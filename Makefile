@@ -10,11 +10,14 @@
 #   make read-text
 #   Reads the text on every photo in photos/ into generated/read-text/<photo>.json: every line of text found, and where it is (src/read_text.py).
 #
+#   make match-serials
+#   Matches the serial on each photo's label, from its text, against gb-game-list's releases, into generated/match-serials/serials.tsv (src/match_serials.py).
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text
+.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -30,6 +33,12 @@ read-text: | src/ocr
 
 clean-read-text:
 	rm -rf generated/read-text
+
+match-serials:
+	$(PYTHON) src/match_serials.py
+
+clean-match-serials:
+	rm -rf generated/match-serials
 
 # The text recognition tool, built when missing (macOS).
 src/ocr: src/ocr.swift
