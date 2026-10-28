@@ -1,0 +1,32 @@
+{
+ "AGB-AGLJ-JPN_3.jpg": {
+  "serial_on_label": "AGB-AGLJ-JPN",
+  "original_sha1": "6f24db7d4e1a8c6f02493882b2237af90cef87b5",
+  "sha1": "dd9f0efabdb02a90964a4e0b5f4a56246719c29e",
+  "original_name": "s-l1600 - 2026-10-24T200320.052.webp"
+ },
+ "AGB-AHCJ-JPN.jpg": {
+  "serial_on_label": "AGB-AHCJ-JPN",
+  "original_sha1": "ea11a04e21d4e614ea2f1e80f9bfc26ae88cf0a1",
+  "sha1": "3ec672012222a595a2b9758c81a5bb9c5e19c763",
+  "original_name": "s-l1600 - 2026-10-24T200246.801.webp"
+ },
+ "AGB-BT3J-JPN-1_2.jpg": {
+  "serial_on_label": "AGB-BT3J-JPN-1",
+  "original_sha1": "5a9f7d3c82a51b977cc1d32d4a01d78e923ed584",
+  "sha1": "5d044d9314186c19302cb5174b1bc2f0f41a28f8",
+  "original_name": "s-l1600 - 2026-10-24T200254.117.webp"
+ },
+ "AGB-FLBJ-JPN_3.jpg": {
+  "serial_on_label": "AGB-FLBJ-JPN",
+  "original_sha1": "e07e24fef40c16c0c3c9ee89b9935c0475b4474d",
+  "sha1": "edf07c7930a1eca4fe942fdcb9fd9a1d1f9665a9",
+  "original_name": "s-l1600 - 2026-10-24T200315.567.webp"
+ },
+ "AGB-FM2J-JPN_2.jpg": {
+  "serial_on_label": "AGB-FM2J-JPN",
+  "original_sha1": "55a786f57ec8a95dcf5c527d0624114dd974c8e4",
+  "sha1": "b37cd25d94ad6b040d70179c3f3f170e749083da",
+  "original_name": "s-l1600 - 2026-10-24T200305.612.webp"
+ }
+}

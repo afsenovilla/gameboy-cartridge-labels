@@ -1,0 +1,32 @@
+{
+ "CGB-AFIP-EUR.webp": {
+  "original_name": "CGB-AFIP-EUR.webp",
+  "serial_on_label": "CGB-AFIP-EUR",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "2f26145e8ed9d2fb69bdc975f57e68c7a48e99cc"
+ },
+ "CGB-AIRJ.jpg": {
+  "serial_on_label": "CGB-AIRJ",
+  "original_sha1": "4cb536d9a5c21f75e64abd3145e5ff858a01a8da",
+  "sha1": "abee48c46242a7d9d36996e6d7a5a2f5e1fe2a3c",
+  "original_name": "1217110124_6760db7464ab0.jpg"
+ },
+ "CGB-AW9J-JPN.jpg": {
+  "serial_on_label": "CGB-AW9J-JPN",
+  "original_sha1": "34dfe31a287f773b79c1b9d4b4064487c866d79a",
+  "sha1": "6a259cc380cf69adce00eb73f9a2f10a717072b0",
+  "original_name": "s-l1200 (10).jpg"
+ },
+ "CGB-BJPJ-JPN.jpg": {
+  "serial_on_label": "CGB-BJPJ-JPN",
+  "original_sha1": "6a1f94ad0a8d35818708a34ea94db53c4ffe7458",
+  "sha1": "5567d69ffe1fb0ab0b6c31d9a79aaafc1dc0f085",
+  "original_name": "s-l1200 (6).jpg"
+ },
+ "CGB-BYTE-USA.webp": {
+  "original_name": "CGB-BYTE-USA.webp",
+  "serial_on_label": "CGB-BYTE-USA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "97aa40d6f6946ba70b4a4253cae84de7322f0027"
+ }
+}

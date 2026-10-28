@@ -1,0 +1,58 @@
+{
+ "DMG-ACWP.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1e/1ed94a5e-7ad5-48cc-9052-a4d2ba81ecbe?rule=$_59.AUTO",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/cool-hand-gameboy-nintendo-game-boy/3529975485-227-26514",
+  "title_on_page": "Cool Hand Gameboy Nintendo Game Boy",
+  "serial_on_label": "DMG-ACWP-EUR",
+  "note": "Black dual-mode cart sitting in an open clear dust case, straight on. Serial is DMG-ACWP, not ACDP; suffix read as EUR from a small crop (fairly sure).",
+  "sha1": "1edbc8e49adbac847f836a7046b9205293fa6eca"
+ },
+ "DMG-ACWP_2.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/96/9605f133-ad7d-454c-b608-b17307e95ceb?rule=$_59.AUTO",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-game-boy-spiel-cool-hand-/3063596869-279-4358",
+  "title_on_page": "NINTENDO GAME BOY SPIEL \" COOL HAND \"",
+  "serial_on_label": "DMG-ACWP-EUR",
+  "note": "Loose black cart on a wood table, straight on; label slightly worn, handwritten '20' on it. Serial is DMG-ACWP, not ACDP.",
+  "sha1": "b6728263ce7c545976fa4dd5fd664dab096d02b1"
+ },
+ "DMG-ASTE.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/53/539022bd-fc51-44d0-ba92-e64124fa8d4b?rule=$_57.JPG",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/star-trek-generations-beyond-the-nexus-nintendo-game-boy/3545125263-227-627",
+  "title_on_page": "Star Trek Generations: Beyond the Nexus - Nintendo Game Boy",
+  "serial_on_label": "DMG-ASTE-USA",
+  "note": "USA cart (Absolute logo) standing upright on a black stand, straight on; top edge near frame border, a bit dim.",
+  "sha1": "63a3719472d6cdcf68501f2623eab3aaf72c211e"
+ },
+ "DMG-VP-USA.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4c/4cc9c79f-718b-46aa-8f90-2213ff958798?rule=$_57.JPG",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/captain-america-gameboy/3406659353-227-19747",
+  "title_on_page": "Captain America- Gameboy",
+  "serial_on_label": "DMG-VP-USA",
+  "note": "Cart straight on but inside a clear acrylic display case/stand (case edges and slight reflections around the cart); label sharp.",
+  "sha1": "5abfb3e22d3190a825afe40d69fe55f581382483"
+ },
+ "DMG-YG-NOE_2.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c2/c2480fb4-d3e4-483e-9ca0-be17c3b15c30?rule=$_59.AUTO",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-gameboy-spiel-yogi-bear-s-gold-rush-game-b/3543207158-227-734",
+  "title_on_page": "Nintendo Gameboy Spiel Yogi Bear's Gold Rush, Game B",
+  "serial_on_label": "DMG-YG-NOE",
+  "note": "Loose cart on white, slight perspective from above.",
+  "sha1": "cc5631165f1123c1e4b84db8f12545a931733553"
+ },
+ "DMG-YS-NOE-1.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a9/a9f7d722-fd3c-4691-8783-a59b19e77651?rule=$_59.AUTO",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/gameboy-daffy-duck-original/3501501773-227-2607",
+  "title_on_page": "Gameboy Daffy Duck Original",
+  "serial_on_label": "DMG-YS-NOE-1",
+  "note": "Loose cart on dark background, straight on; cart is about 400 px wide in the frame.",
+  "sha1": "6ffd2c4c1c3fed757ec27478a7643beb44be1416"
+ },
+ "DMG-YS.jpg": {
+  "image_url": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/de/de2af281-f2f3-4466-add8-7a16f1acb802?rule=$_59.AUTO",
+  "page_url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-gameboy-daffy-duck/2870024889-227-6437",
+  "title_on_page": "Nintendo Gameboy Daffy Duck",
+  "serial_on_label": "DMG-YS-NOE-1",
+  "note": "Cart inside a clear plastic sleeve (slight sheen); straight on, label readable.",
+  "sha1": "6342dd275178b4957f847c7fedb5876a6c057ba5"
+ }
+}

@@ -1,0 +1,296 @@
+{
+ "DMG-A2GJ-JPN.jpg": {
+  "sha1": "665b85d2b99d66dd8a7e78b30c585efa02f1d22a"
+ },
+ "DMG-A2GJ-JPN_2.jpg": {
+  "sha1": "177d70a8d8a5786d8d5442b141e3053638590fcb"
+ },
+ "DMG-AAUJ-JPN.jpg": {
+  "sha1": "3a48603facddca5c9bafc40e335c4b8f93100208"
+ },
+ "DMG-AAUJ-JPN_2.jpg": {
+  "sha1": "a4294d045c4bdd414763ed01abae9aab398017e8"
+ },
+ "DMG-AAXJ-JPN.jpg": {
+  "sha1": "30f7b4b433e1b8d6eb6f1ff9e44181d260b40f3e"
+ },
+ "DMG-ADDP-EUR-1.jpg": {
+  "sha1": "284e1c4caa85b28c934f6e39e2c7c2f2ff3005f1"
+ },
+ "DMG-ADDP-EUR-1_2.jpg": {
+  "sha1": "65dd919950c9460025e1c12f57c3e36beeb1c27c"
+ },
+ "DMG-ADDP-EUR-1_3.jpg": {
+  "sha1": "bc4dfa40b425e5c3609b70f65255347d67647956"
+ },
+ "DMG-ADMP-NOE.jpg": {
+  "sha1": "e8cae4ff6151ac6ab266f9e35c442dfd15577392"
+ },
+ "DMG-ADQJ-JPN.jpg": {
+  "sha1": "a036d9a2aa92b646edd1d21f868d3ad9f07e049e"
+ },
+ "DMG-ADQJ-JPN_2.jpg": {
+  "sha1": "ccc40f41ff89cf240128ccfd9bcbab685e2daace"
+ },
+ "DMG-ADQJ-JPN_3.jpg": {
+  "sha1": "a7ba42221c588e6cd2dbecbc0e23672587358a8c"
+ },
+ "DMG-ADQJ-JPN_4.jpg": {
+  "sha1": "57a5f48c03a12277c30522faef751e7c504e9971"
+ },
+ "DMG-AEDJ-JPN.jpg": {
+  "sha1": "8566a0b2b8771360c301b6937d0877ef58ac6b91"
+ },
+ "DMG-AKBJ-JPN.jpg": {
+  "sha1": "616644fe16f5d7f7891e936718eb3cbddc559fc7"
+ },
+ "DMG-AM3J-JPN.jpg": {
+  "sha1": "b7e8b4483be3be34d31dcf960df3057ab6a5326e"
+ },
+ "DMG-AM3J-JPN_2.jpg": {
+  "sha1": "10b9b5aaf936bb9ebe9dd33bb9e9e806df87b8e3"
+ },
+ "DMG-AM3J-JPN_3.jpg": {
+  "sha1": "87c105e369cbaf4989445c77df1fe77e0f1d1743"
+ },
+ "DMG-AM3J-JPN_4.jpg": {
+  "sha1": "b4f65f267fb40163d5676f104d4e4e4901c712d6"
+ },
+ "DMG-AM3J-JPN_5.jpg": {
+  "sha1": "b7f745c340323d87d2340e00bc8d61d45cfc1849"
+ },
+ "DMG-AMDJ-JPN.jpg": {
+  "sha1": "04e097413395d334265092357c58896839b91dab"
+ },
+ "DMG-AOMJ-JPN.jpg": {
+  "sha1": "35224bd0bba15e58734f2c8a11fb3907b3c9b002"
+ },
+ "DMG-AOMJ-JPN_2.jpg": {
+  "sha1": "697a07e74ae5a25d461f37384205d43f8d819944"
+ },
+ "DMG-AOMJ-JPN_3.jpg": {
+  "sha1": "b97427fa2fe4c1de5e9ca8bb714ee14d8379ae9f"
+ },
+ "DMG-APAJ-JPN.jpg": {
+  "sha1": "9aa0783d2eb80914439f42258f9ab818975fa670"
+ },
+ "DMG-APAJ-JPN_2.jpg": {
+  "sha1": "cea7f608fc50f165f2bc0e6c639ddc68cfeff7e8"
+ },
+ "DMG-APBJ-JPN.jpg": {
+  "sha1": "d378ba326cda5a7a2457a8f2e607924ee6d4bd91"
+ },
+ "DMG-APBJ-JPN_2.jpg": {
+  "sha1": "dc331d64bfbc9c55d7041ee19ef2509353afc54c"
+ },
+ "DMG-APBJ-JPN_3.jpg": {
+  "sha1": "ec81f618f8429dfbf281dfae5a38233c7ab605a6"
+ },
+ "DMG-APBJ-JPN_4.jpg": {
+  "sha1": "2700a8def5f3621f00c294c891271449b5e7b110"
+ },
+ "DMG-APBJ-JPN_5.jpg": {
+  "sha1": "31cf0565711ad6c1b628f008e8e488eed799c49b"
+ },
+ "DMG-APEJ-JPN.jpg": {
+  "sha1": "295ddb1d4ec5087e9cbe12cc0304492c73ddb6a3"
+ },
+ "DMG-APEJ-JPN_2.jpg": {
+  "sha1": "9ae53c603792f4dd44b586e7ae2f6c3f30534388"
+ },
+ "DMG-APOJ-JPN.jpg": {
+  "sha1": "7c8bd0e2dd0b22ec17cc7913d9078095a2abdfa6"
+ },
+ "DMG-APSJ-JPN.jpg": {
+  "sha1": "77247021bfe0e73218fa25df604179986bd92d02"
+ },
+ "DMG-APSJ-JPN_10.jpg": {
+  "sha1": "a982cbc7478f8476214245046dfb70f65f0bece6"
+ },
+ "DMG-APSJ-JPN_2.jpg": {
+  "sha1": "1222f2020dcfbfafd20ec0b9dde27c6141ddbdb1"
+ },
+ "DMG-APSJ-JPN_3.jpg": {
+  "sha1": "9bf805148a4cf586e4a863a8ce1eb6d73627162a"
+ },
+ "DMG-APSJ-JPN_4.jpg": {
+  "sha1": "dfbcd9ccc893052bce2a6311200bf6046c0ba2f9"
+ },
+ "DMG-APSJ-JPN_5.jpg": {
+  "sha1": "347fdeecf00f62ab90cd5bad53e0781166996ae6"
+ },
+ "DMG-APSJ-JPN_6.jpg": {
+  "sha1": "05661c34da499657b34d8b55aef5b58aec703854"
+ },
+ "DMG-APSJ-JPN_7.jpg": {
+  "sha1": "33cda9b12eb6b6f65d561bb3ff5e13901010a0fe"
+ },
+ "DMG-APSJ-JPN_8.jpg": {
+  "sha1": "547813df18454beb7c8903a32832e0d54aa1d4da"
+ },
+ "DMG-APSJ-JPN_9.jpg": {
+  "sha1": "01550460dff0a1cb84981e76324f15b330e61fae"
+ },
+ "DMG-APYJ-JPN.jpg": {
+  "sha1": "bcb67f0f02712dcb66b67c4d2d6b818ebbd97406"
+ },
+ "DMG-ATAJ-JPN.jpg": {
+  "sha1": "783d73312704c674f3ace9bf246cc4c129d8205d"
+ },
+ "DMG-ATEA-JPN.jpg": {
+  "sha1": "24ddd0226b227ea60118c98a6932b1bc98791e23"
+ },
+ "DMG-ATOJ-JPN.jpg": {
+  "sha1": "3c9f9732259dfec8645f3db0e100ace801b221ac"
+ },
+ "DMG-ATRJ-JPN.jpg": {
+  "sha1": "35713ecfd92e7706204c00ce3bd8ed636baeed6c"
+ },
+ "DMG-AU3P-NOE.jpg": {
+  "sha1": "66c6fd144c5aec399e52f06116b04ee04b9fcb59"
+ },
+ "DMG-AVBJ-JPN.jpg": {
+  "sha1": "211ae4a69613a83ef9051618f273b64cd7ebc7f5"
+ },
+ "DMG-AW2J-JPN.jpg": {
+  "sha1": "70b4fd3b28882e161c9ffd3d41d43c548dac7151"
+ },
+ "DMG-AWLP-EUR.jpg": {
+  "sha1": "54f73cd60856e078295dd70ac6a3d7cb218af04e"
+ },
+ "DMG-AWLP-EUR_2.jpg": {
+  "sha1": "d893f7579020347e657be5ae8b5b42c7ce4f542e"
+ },
+ "DMG-AWLP-EUR_3.jpg": {
+  "sha1": "f727f9fa975f324e917ba67cd19fc9a590a3cb3d"
+ },
+ "DMG-AYLP-EUR.jpg": {
+  "sha1": "8b4de637b2d2517b6613d077fa4bc973dc575c69"
+ },
+ "DMG-B2A.jpg": {
+  "sha1": "276ffc84bb7a30b468ee9d9795d955acd1e67dd7"
+ },
+ "DMG-BQLJ-JPN.jpg": {
+  "sha1": "61267721bf86bfcf045754d6b6b6f4a323126db2"
+ },
+ "DMG-CVJ.jpg": {
+  "sha1": "81874f683c90a730173db5ca6f949985b3e67e5f"
+ },
+ "DMG-CVJ_2.jpg": {
+  "sha1": "a6efb1d515c6f27af0f616fd47e37264e642f94a"
+ },
+ "DMG-DT-NOE.jpg": {
+  "sha1": "e1dbcf6293379044cf3e682d4449a86ecd1ea3c3"
+ },
+ "DMG-F1A.jpg": {
+  "sha1": "79607768e1de5738afcfde26aae6eedb301f3f80"
+ },
+ "DMG-FPA.jpg": {
+  "sha1": "a18281fd97ebf518c9f292045d03df9b2efd91e4"
+ },
+ "DMG-GK-USA.jpg": {
+  "sha1": "96b71044cc638ff94f97f34d8bf99a06caa50c1f"
+ },
+ "DMG-HLA.jpg": {
+  "sha1": "5e5807fed9863f5d49df09142a98548186276c2a"
+ },
+ "DMG-HLA_2.jpg": {
+  "sha1": "664a57c55c51582086f7f21465014741134d7ac2"
+ },
+ "DMG-K9J.jpg": {
+  "sha1": "713286e205bf1c63b070e64443ef7071df5df5d8"
+ },
+ "DMG-KLA.jpg": {
+  "sha1": "2ab1e789973cd31575e12270f0a85a1f7d8313db"
+ },
+ "DMG-KY-SCN.jpg": {
+  "sha1": "1e379308520700de621011671bb401e46930ce3c"
+ },
+ "DMG-KYJ.jpg": {
+  "sha1": "31ba2cfd7eac06591aea78c170f57396e92eeca5"
+ },
+ "DMG-KYJ_2.jpg": {
+  "sha1": "fd74ed3b182924855f222ad2dd918aa508091f4b"
+ },
+ "DMG-KYJ_3.jpg": {
+  "sha1": "2603e6942b1386cc4f33b3baeda04d70a4d85fe5"
+ },
+ "DMG-L6J.jpg": {
+  "sha1": "88e74f9138ac411c9322989ec2f7ae5cb25c7a6a"
+ },
+ "DMG-LCA.jpg": {
+  "sha1": "9efdd02db85df4f33bf09312c8370169bfbe33a8"
+ },
+ "DMG-MQ-UKV.jpg": {
+  "sha1": "08adcea27487bd0b02b8bd84983ae48e1c8921a1"
+ },
+ "DMG-MQ-UKV_2.jpg": {
+  "sha1": "7f31dc89334417b731c020a4bb273119a3cd0aa1"
+ },
+ "DMG-MQ-UKV_3.jpg": {
+  "sha1": "e9abbfaf6703f174266f902dd73f6468b9c4be8f"
+ },
+ "DMG-NBA.jpg": {
+  "sha1": "62b76891c929cee50092023f5e5fd02d4135b24d"
+ },
+ "DMG-PTJ.jpg": {
+  "sha1": "96676f298e520bbd9ae730a024b6ce06f1082cec"
+ },
+ "DMG-QQJ.jpg": {
+  "sha1": "97c5268a71ee55a401d05e97471f9b299347613b"
+ },
+ "DMG-QX-SCN.jpg": {
+  "sha1": "6c723ccf1ea758e0d4c1948676201a1b30478fa5"
+ },
+ "DMG-SAJ.jpg": {
+  "sha1": "c6a6b7fe5254944b63db3c40cdc53e1f1332b2fd"
+ },
+ "DMG-SAJ_2.jpg": {
+  "sha1": "c752b181557a3ea9565c8b2e1281ffdc7a5fcdbc"
+ },
+ "DMG-SS-USA.jpg": {
+  "sha1": "a696a5f65ee5c61b123b695aef9c2a02aef1ac1a"
+ },
+ "DMG-SS-USA_2.jpg": {
+  "sha1": "50d12059603dfc1e601762454c0f889d11b63718"
+ },
+ "DMG-SVJ.jpg": {
+  "sha1": "fb947cabe36ae89b687b309b077d7224f15bc0c3"
+ },
+ "DMG-TRA.jpg": {
+  "sha1": "9dab6deaa24eab5ab0fe2e47bd3190d4b9b2e65f"
+ },
+ "DMG-TRA_2.jpg": {
+  "sha1": "0a9c1086c72a289dce31d228ee9a583aea7c1de8"
+ },
+ "DMG-TRA_3.jpg": {
+  "sha1": "6f3f40c67ad403f777900cb61bf7f38549056cc8"
+ },
+ "DMG-V2A.jpg": {
+  "sha1": "1ffd0d7e2f39db7e50ee7045cd4e24ebfc87c22b"
+ },
+ "DMG-VPHJ-JPN.jpg": {
+  "sha1": "9ae72540ba08641e5ef1243e376eed5fad5910e9"
+ },
+ "DMG-VUA.jpg": {
+  "sha1": "b93f3a8884e207dfc224becb2b3cb63448070401"
+ },
+ "DMG-W3-SCN.jpg": {
+  "sha1": "7a5b5a7a76454cb558a2c069d533a42e9be1e01a"
+ },
+ "DMG-YT-EUR.jpg": {
+  "sha1": "26bf8b5841c4cd23e28969905dea1229731ff72a"
+ },
+ "DMG-ZLJ.jpg": {
+  "sha1": "5ba8a07bc5cffc171768941e2691dde0f1ccdd00"
+ },
+ "DMG-ZLJ_2.jpg": {
+  "sha1": "e419827f7c6e38959ee0094369f17a1fd5e511b8"
+ },
+ "DMG-ZLJ_3.jpg": {
+  "sha1": "f1eece5db9a9a2d7789eb92c0171f456552f3071"
+ },
+ "DMG-ZZJ-1.jpg": {
+  "sha1": "21c0b4d1e2fe3511fcc00e1b6459ff87b0f3dc07"
+ }
+}
