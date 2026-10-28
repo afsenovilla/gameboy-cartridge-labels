@@ -4,5 +4,17 @@ Clean, straight-on images of Game Boy cartridge labels, made from photos of cart
 
 ## Setup
 
-Needs Python 3. Run `make setup` once: it creates the Python environment, `.venv/`, with the packages in
-`requirements.txt`. Run `make` to list the steps.
+Needs macOS (for text recognition), Python 3, and [gb-game-list](../gb-game-list) checked out next to this repository.
+Run `make setup` once: it creates the Python environment, `.venv/`, with the packages in `requirements.txt`.
+
+## Where things are
+
+- `save-new-images-here/`: drop off new photos here, in a subfolder named after where they came from.
+- `photos/`: every photo of a cartridge, `photos/<source>/<system>/<serial>[_<n>].<ext>`, with a `sources.json` per folder
+  saying where each photo came from. A photo is named by the serial printed on its label; to correct one, rename it.
+- `src/`: the scripts.
+- `generated/`: everything made from the photos (not committed).
+
+## Steps
+
+Run `make` to list them. Each step is one target, and runs only that step.

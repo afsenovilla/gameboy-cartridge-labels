@@ -1,0 +1,152 @@
+import glob, hashlib, json, os, re, shutil, sys
+
+# photos/: every photo of a cartridge, wherever it came from, in photos/<source>/<system>/<serial>[_<n>].<ext>,
+# with one sources.json per folder (file name -> where it came from, and the file's "sha1").
+# - source: where the photos came from (my-collection: my own; google: saved from Google image searches; the others
+#   named after a site or seller), the subfolder of save-new-images-here/ they were dropped off in (src/add_photos.py).
+# - system: dmg, cgb, agb, or unknown, from the serial.
+# - serial: the serial printed on the label (DMG-ADQJ-JPN), else the release id it's known by (DMG-ADQJ), or UNKNOWN;
+#   a number only when several photos have the same serial: the first has none, the next ones _2, _3...
+# - ext: the format the photo came in (jpg, png, webp, avif, heic), never re-encoded.
+# The file names are the truth: to identify a photo, or correct one, rename it (e.g. UNKNOWN_5.jpg -> DMG-A8-JPN.jpg),
+# in whichever folder of its source; spaces become "-", and lower-case serials upper case. reconcile() (run by
+# add-photos, or as photos.py reconcile) then finds its entry by its SHA-1, moves it to its system's folder, and numbers
+# it if its name is taken.
+# Usage: photos.py reconcile
+ROOT = "photos"
+SYSTEMS = ("dmg", "cgb", "agb", "unknown")
+EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".avif", ".heic", ".heif")
+
+
+def system_of(serial):
+    """The folder of a serial or release id: its system's prefix (DMG-, CGB-, AGB-, or agb-1314 for releases without
+    a serial), else unknown."""
+    prefix = serial.split("-")[0].lower()
+    return prefix if prefix in SYSTEMS[:3] else "unknown"
+
+
+def stem(name):
+    return os.path.splitext(name)[0]
+
+
+def tidy(name):
+    """A photo's name without awkward characters, and serials as written: anything but letters, digits, "-" and "_"
+    becomes "-", a lower-case serial (dmg-a8-ukv) upper case; release ids without a serial (agb-0014, digits after the system) stay as they are."""
+    s, ext = os.path.splitext(name.strip())
+    s = re.sub(r"-{2,}", "-", re.sub(r"[^A-Za-z0-9_-]+", "-", s)).strip("-")
+    s = re.sub(r"-_", "_", s)
+    head, sep, tail = s.rpartition("_") if re.search(r"_\d+$", s) else (s, "", "")
+    if re.match(r"(dmg|cgb|agb)-(?!\d+$)[a-z0-9-]+$", head, re.I):
+        head = head.upper()
+    return f"{head}{sep}{tail}{ext.lower()}"
+
+
+def serial_of(name):
+    """The serial a photo's name files it under: its stem without the number."""
+    return re.sub(r"_\d+$", "", stem(name))
+
+
+def folder(source, system):
+    path = os.path.join(ROOT, source, system)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def sources(source, system):
+    """A folder's sources.json: file name -> entry."""
+    path = os.path.join(ROOT, source, system, "sources.json")
+    return json.load(open(path)) if os.path.exists(path) else {}
+
+
+def save_sources(source, system, entries):
+    path = os.path.join(folder(source, system), "sources.json")
+    json.dump(dict(sorted(entries.items())), open(path, "w"), ensure_ascii=False, indent=1)
+
+
+def folders():
+    """(source, system) of every folder in photos/."""
+    return sorted((os.path.basename(os.path.dirname(d)), os.path.basename(d)) for d in glob.glob(os.path.join(ROOT, "*", "*")) if os.path.isdir(d))
+
+
+def all_sources():
+    """(source, system, file name, entry) for every photo in photos/."""
+    for source, system in folders():
+        for name, entry in sources(source, system).items():
+            yield source, system, name, entry
+
+
+def free_name(serial, ext, taken):
+    """<serial><ext>, or the first <serial>_<n><ext> from 2 up, whose stem isn't in taken (lower case: macOS's file
+    system ignores case)."""
+    name, n = serial, 1
+    while name.lower() in taken:
+        n += 1
+        name = f"{serial}_{n}"
+    return name + ext
+
+
+def taken_stems():
+    return {stem(n).lower() for _, _, n, _ in all_sources()}
+
+
+def add(serial, data, ext, entry, source):
+    """Saves a photo (the file's bytes, unchanged) under its serial, numbered if taken, in its source's folder, with
+    its entry; returns its name."""
+    system = system_of(serial)
+    name = free_name(serial, ext.lower().replace(".jpeg", ".jpg"), taken_stems())
+    open(os.path.join(folder(source, system), name), "wb").write(data)
+    entries = sources(source, system)
+    entries[name] = dict(entry, sha1=hashlib.sha1(data).hexdigest())
+    save_sources(source, system, entries)
+    return name
+
+
+def reconcile(verbose=True):
+    """Brings sources.json in line with the files: a renamed or moved photo gets its entry back (found by SHA-1), and
+    its system's folder within its source; a name taken by another photo gets the next
+    number (photos keeping their names first); entries whose file is gone are dropped. Returns the number of changes."""
+    entries = {f: sources(*f) for f in folders()}
+    by_sha = {e["sha1"]: (f, n) for f in entries for n, e in entries[f].items() if e.get("sha1")}
+    files = sorted((f, os.path.basename(p)) for f in entries for p in glob.glob(os.path.join(ROOT, *f, "*"))
+                   if os.path.splitext(p)[1].lower() in EXTENSIONS)
+    # Photos already known under their tidy names keep them; the renamed and new ones get what's free.
+    files.sort(key=lambda fn: not (fn[1] in entries[fn[0]] and tidy(fn[1]) == fn[1]))
+    claimed, taken, changes = set(), set(), 0
+    for (source, system), name in files:
+        path = os.path.join(ROOT, source, system, name)
+        entry = entries[(source, system)].get(name)
+        if entry is None or not entry.get("sha1"):
+            sha = hashlib.sha1(open(path, "rb").read()).hexdigest()
+            old = by_sha.get(sha)
+            if entry is None and old and old != ((source, system), name):
+                entry = entries[old[0]].pop(old[1])
+                if verbose:
+                    print(f"renamed {'/'.join(old[0])}/{old[1]} -> {source}/{system}/{name}")
+            entry = dict(entry or {"note": "added by hand"}, sha1=sha)
+            changes += 1
+        new_name = tidy(name)
+        if stem(new_name).lower() in taken:
+            new_name = free_name(serial_of(new_name), os.path.splitext(new_name)[1], taken)
+        target = (source, system_of(serial_of(new_name)))
+        taken.add(stem(new_name).lower())
+        if target != (source, system) or new_name != name:
+            shutil.move(path, os.path.join(folder(*target), new_name))
+            if verbose:
+                print(f"moved {source}/{system}/{name} -> {'/'.join(target)}/{new_name}")
+            changes += 1
+        entries[(source, system)].pop(name, None)
+        entries.setdefault(target, {})[new_name] = entry
+        claimed.add((target, new_name))
+    for f in list(entries):
+        for name in [n for n in entries[f] if (f, n) not in claimed]:
+            del entries[f][name]
+            if verbose:
+                print(f"dropped {'/'.join(f)}/{name}: its file is gone")
+            changes += 1
+        if entries[f] != sources(*f):
+            save_sources(*f, entries[f])
+    return changes
+
+
+if __name__ == "__main__" and sys.argv[1:] == ["reconcile"]:
+    reconcile()
