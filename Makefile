@@ -7,11 +7,14 @@
 #   make add-photos
 #   Files the photos left in save-new-images-here/ into photos/, each named by the serial read on its label (src/add_photos.py).
 #
+#   make read-text
+#   Reads the text on every photo in photos/ into generated/read-text/<photo>.json: every line of text found, and where it is (src/read_text.py).
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos
+.PHONY: help setup add-photos read-text clean-read-text
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -21,6 +24,12 @@ setup:
 
 add-photos: | src/ocr
 	$(PYTHON) src/add_photos.py
+
+read-text: | src/ocr
+	$(PYTHON) src/read_text.py
+
+clean-read-text:
+	rm -rf generated/read-text
 
 # The text recognition tool, built when missing (macOS).
 src/ocr: src/ocr.swift
