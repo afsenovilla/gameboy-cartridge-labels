@@ -1,0 +1,4 @@
+# The Python environment, made by make setup.
+.venv/
+# macOS Finder metadata.
+.DS_Store
