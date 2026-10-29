@@ -156,6 +156,14 @@ def distance(verdict, fit):
     return float(np.linalg.norm(project(to_mm, project(np.array(verdict["mm_to_photo"]), body)) - body, axis=1).max())
 
 
+def save_verdicts(verdicts):
+    """Writes reviews/fits.json: one line per photo, so that the file's history reads as verdicts given."""
+    os.makedirs(os.path.dirname(VERDICTS), exist_ok=True)
+    lines = [f"{json.dumps(name)}: {json.dumps(v, ensure_ascii=False)}" for name, v in sorted(verdicts.items())]
+    open(VERDICTS + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
+    os.replace(VERDICTS + ".tmp", VERDICTS)
+
+
 class Review:
     """The fits, the photos and the verdicts, read when the tool starts."""
 
@@ -213,11 +221,7 @@ class Review:
         self.save()
 
     def save(self):
-        os.makedirs(os.path.dirname(VERDICTS), exist_ok=True)
-        # One line per photo, so that the file's history reads as verdicts given.
-        lines = [f"{json.dumps(name)}: {json.dumps(v, ensure_ascii=False)}" for name, v in sorted(self.verdicts.items())]
-        open(VERDICTS + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
-        os.replace(VERDICTS + ".tmp", VERDICTS)
+        save_verdicts(self.verdicts)
 
     def delete(self, name):
         photos.delete(self.paths.pop(name))

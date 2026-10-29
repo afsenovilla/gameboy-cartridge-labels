@@ -116,6 +116,26 @@ def delete(path):
     save_sources(source, system, entries)
 
 
+def rename(path, name):
+    """Renames a photo in photos/ to name (a serial, without the extension), tidied and numbered if taken, in its
+    system's folder within its source, with its entry; returns its new path."""
+    source, system, old = path.split(os.sep)[-3:]
+    ext = os.path.splitext(old)[1]
+    serial = serial_of(tidy(name.replace(".", "-")))
+    if not serial:
+        raise ValueError(f"not a name: {name!r}")
+    new = free_name(serial, ext, taken_stems() - {stem(old).lower()})
+    new_path = os.path.join(folder(source, system_of(serial)), new)
+    shutil.move(path, new_path)
+    entries = sources(source, system)
+    entry = entries.pop(old)
+    save_sources(source, system, entries)
+    entries = sources(source, system_of(serial))
+    entries[new] = entry
+    save_sources(source, system_of(serial), entries)
+    return new_path
+
+
 def reconcile(verbose=True):
     """Brings sources.json in line with the files: a renamed or moved photo gets its entry back (found by SHA-1), and
     its system's folder within its source; a name taken by another photo gets the next

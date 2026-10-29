@@ -22,11 +22,14 @@
 #   make search-photos
 #   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Jauce) for photos of the Game Boy and Game Boy Color releases without a fit judged good, into generated/search-photos/index.html (src/search_photos.py).
 #
+#   make name-photos
+#   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its verdicts in reviews/fits.json with it; or delete it (src/name_photos.py). Not while make review-fits runs.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits search-photos
+.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits search-photos name-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -60,6 +63,9 @@ review-fits:
 
 search-photos:
 	$(PYTHON) src/search_photos.py
+
+name-photos:
+	$(PYTHON) src/name_photos.py
 
 # The text recognition tool, built when missing (macOS).
 src/ocr: src/ocr.swift
