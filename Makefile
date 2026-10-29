@@ -19,11 +19,14 @@
 #   make review-fits
 #   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to reviews/fits.json (src/review_fits.py).
 #
+#   make search-photos
+#   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Jauce) for photos of the Game Boy and Game Boy Color releases without a fit judged good, into generated/search-photos/index.html (src/search_photos.py).
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits
+.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits search-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -54,6 +57,9 @@ clean-fit-cartridge:
 
 review-fits:
 	$(PYTHON) src/review_fits.py
+
+search-photos:
+	$(PYTHON) src/search_photos.py
 
 # The text recognition tool, built when missing (macOS).
 src/ocr: src/ocr.swift
