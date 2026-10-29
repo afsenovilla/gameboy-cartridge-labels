@@ -20,7 +20,7 @@
 #   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to reviews/fits.json (src/review_fits.py).
 #
 #   make search-photos
-#   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Jauce) for photos of the Game Boy and Game Boy Color releases without a fit judged good, into generated/search-photos/index.html (src/search_photos.py).
+#   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Jauce) for photos of the Game Boy and Game Boy Color releases not in photos/ (those from otakaraou alone apart), into generated/search-photos/index.html (src/search_photos.py).
 #
 #   make name-photos
 #   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its verdicts in reviews/fits.json with it; or delete it (src/name_photos.py). Not while make review-fits runs.

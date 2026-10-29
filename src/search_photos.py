@@ -2,17 +2,16 @@ import csv, html, json, os, pathlib, re, sys, unicodedata, urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, serials
-from fit_cartridge import OUT as FITS
 
 # search-photos: a local page of searches for photos of the Game Boy and Game Boy Color releases still without one: no
-# cartridge photo in gb-game-list, and no photo in photos/ with a fit judged good (kept as judged by fit-cartridge; a
-# photo's release from match-serials, else from its name). One line per release, with a link per place to search:
+# cartridge photo in gb-game-list, and no photo in photos/ (a photo's release from match-serials, else from its name),
+# whether or not its fit works. Releases with photos from otakaraou alone are listed apart: they are worth replacing.
+# One line per release, with a link per place to search:
 # Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, and, for Japanese
 # releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese title, with ゲームボーイ and
 # カセット on the image searches (listings there are titled in Japanese, rarely with the serial), the others by their
 # English title, with "game boy" and cartridge; the eBay sellers title their listings in English, so they get the
-# English title alone. Long titles are cut at their subtitle. Releases in my own photos are listed apart: no need to
-# search for them. Each line has a box to tick when done (kept in the browser).
+# English title alone. Long titles are cut at their subtitle. Each line has a box to tick when done (kept in the browser).
 # Usage: search_photos.py
 RELEASES = serials.RELEASES
 SERIALS = "generated/match-serials/serials.tsv"
@@ -58,40 +57,37 @@ def links(release):
 releases = [r for r in json.load(open(RELEASES)) if r["system"] in SYSTEMS and r["cartridgeSerials"]]
 release_of = serials.releases_by_serial()
 matched = {row[0]: row[3] for row in csv.reader(open(SERIALS), delimiter="\t") if row[1] in ("exact", "near") and row[3]}
-covered, own = set(), set()
+covered, otakaraou = set(), set()
 for source, _, name, _ in photos.all_sources():
     stem = photos.stem(name)
     release = matched.get(stem) or (release_of[photos.serial_of(stem)]["id"] if photos.serial_of(stem) in release_of else None)
-    fit_path = os.path.join(FITS, stem + ".json")
-    if release and os.path.exists(fit_path) and "judged" in json.load(open(fit_path)):
-        covered.add(release)
-    elif release and source == "my-collection":
-        own.add(release)
+    if release:
+        (otakaraou if source == "otakaraou" else covered).add(release)
 missing = [r for r in releases if r["id"] not in covered and not any(i["kind"] == "cartridgePhoto" for i in r["images"])]
-retake = sorted((r for r in missing if r["id"] in own), key=lambda r: r["title"])
-missing = [r for r in missing if r["id"] not in own]
+replace = [r for r in missing if r["id"] in otakaraou]
+missing = [r for r in missing if r["id"] not in otakaraou]
 
+groups = [(f"{system_name}: {label}", [r for r in missing if r["system"] == system and japanese(r) == ja])
+          for system, system_name in (("dmg", "Game Boy"), ("cgb", "Game Boy Color"))
+          for ja, label in ((True, "Japanese releases"), (False, "Other releases"))]
+groups.append(("Only from otakaraou: worth replacing", replace))
 sections = []
-for system, system_name in (("dmg", "Game Boy"), ("cgb", "Game Boy Color")):
-    for ja, label in ((True, "Japanese releases"), (False, "Other releases")):
-        group = sorted((r for r in missing if r["system"] == system and japanese(r) == ja), key=lambda r: r["title"])
-        rows = []
-        for r in group:
-            title = japanese_title(r) if ja else r["title"]
-            searches = " · ".join(f'<a href="{html.escape(url)}" target="_blank">{place}</a>' for place, url in links(r))
-            rows.append(f'<li><label><input type="checkbox" data-key="{html.escape(r["id"])}"> {html.escape(title)}</label> '
-                        f'<small title="{html.escape(r["title"])}">{html.escape(" ".join(r["cartridgeSerials"]))}</small> {searches}</li>')
-        sections.append(f"<h2>{system_name}: {label} ({len(group)})</h2><ol>{''.join(rows)}</ol>")
-sections.append(f"<h2>In my own photos, without a fit judged good: no need to search ({len(retake)})</h2><p>"
-                + " · ".join(f"{html.escape(r['title'])} <small>{html.escape(r['id'])}</small>" for r in retake) + "</p>")
+for heading, group in groups:
+    rows = []
+    for r in sorted(group, key=lambda r: r["title"]):
+        title = japanese_title(r) if japanese(r) else r["title"]
+        searches = " · ".join(f'<a href="{html.escape(url)}" target="_blank">{place}</a>' for place, url in links(r))
+        rows.append(f'<li><label><input type="checkbox" data-key="{html.escape(r["id"])}"> {html.escape(title)}</label> '
+                    f'<small title="{html.escape(r["title"])}">{html.escape(" ".join(r["cartridgeSerials"]))}</small> {searches}</li>')
+    sections.append(f"<h2>{heading} ({len(group)})</h2><ol>{''.join(rows)}</ol>")
 
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Photo searches</title>
 <style>body{{font:14px system-ui;margin:16px;background:#f4f4f4;color:#222}}li{{margin:4px 0;line-height:1.5}}
 small{{color:#888;margin:0 6px}}li:has(input:checked){{opacity:.4}}</style></head><body>
 <h1>Photo searches</h1>
-<p>{len(missing)} Game Boy and Game Boy Color releases without a cartridge photo in gb-game-list or a fit judged good, not in my
-own photos. Save the photos found in a subfolder of save-new-images-here/ named after where they came from, and file them with
+<p>{len(missing)} Game Boy and Game Boy Color releases without a cartridge photo in gb-game-list or in photos/, and
+{len(replace)} with photos from otakaraou alone. Save the photos found in a subfolder of save-new-images-here/ named after where they came from, and file them with
 make add-photos. Ticks are kept in this browser.</p>
 {''.join(sections)}
 <script>
@@ -102,4 +98,4 @@ for (const box of document.querySelectorAll("input[data-key]")) {{
 </script></body></html>"""
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 open(OUT, "w").write(page)
-print(f"{len(missing)} releases to search, {len(retake)} in my own photos without a fit judged good -> {pathlib.Path(OUT).resolve().as_uri()}")
+print(f"{len(missing)} releases to search, {len(replace)} from otakaraou alone -> {pathlib.Path(OUT).resolve().as_uri()}")
