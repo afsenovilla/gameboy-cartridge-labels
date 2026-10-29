@@ -19,6 +19,9 @@
 #   make review-fits
 #   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to reviews/fits.json (src/review_fits.py).
 #
+#   make fit-by-hand
+#   A tool, not a step: a local page for placing the plastic and the label by hand where the fit is off, one photo at a time, those judged almost first: drag the recess's corners and the label into place; saved to reviews/fits.json as great fits, which fit-cartridge keeps (src/fit_by_hand.py). Not while make review-fits runs.
+#
 #   make search-photos
 #   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Jauce) for photos of the Game Boy and Game Boy Color releases not in photos/ (those from otakaraou alone apart), into generated/search-photos/index.html (src/search_photos.py).
 #
@@ -29,7 +32,7 @@
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits search-photos name-photos
+.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits fit-by-hand search-photos name-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -60,6 +63,9 @@ clean-fit-cartridge:
 
 review-fits:
 	$(PYTHON) src/review_fits.py
+
+fit-by-hand:
+	$(PYTHON) src/fit_by_hand.py
 
 search-photos:
 	$(PYTHON) src/search_photos.py
