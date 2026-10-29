@@ -41,6 +41,17 @@
   "note": "automatic: query 'メダロット２ パーツコレクション ゲームボーイ', first photo of the listing",
   "sha1": "3bce0a8b615177eced056825bb58b20f84f47c30"
  },
+ "DMG-ADNJ-JPN_4.jpg": {
+  "original_name": "i-img1200x1200-17843907050634bpskaj14842.jpg",
+  "serial_on_label": "DMG-ADNJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "d531df0610a91f9a3b30e0ec481a51affcd4fee5"
+ },
+ "DMG-AFJ.jpg": {
+  "original_name": "i-img1200x800-17890252484178tnlepc33.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "382c817dca81984d70515d763f67d0c67d7a5848"
+ },
  "DMG-AGHJ-JPN_4.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0209/user/4de85e37f2cc010ee64b5d765ea5758a79581da8e31f1e79dbb068181bd11d56/i-img1200x1200-17892872401206173ff02480.jpg",
   "page_url": "https://www.jauce.com/auction/g1244402212",
@@ -110,6 +121,12 @@
   "title_on_page": "攻めCOMダンジョン ドルルルアーガ 商品説明必読！！",
   "note": "automatic: query '攻めＣＯＭダンジョン ドルルルアーガ ゲームボーイ', first photo of the listing",
   "sha1": "1c5de4cdccf3f7bc6ce6e2cbc41197f1f7e56e98"
+ },
+ "DMG-C3J_2.jpg": {
+  "original_name": "i-img900x1200-1706769125lneeeq150219.jpg",
+  "serial_on_label": "DMG-C3J",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f605949107f101981e52690a77d89c77a1a4dd7d"
  },
  "DMG-EHJ_4.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17912640667235mtengl154405.jpg",

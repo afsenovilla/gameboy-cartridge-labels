@@ -69,6 +69,12 @@
   "sha1": "9b81c3e58c13be18acaddc8016af4421e0b5232c",
   "original_name": "s-l1600 (35).webp"
  },
+ "DMG-A8EJ-JPN_3.webp": {
+  "original_name": "s-l1600 (22).webp",
+  "serial_on_label": "DMG-A8EJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "60744c20f5de4803e935103690c81e148bfb53a8"
+ },
  "DMG-A8UJ-JPN.jpg": {
   "serial_on_label": "DMG-A8UJ-JPN",
   "original_sha1": "e66730360a6830ece338a490d8345456e32e3866",
@@ -80,6 +86,12 @@
   "original_sha1": "b73d53ee3043b1729b5b23b962831f852d2747d4",
   "sha1": "a0b071bb3577494a45012d91843da50cd6bb2210",
   "original_name": "s-l1600 - 2026-10-24T151146.542.webp"
+ },
+ "DMG-AALJ-JPN_2.webp": {
+  "original_name": "'.webp",
+  "serial_on_label": "DMG-AALJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c0690fd1f868b2d03c201159506c4cabe9bdd4ca"
  },
  "DMG-AAMJ-JPN.jpg": {
   "serial_on_label": "DMG-AAMJ-JPN",
@@ -110,6 +122,18 @@
   "original_sha1": "90ea84b9f11642fb379df93cf88afcd7cbcb756c",
   "sha1": "e6d9fc012fde411489c5ce8dcff17c1c10c67c6f",
   "original_name": "s-l1600 (11).webp"
+ },
+ "DMG-ABA_2.webp": {
+  "original_name": "s-l1600.webp",
+  "serial_on_label": "DMG-ABA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "be30109e91ffc43fbd35baa92c3f1dd75f4ea880"
+ },
+ "DMG-ABNJ-JPN_4.webp": {
+  "original_name": "s-l1600 (9).webp",
+  "serial_on_label": "DMG-ABNJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f88e3f7464954a597fa6e09abd2ad023bb736e06"
  },
  "DMG-ACJJ-JPN_3.jpg": {
   "serial_on_label": "DMG-ACJJ-JPN",
@@ -271,6 +295,12 @@
   "sha1": "e5e006149067495b9f349fa0b724e18b4c34e3cc",
   "original_name": "s-l1600 (100).webp"
  },
+ "DMG-AM6J-JPN_3.webp": {
+  "original_name": "s-l1600 (14).webp",
+  "serial_on_label": "DMG-AM6J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "44535880140c9b020b30b5ca2cc18cef0e5aadd9"
+ },
  "DMG-AMAJ-JPN_4.jpg": {
   "serial_on_label": "DMG-AMAJ-JPN",
   "original_sha1": "d5b787cf0061100d9204dbdbe2a6bab9fcdd1165",
@@ -313,6 +343,12 @@
   "sha1": "7be236d5ba1e9f4645ed978612be4f2e6be98f41",
   "original_name": "s-l1600 (94).webp"
  },
+ "DMG-AOKJ-JPN_2.webp": {
+  "original_name": "s-l1600 (1).webp",
+  "serial_on_label": "DMG-AOKJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5a9dc060f6b2198729328458b20c89dde89094e6"
+ },
  "DMG-APJ_4.jpg": {
   "serial_on_label": "DMG-APJ",
   "original_sha1": "4e1a4b4c33096a96400b9df076ddba0817967bb1",
@@ -330,6 +366,12 @@
   "original_sha1": "3e692d20be85188e303e75655f608ddde6eefebc",
   "sha1": "c1bd40a78f149e75bc3e4577dc38834895068291",
   "original_name": "s-l1600 (3).webp"
+ },
+ "DMG-AS2J-JPN.webp": {
+  "original_name": "s-l1600 (29).webp",
+  "serial_on_label": "DMG-AS2J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c3cdd904cbcea5b2a597615fa18b817e86702bfa"
  },
  "DMG-AS7J-JPN_2.jpg": {
   "serial_on_label": "DMG-AS7J-JPN",
@@ -504,6 +546,12 @@
   "sha1": "6f538d15d04394e1bc6b0507d154f5349ca7a7f0",
   "original_name": "s-l1600 (15).webp"
  },
+ "DMG-BAA.webp": {
+  "original_name": "s-l1600 (3).webp",
+  "serial_on_label": "DMG-BAA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b3f4f135308cc74ba52cedd99b54af6323223771"
+ },
  "DMG-BD4J-JPN_2.jpg": {
   "serial_on_label": "DMG-BD4J-JPN",
   "original_sha1": "1cabd954527087ea83587b9ebefa364f9e241bee",
@@ -539,11 +587,22 @@
   "sha1": "2da6a68e8367014673223a1f83b3d866ba7b5da1",
   "original_name": "s-l1600 (47).webp"
  },
+ "DMG-BMPJ-JPN_2.webp": {
+  "original_name": "s-l1600 (13).webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "12ac7e9f84dd20ceeed0d582618659a3986c1a19"
+ },
  "DMG-BOJ_2.jpg": {
   "serial_on_label": "DMG-BOJ",
   "original_sha1": "296a16b50afac6e89b3b6d1b626f993cf46b286c",
   "sha1": "776d5dadfa1c5e3249a00bbda498c2e87604056d",
   "original_name": "s-l1600 - 2026-10-24T145034.673.webp"
+ },
+ "DMG-BPA.webp": {
+  "original_name": "s-l1600 (4).webp",
+  "serial_on_label": "DMG-BPA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7c74492c122de4fae29280b6345812b600212740"
  },
  "DMG-BQIJ-JPN_3.jpg": {
   "original_sha1": "84496b15c1a605891217d6525dba45599728fe97",
@@ -591,6 +650,12 @@
   "sha1": "ac0fe8950025859edcd9203e92eeee5ee3e56b83",
   "original_name": "s-l1600 (91).webp"
  },
+ "DMG-COJ.webp": {
+  "original_name": "s-l1600 (12).webp",
+  "serial_on_label": "DMG-COJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "4f3cbdb45f81511ffd52a57d920b209c55526b60"
+ },
  "DMG-CYJ_2.jpg": {
   "serial_on_label": "DMG-CYJ",
   "original_sha1": "71ead24611a9eef067e54d1c4905a07b3880195c",
@@ -602,6 +667,12 @@
   "original_sha1": "209ae53a993c09eb89af9c98de86f9b35ad35dd6",
   "sha1": "5280ac0d03b09734de79619afd46def2f964b352",
   "original_name": "s-l1600 - 2026-10-24T150815.214.webp"
+ },
+ "DMG-D9J.webp": {
+  "original_name": "s-l1600 (15).webp",
+  "serial_on_label": "DMG-D9J",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "fcc4f3a1a57f9d64990ff3e8dc2496f042d22bf4"
  },
  "DMG-DAJ_2.jpg": {
   "serial_on_label": "DMG-DAYJ",
@@ -620,11 +691,34 @@
   "sha1": "b23e3ab4d1a81863bccb9487bcd4ce29268037ba",
   "original_name": "s-l1600 (2).webp"
  },
+ "DMG-DGJ_3.webp": {
+  "original_name": "s-l1600 (21).webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "16422758861f31e1fd470b914918e8c02b80c722"
+ },
+ "DMG-DMJ.webp": {
+  "original_name": "s-l1600 (17).webp",
+  "serial_on_label": "DMG-DMJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "cd7a9fef63d251c2f9a20d3127dbc7e100d24667"
+ },
+ "DMG-DQJ.webp": {
+  "original_name": "s-l1600 (19).webp",
+  "serial_on_label": "DMG-DQJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "11d2326d41c26f8554e3c348453c245207b6ebde"
+ },
  "DMG-DRA_2.jpg": {
   "serial_on_label": "DMG-DRA",
   "original_sha1": "66f2246ecd67550c12d00b352c2a7051573739b4",
   "sha1": "62ff99ce880932e79c4617a9a6b45c506508055e",
   "original_name": "s-l1600 - 2026-10-24T144228.133.webp"
+ },
+ "DMG-DUJ.webp": {
+  "original_name": "s-l1600 (16).webp",
+  "serial_on_label": "DMG-DUJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8e8a838ecaab14803c07e4e5b16980e18ccc9d14"
  },
  "DMG-DUJ_4.jpg": {
   "serial_on_label": "DMG-DUJ",
@@ -661,11 +755,28 @@
   "sha1": "7c87b6265d6f6a958de1017ae07dd0f01fa9b5ff",
   "original_name": "s-l1600 (52).webp"
  },
+ "DMG-FDJ.webp": {
+  "original_name": "s-l1600 (24).webp",
+  "serial_on_label": "DMG-FDJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "1c9866468033c36c76831ba42fb1faf64573f1a4"
+ },
  "DMG-FFJ_3.jpg": {
   "serial_on_label": "DMG-FFJ",
   "original_sha1": "56fb00cdc219ef415c3a2e2b8253aa97c784a194",
   "sha1": "e4843d0e974c346f979d49bc4b1b88ea3a2f5a38",
   "original_name": "s-l1600 - 2026-10-24T150832.509.webp"
+ },
+ "DMG-FIJ_2.webp": {
+  "original_name": "s-l1600 (25).webp",
+  "serial_on_label": "DMG-FIJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "842114978c512fe35a6bb2f8cff0964ab9b1b821"
+ },
+ "DMG-FJJ.webp": {
+  "original_name": "s-l1600 (23).webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "50ec8dd44a954c5c40e1448b5e63b1a88145a9ca"
  },
  "DMG-FKA.jpg": {
   "original_sha1": "75007f29c22d4aa69737a067bd5e9a38739ec582",
@@ -707,6 +818,12 @@
   "original_sha1": "c5d09e187a17a5e487d01fbaf9d92f488cd473b0",
   "sha1": "be75c92b42d06a698d350ec2fb21cefe2586f2b6",
   "original_name": "s-l1600 - 2026-10-24T151006.917.webp"
+ },
+ "DMG-GMA.webp": {
+  "original_name": "s-l1600 (10).webp",
+  "serial_on_label": "DMG-GMA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "1b3d317c16d4d443a4ffcd1f50d525ac39ff40fd"
  },
  "DMG-GTA_2.jpg": {
   "serial_on_label": "DMG-GTA",
@@ -895,6 +1012,12 @@
   "sha1": "bfcdcbd427813cbbcd0fdbcb0c15908db00dcda2",
   "original_name": "s-l1600 - 2026-10-24T145209.859.webp"
  },
+ "DMG-PSJ.webp": {
+  "original_name": "s-l1600 (27).webp",
+  "serial_on_label": "DMG-PSJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "0bb56990e3882faee02c471ee6edcccab3f6d0fe"
+ },
  "DMG-PUJ_2.jpg": {
   "serial_on_label": "DMG-PUJ",
   "original_sha1": "32f900a57023cb131f6eaeb91537302bf4d0bdca",
@@ -955,6 +1078,12 @@
   "sha1": "e93f92e30e5fd1ff0f77f18444cbb39d2792d082",
   "original_name": "s-l1600 (1).webp"
  },
+ "DMG-SPA_2.webp": {
+  "original_name": "s-l1600 (32).webp",
+  "serial_on_label": "DMG-SPA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "0c8234069ac188b4f7ced53c4165c6cac48567fe"
+ },
  "DMG-TFJ.jpg": {
   "original_sha1": "9242b6f880aaf8a7286bc81d4143eae15b8f070e",
   "sha1": "e44226bc334d6d06f21f20e81ce281f0225fb8b9",
@@ -983,6 +1112,12 @@
   "original_sha1": "8f14d1197f276ea606f8798806ac1370c38aa01d",
   "sha1": "b60ca7e7a0d67386efcb98e8f193055c385fc328",
   "original_name": "s-l1600 - 2026-10-24T151040.757.webp"
+ },
+ "DMG-TSA.webp": {
+  "original_name": "s-l1600 (2).webp",
+  "serial_on_label": "DMG-TSA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "bf4efaab8131ec0689b8b44f6b78de828ac6aa50"
  },
  "DMG-U3J_2.jpg": {
   "serial_on_label": "DMG-U3J",
@@ -1078,6 +1213,18 @@
   "original_sha1": "a2ac642d130e29c6ee8be9fc7b88fde21056fb50",
   "sha1": "294871e4e9f5cdff3e74fe30534ebf314a3c0817",
   "original_name": "s-l1600 (97).webp"
+ },
+ "DMG-YVJ.webp": {
+  "original_name": "s-l1600 (18).webp",
+  "serial_on_label": "DMG-YW951",
+  "note": "named by nothing: no serial read",
+  "sha1": "f443fa181700ce508932d3c0b1246aa4af46158d"
+ },
+ "DMG-Z2J.webp": {
+  "original_name": "s-l1600 (20).webp",
+  "serial_on_label": "DMG-Z2J",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "09f95d75c2d75aa9cd94ca7ead0262f87d555bab"
  },
  "DMG-ZEJ_3.jpg": {
   "serial_on_label": "DMG-ZEJ",

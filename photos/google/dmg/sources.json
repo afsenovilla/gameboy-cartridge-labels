@@ -709,6 +709,11 @@
   "sha1": "97b6a04c25d352be1b152aa5f0a242b390b3d110",
   "original_name": "810136.jpg"
  },
+ "DMG-HNJ_2.jpg": {
+  "original_name": "dmg-hnj.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "ce443d582a5acad01089faa0e9f4475c3d5bb951"
+ },
  "DMG-IPJ_2.jpg": {
   "original_sha1": "3c5544aa03e6213fc979cb60da9fa1ed9638c08c",
   "sha1": "b47c5c50c6680549cb3076f4bff80acae50f98c8",
