@@ -106,6 +106,12 @@
   "sha1": "713cd030bd7f5df32ccb590f73205024bb92aab9",
   "original_name": "IMG20250211162219.jpg"
  },
+ "DMG-AAGJ-JPN.webp": {
+  "original_name": "s-l1200.webp",
+  "serial_on_label": "DMG-AAGJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5969cf4210b4868ba4525bc748a1217d71eb1e70"
+ },
  "DMG-AALJ-JPN.jpg": {
   "original_sha1": "e9c1368595cf1342eb1940f93c36c713a873400f",
   "sha1": "004ae0b2b68e3a88787f02d8878633731f6ae1d1",
@@ -300,6 +306,12 @@
   "sha1": "2034ba28cbd0a19746fc396f25932c1cdc1108f6",
   "original_name": "661462729_d16bb28f-4b79-41cf-9118-98b7055664b6.jpg"
  },
+ "DMG-ALA.jpg": {
+  "original_name": "m57127912164_1.jpg",
+  "serial_on_label": "DMG-ALA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b66f44542c086ab3fcc3484efb16fb90bcdaba79"
+ },
  "DMG-ALAP-EUR.jpg": {
   "original_sha1": "832d432251cc7a3e10d1c009b75fe9a6f61c511b",
   "sha1": "95c86f933977b7b155d240d98f387a6ce3e159da",
@@ -345,6 +357,12 @@
   "original_sha1": "9917b1683e96a6e41aff461c72b4aafd335f68ca",
   "sha1": "5a0735d476e1223b8275503982c7fec0eb6b3982",
   "original_name": "il_fullxfull.2928005063_d933.avif"
+ },
+ "DMG-AQJ.jpg": {
+  "original_name": "20231111_0c632e.jpg",
+  "serial_on_label": "DMG-AQJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "953e11754de2c17cf2b54e62032baa8ae897e29f"
  },
  "DMG-ARA_2.jpg": {
   "serial_on_label": "DMG-ARA",
@@ -590,6 +608,18 @@
   "sha1": "ae8e411485ceda937e9ad2d3bdb50adbff5df2cf",
   "original_name": "$_12 (1).jpeg"
  },
+ "DMG-DLA.jpg": {
+  "original_name": "images.jpeg",
+  "serial_on_label": "DMG-DLA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "79bc8f591f62d7ccc3fdcd7e2c2345f72bb69eef"
+ },
+ "DMG-DOJ.jpg": {
+  "original_name": "35a41ffa9f00bbd1f77622511ce2ad6a.jpg",
+  "serial_on_label": "DMG-DOJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "a7b7bb9aca44316b1fa0504ec4449c3fcd6b229d"
+ },
  "DMG-DQJ_2.jpg": {
   "serial_on_label": "DMG-DQJ",
   "original_sha1": "1a372c08cc586821d68d5a3ae6029734971e54aa",
@@ -673,6 +703,12 @@
   "original_sha1": "0c381cfbf3cbed6e66fd16ea6accb5b220a20dac",
   "sha1": "937d2ac77c1600b8e43615b2ea1c3055a728414b",
   "original_name": "661462902_9627ba24-6ea8-4091-88bf-dd37936adf95.webp"
+ },
+ "DMG-GIJ.jpg": {
+  "original_name": "71fEWxai6VL.jpg",
+  "serial_on_label": "DMG-GIJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "9982d49815ed58777fd44ff6eb9b7aa0d43dbbed"
  },
  "DMG-GM-USA.jpg": {
   "serial_on_label": "DMG-GM-USA",

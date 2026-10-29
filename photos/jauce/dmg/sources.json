@@ -20,6 +20,29 @@
   "note": "automatic: query 'ポケットカラー麻雀 ゲームボーイ', first photo of the listing",
   "sha1": "10e79f15fa69bf43ddacbebe0675cd1bce0e2e9b"
  },
+ "DMG-A2OJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-1681967602fviwk3383580.jpg",
+  "serial_on_label": "DMG-A2OJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "11fd5a97e1527c641222a79167d478b8c1de85ff"
+ },
+ "DMG-A4DJ-JPN.jpg": {
+  "original_name": "i-img900x1200-17532464261198ybee6w33.jpg",
+  "serial_on_label": "DMG-A4DW-JPN",
+  "note": "named by nothing: no serial read",
+  "sha1": "9e2b632ba7aeedb1a0faf21c5a0205fdfab07c2b"
+ },
+ "DMG-A56J-JPN.jpg": {
+  "original_name": "i-img1200x903-17931619855571bxprsj38.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "5e423fc9bb5baa8e9f400de124842780f1cb14d7"
+ },
+ "DMG-A5CJ-JPN.jpg": {
+  "original_name": "i-img1160x1200-17875361537419kbh3zl34.jpg",
+  "serial_on_label": "DMG-A5CJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e2a20da4fb695d97acc4f8faa59388ca3657cf73"
+ },
  "DMG-A7CJ-JPN_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0209/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17899018089512ueaqpt67924.jpg",
   "page_url": "https://www.jauce.com/auction/b1245303423",
@@ -40,6 +63,65 @@
   "title_on_page": "メダロット パーツコレクション2 ソフトのみ GB　ラック",
   "note": "automatic: query 'メダロット２ パーツコレクション ゲームボーイ', first photo of the listing",
   "sha1": "3bce0a8b615177eced056825bb58b20f84f47c30"
+ },
+ "DMG-A8MJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-1681446416wtscii105591.jpg",
+  "serial_on_label": "DMG-A8MJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b95a83dba7ffbec0cf7cba5386191867260348f3"
+ },
+ "DMG-A95J-JPN.jpg": {
+  "original_name": "i-img1200x1200-17461595065500vpbolg336.jpg",
+  "serial_on_label": "DMG-A95J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "2648ddca008dd1198a5942b0308cc7819a2a7e31"
+ },
+ "DMG-A9CJ-JPN_2.jpg": {
+  "original_name": "i-img904x1200-179305638314309sbzrs36.jpg",
+  "serial_on_label": "DMG-A9CJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7ce733c43853d7a50b91e07274120a9d83648493"
+ },
+ "DMG-AAJ.jpg": {
+  "original_name": "i-img743x825-17473683292425lxws0w8473.jpg",
+  "serial_on_label": "DMG-AAJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c5d67a0245baa21742be9e241a9a40f10d19eacf"
+ },
+ "DMG-AB7J-JPN_2.jpg": {
+  "original_name": "i-img1200x900-17930776116124opztt0428.jpg",
+  "serial_on_label": "DMG-AB7J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "a2ee75d2c1e75d47f7fcca38500863a0c2038c9a"
+ },
+ "DMG-AB7J-JPN_3.jpg": {
+  "original_name": "i-img600x600-17875349778116zethzl954.jpg",
+  "serial_on_label": "DMG-AB7J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "746895c7468f3c177045bf966c0c3bb0e776e557"
+ },
+ "DMG-ABJJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-1687556653fzxqeb944956.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "771cafa88f62b6860aec1d8813f3c8d99084d034"
+ },
+ "DMG-AC2J-JPN.jpg": {
+  "original_name": "i-img900x1200-17859982114829pd8kxq469.jpg",
+  "serial_on_label": "DMG-AC2J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "efdf8e004fd7b64d1e4cc631a32cd43b9a9e724b"
+ },
+ "DMG-ADAJ-JPN_2.jpg": {
+  "original_name": "i-img1200x1200-17929077105755m9k7nr27.jpg",
+  "serial_on_label": "DMG-ADAJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "0dd3eb0ff684f311a13dc31b9d95e3a2ba79359a"
+ },
+ "DMG-ADKJ-JPN.jpg": {
+  "original_name": "i-img1200x900-17930762352320a1dt4734.jpg",
+  "serial_on_label": "DMG-ADKJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "64bd01c8660d6171e372b55795481218cbb3ce1c"
  },
  "DMG-ADNJ-JPN_4.jpg": {
   "original_name": "i-img1200x1200-17843907050634bpskaj14842.jpg",
@@ -73,6 +155,12 @@
   "note": "automatic: query 'ゴッドメディスン 復刻版 ゲームボーイ', first photo of the listing",
   "sha1": "5c2e224a1fd2cb93b18b7203eee3e93ff1a7ff6e"
  },
+ "DMG-AGXJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-17879042532665euhmhf217156.jpg",
+  "serial_on_label": "DMG-AGXJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "28518ffe07b9c298beaf68692342b31c1080ca92"
+ },
  "DMG-AHMJ-JPN_3.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0209/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-1790234259815067cglc8573.jpg",
   "page_url": "https://www.jauce.com/auction/c1245750510",
@@ -87,12 +175,130 @@
   "note": "automatic: query 'ハムスターパラダイス ゲームボーイ', first photo of the listing",
   "sha1": "aec643cd3fa92f03207194316cf45b5fc1c92a6f"
  },
+ "DMG-AHNJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-175671558091253pvllg617.jpg",
+  "serial_on_label": "DMG-AHNJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7f5b2b5b20943ec4d79e6b4f1aa0cc66792c357d"
+ },
+ "DMG-AJTJ-JPN.jpg": {
+  "original_name": "i-img1152x1033-17913726964769puzmlo34.jpg",
+  "serial_on_label": "DMG-AJTJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "2a430fa9c2a1d09c979ce5d6b99ebe983a074ee9"
+ },
+ "DMG-AKJ.jpg": {
+  "original_name": "i-img1200x1200-17425284262080cojqiv74058.jpg",
+  "serial_on_label": "DMG-AKJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "94154017063ab4633374ab96b6e610dca471df84"
+ },
+ "DMG-AMGJ-JPN.jpg": {
+  "original_name": "i-img1200x901-1773891929552205wsphvh8.jpg",
+  "serial_on_label": "DMG-AMGJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "3e1bbfe766cd0896e3fedeeca0e26628647d9b76"
+ },
+ "DMG-AMUJ-JPN.jpg": {
+  "original_name": "i-img1200x900-17652589514732uif4gq17668.jpg",
+  "serial_on_label": "DMG-AMUJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f128faad2cea7d6ced3084622b260395f9877d85"
+ },
+ "DMG-AMZJ-JPN_2.jpg": {
+  "original_name": "i-img1200x1200-17922129288659mi1qyt33.jpg",
+  "serial_on_label": "DMG-AMZJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "4837a1b9a59c483a27c510b3a4e59684077abd1e"
+ },
+ "DMG-AN3J-JPN.jpg": {
+  "original_name": "i-img1200x675-1784026890406943si8lvn8.jpg",
+  "serial_on_label": "DMG-AN3J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "6ba3ea32bd223c521e7eb226312ad555445f9de0"
+ },
+ "DMG-ANPJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-1531561033iikjmv361440.jpg",
+  "serial_on_label": "DMG-ANPJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "fca9342fda489e7bebcc5053c3796af8873ff2c8"
+ },
+ "DMG-AOEJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-178618770027547mtw0j27.jpg",
+  "serial_on_label": "DMG-AOEJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "6d2a9c82b385f108049f49557e1d86443fc70b18"
+ },
+ "DMG-APNJ-JPN_2.jpg": {
+  "original_name": "i-img1200x900-178728511803241tpqw935.jpg",
+  "serial_on_label": "DMG-APNJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e66a6d48112cc9221f481c5ded6de6a80f3b724c"
+ },
+ "DMG-AQEJ-JPN.jpg": {
+  "original_name": "i-img1200x900-17859021919548nsmkxz4098.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "ba5201dc63275a9b10e4642adf240f988631a701"
+ },
+ "DMG-AR2J-JPN.jpg": {
+  "original_name": "i-img1200x1200-17877179752751tjfrqm34.jpg",
+  "serial_on_label": "DMG-AR2J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "fae65488b6e164f58ac966a7b394f7d235d520f6"
+ },
  "DMG-ARAJ-JPN.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0205/user/60be8994dac5d5173f68cc5ae99bff302e26ba4a2ee2f416f24fe46e556cea63/i-img900x1200-17795991593695bxpvev34.jpg",
   "page_url": "https://www.jauce.com/auction/u1231023540",
   "title_on_page": "ゲームボーイ ロードス島戦記",
   "note": "automatic: query 'ロードス島戦記 －英雄騎士伝－ ＧＢ ゲームボーイ', first photo of the listing",
   "sha1": "7847a01e94ace96aee4976b33e39627587bcbd77"
+ },
+ "DMG-ASGJ-JPN_2.jpg": {
+  "original_name": "i-img1025x1200-17718017370214qhn27h37904.jpg",
+  "serial_on_label": "DMG-ASGJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c74ed6ebf2abc3c3cd165e95b785b3fac2217f71"
+ },
+ "DMG-ASJ.jpg": {
+  "original_name": "i-img1200x1200-17912576903980a5so1r152660.jpg",
+  "serial_on_label": "DMG-ASJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "9a2704b45465b0a2e573384877742fe8d7cc5e89"
+ },
+ "DMG-AWIJ-JPN.jpg": {
+  "original_name": "i-img600x600-1791819876016666ta6v15439.jpg",
+  "serial_on_label": "DMG-AWIJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f150c729fbd7515e8d2fb2b615ebed16b003ee5f"
+ },
+ "DMG-AWMJ-JPN.jpg": {
+  "original_name": "i-img600x600-179181789325739etcpu11740.jpg",
+  "serial_on_label": "DMG-AWMJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "611a859cffa2bffbf0b819eacab4d098019318ef"
+ },
+ "DMG-AXAJ-JPN.jpg": {
+  "original_name": "i-img1200x904-1753291070058660n8m1409.jpg",
+  "serial_on_label": "DMG-AXAJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "10bfaa223bba588aa5c28f0c23b3f0108dbcf7dc"
+ },
+ "DMG-AY2J-JPN.jpg": {
+  "original_name": "i-img1200x675-1786808357251537hki9rd8.jpg",
+  "serial_on_label": "DMG-AY2J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e1a4e251eeeba3078c2092d262708f5cb0df30a9"
+ },
+ "DMG-BDTJ-JPN.jpg": {
+  "original_name": "i-img898x1198-1699442938yiw4z77.jpg",
+  "serial_on_label": "DMG-BDTJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "81a93df2ad6630eeba5a2c9aa32f98782cb600d2"
+ },
+ "DMG-BG2J-JPN.jpg": {
+  "original_name": "i-img1200x1200-1676021724x6rv9b642586.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "8871cf0a613fa453e5832dc11a1afea8d78b6159"
  },
  "DMG-BORJ-JPN_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0204/user/6ee80e603de58c4594c48c839cc4e2734ae0c0871491ac076099a7565377eeb8/i-img1200x901-1777092614860490tbs0zz8.jpg",
@@ -122,11 +328,46 @@
   "note": "automatic: query '攻めＣＯＭダンジョン ドルルルアーガ ゲームボーイ', first photo of the listing",
   "sha1": "1c5de4cdccf3f7bc6ce6e2cbc41197f1f7e56e98"
  },
+ "DMG-BXLJ-JPN.jpg": {
+  "original_name": "i-img1200x901-1778103311313158ljcxca8.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "afe071ecdad065789f051c4791a7f0c8c6492ee0"
+ },
  "DMG-C3J_2.jpg": {
   "original_name": "i-img900x1200-1706769125lneeeq150219.jpg",
   "serial_on_label": "DMG-C3J",
   "note": "named by the serial read on it (exact)",
   "sha1": "f605949107f101981e52690a77d89c77a1a4dd7d"
+ },
+ "DMG-C9A.jpg": {
+  "original_name": "i-img529x529-177728019733963vsvld33.jpg",
+  "serial_on_label": "DMG-C9A",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "18856f80b298423d6f6291f7eebc3e417d24774a"
+ },
+ "DMG-CDJ.jpg": {
+  "original_name": "i-img1200x900-17768528489415wcdwpp296755.jpg",
+  "serial_on_label": "DMG-CDJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "faa0a6eb4a3ef593b087c7ce95554e8a044e367a"
+ },
+ "DMG-DBJ.jpg": {
+  "original_name": "i-img1200x1200-17852191913798dwoiwz51675.jpg",
+  "serial_on_label": "DMG-DB",
+  "note": "named by nothing: no serial read",
+  "sha1": "e43da296fa519244baf45430874f3ca32de8bd01"
+ },
+ "DMG-DUJ_2.jpg": {
+  "original_name": "i-img1200x1200-1791454072358343ssnxs28.jpg",
+  "serial_on_label": "DMG-DUJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "cb596f8c23f1b558014acbe733c07ecbbe555b35"
+ },
+ "DMG-DZJ.jpg": {
+  "original_name": "i-img1200x1200-17912617898254geh8o31213.jpg",
+  "serial_on_label": "DMG-DZJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "d41d27d58dd57c1f6a7f850ad6eb9db06f32dbf2"
  },
  "DMG-EHJ_4.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17912640667235mtengl154405.jpg",
@@ -149,6 +390,18 @@
   "note": "automatic: query 'テトリスフラッシュ ゲームボーイ', first photo of the listing",
   "sha1": "b83917a4f1db3c904b5c95376cf6230610326f48"
  },
+ "DMG-EPJ.jpg": {
+  "original_name": "i-img735x825-17684679820890ke7ca931662.jpg",
+  "serial_on_label": "DMG-EPJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "511f0f66d7806f94710f471164a2086f9f75a252"
+ },
+ "DMG-FQJ.jpg": {
+  "original_name": "i-img900x1200-178893759005533efnmu6559.jpg",
+  "serial_on_label": "DMG-FQJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b0be187f066a651ac6d6ff03671453b03b006934"
+ },
  "DMG-G3J_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0208/user/17ace05dc806d3acec46fc1b3d7717c650f9f239c99a0a6c87c8b7c10c0060b0/i-img1200x1200-17858473015902wyyyih81378.jpg",
   "page_url": "https://www.jauce.com/auction/e1239640673",
@@ -169,6 +422,30 @@
   "title_on_page": "GB ゲームボーイ SD戦国外伝2 天下統一編 ソフトのみ 起動確認済",
   "note": "automatic: query 'ＳＤ戦国伝２・天下統一編 ゲームボーイ', first photo of the listing",
   "sha1": "2430bea1099a7ec15ed12cc6b546dc7a69529175"
+ },
+ "DMG-GJJ.jpg": {
+  "original_name": "i-img1163x1200-1602386089w4g5nf1314023.jpg",
+  "serial_on_label": "DMG-GJJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "3c053286910bd434150ae37daae225a2c5c779e6"
+ },
+ "DMG-GJJ_2.jpg": {
+  "original_name": "i-img1200x900-1773110348802375pnzral8.jpg",
+  "serial_on_label": "DMG-GJJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "977f36078e8c102ffe03663498b0a3d97e942a66"
+ },
+ "DMG-GOA.jpg": {
+  "original_name": "i-img1200x1200-17906507126554sk4sla2404.jpg",
+  "serial_on_label": "DMG-GOA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "665cd12bdb3b8c852f397c5d0752290318b77a46"
+ },
+ "DMG-H2A.jpg": {
+  "original_name": "i-img1200x1200-178598634110818uij7e51675.jpg",
+  "serial_on_label": "DMG-H2A",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "dd5de613754d995438ed11f59f43d98ac02b822c"
  },
  "DMG-HKJ_3.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0207/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17852885982686ayih4p3696.jpg",
@@ -191,12 +468,36 @@
   "note": "automatic: query '北斗の拳  凄絶十番勝負 ゲームボーイ', first photo of the listing",
   "sha1": "385f031bab85b435d9639482d3eda49a0a2a0052"
  },
+ "DMG-HMJ.jpg": {
+  "original_name": "i-img1070x1200-17339927618255rplpp89297.jpg",
+  "serial_on_label": "DMG-HMI",
+  "note": "named by nothing: no serial read",
+  "sha1": "fde22499905b7a073d3764f93ddd7dad9b247c15"
+ },
+ "DMG-HZJ.jpg": {
+  "original_name": "i-img964x1200-16832251602fdyfc437285.jpg",
+  "serial_on_label": "DMG-HZJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5bd70271191b30f3bd0130c5d41f41e3f3cd9e17"
+ },
+ "DMG-IFJ.jpg": {
+  "original_name": "i-img1200x901-1776209986104582ybgpjz8.jpg",
+  "serial_on_label": "DMG-IFJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "adaf27f969a5ca5f7ebe35e896f5c781890249ad"
+ },
  "DMG-ISJ_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/4fbc5e4c78dee3d3965bed04ddd455b7e05a1f03bb5235fbdaf6ca4b740ff2ed/i-img1200x1200-17912463227165m3y5hn36.jpg",
   "page_url": "https://www.jauce.com/auction/k1247208750",
   "title_on_page": "三國志 ゲームボーイ版 GameBoy ゲームボーイ 動作確認済・端子清掃済[GB8416_465]",
   "note": "automatic: query '三國志・ゲームボーイ版 ゲームボーイ', first photo of the listing",
   "sha1": "60b57b10fedd81355e8445eba78c2732224177cd"
+ },
+ "DMG-JAJ.jpg": {
+  "original_name": "i-img1200x900-1776210543720094f0dcrh8.jpg",
+  "serial_on_label": "DMG-JAJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "4a28b0fd855e66793f51b6f62b4125c98e63860a"
  },
  "DMG-JFJ_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0508/user/291672dedaf984e72b69b146db3cf10009303c0dc171fb97ab77baddabd9bb41/i-img1200x1200-1723269233925774q47b70945.jpg",
@@ -212,12 +513,190 @@
   "note": "automatic: query '雀四郎 ゲームボーイ', first photo of the listing",
   "sha1": "ce5cda5b1d8a9fe2b8a160bbb421e67b72ef22e0"
  },
+ "DMG-KBJ.jpg": {
+  "original_name": "i-img756x825-17796035012521fmo0gc42419.jpg",
+  "serial_on_label": "DMG-KBJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "38b186169adc67d20a16acfffc9981ea212273ad"
+ },
+ "DMG-KFJ.jpg": {
+  "original_name": "i-img1200x1200-1757819053171839sovqjn8.jpg",
+  "serial_on_label": "DMG-KFJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "92170afbb0cbce0d2330d5d2a49e29f69e81619d"
+ },
+ "DMG-KIJ.jpg": {
+  "original_name": "i-img600x600-17764191183505ym3yyh14760.jpg",
+  "serial_on_label": "DMG-KIJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "3ca96a2430e20483cc678e558db41efbb9532773"
+ },
+ "DMG-KJJ.jpg": {
+  "original_name": "i-img1200x1200-179324375995990uonx335.jpg",
+  "serial_on_label": "DMG-KJJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e8facb2ac039965543031f23c7e430a68c87c55f"
+ },
+ "DMG-KOJ_2.jpg": {
+  "original_name": "i-img800x800-17722875380021q0ku9k171823.jpg",
+  "serial_on_label": "DMG-KOJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8a516622cdbb958d047583c8e0af43754b8ec537"
+ },
+ "DMG-KTJ.jpg": {
+  "original_name": "i-img1200x900-1777079826479286t6ghdq8.jpg",
+  "serial_on_label": "DMG-KTJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "d298e152e989639ee127a195970b749662ee36e2"
+ },
+ "DMG-LOJ_2.jpg": {
+  "original_name": "i-img1200x1200-17880578782762av6ih284980.jpg",
+  "serial_on_label": "DMG-LOJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7916e4c04da6a3b69010bead77b72bd64a17ffca"
+ },
+ "DMG-MQJ.jpg": {
+  "original_name": "i-img1200x900-1787818729972031el8as58.jpg",
+  "serial_on_label": "DMG-MQJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "230f6c76b26e9969fa72a8bf231075bd4a2bea0e"
+ },
+ "DMG-MUJ.jpg": {
+  "original_name": "i-img1045x1200-17831563615103ph2g4o34.jpg",
+  "serial_on_label": "DMG-MUJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c2e2c0d45d12744d0ddc266bbc3aef285fd156f2"
+ },
+ "DMG-NDJ.jpg": {
+  "original_name": "i-img1200x900-1778284822747885chkkjf8.jpg",
+  "serial_on_label": "DMG-NDJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8734191dac44a4498c68d51cdad81477526ace88"
+ },
+ "DMG-OHJ.jpg": {
+  "original_name": "i-img1200x1200-17881444295077ysezty189538.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "66dc677dfffc3fee823f1a639b90945f76ad84d8"
+ },
+ "DMG-OMJ.jpg": {
+  "original_name": "i-img1200x901-1789204913015120jiy2ma8.jpg",
+  "serial_on_label": "DMG-OMJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "eaef8e71e59ed1a89b70a1edffcdf07940855b70"
+ },
+ "DMG-PEJ.jpg": {
+  "original_name": "i-img1200x900-17875375164059kveqi1217.jpg",
+  "serial_on_label": "DMG-PEU",
+  "note": "named by nothing: no serial read",
+  "sha1": "b21ed332ccd03bd2f1f5ff6d060a902fb033cbb0"
+ },
+ "DMG-PFJ.jpg": {
+  "original_name": "i-img1200x1200-17290870831557kmz0ml189346.jpg",
+  "serial_on_label": "DMG-PFJMA",
+  "note": "named by nothing: no serial read",
+  "sha1": "b96a0f0ecb2b58dea88ecfc61f4920ffec3a61ee"
+ },
+ "DMG-PIJ.jpg": {
+  "original_name": "i-img743x809-17922120442629e2wb2233098.jpg",
+  "serial_on_label": "DMG-PIJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "1a6cce561879c65595b1998040cf2768b05a6eef"
+ },
+ "DMG-PJJ.jpg": {
+  "original_name": "i-img1200x904-1722255232zrxkuv29.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "a1be50d9a3c341dfc2d7445357c374bdc3c813aa"
+ },
+ "DMG-QAJ_2.jpg": {
+  "original_name": "i-img1200x1200-17893555011962ywlxur33.jpg",
+  "serial_on_label": "DMG-QAJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "4b2bf17bd9f8f6a864a640c8707f94bd51b3e6ef"
+ },
+ "DMG-R6J.jpg": {
+  "original_name": "i-img1200x900-1777537602242991gbtiur8.jpg",
+  "serial_on_label": "DMG-R6J",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "2c8b55523965d0baf06ede60ae2e35c3392b0e63"
+ },
+ "DMG-RDJ.jpg": {
+  "original_name": "i-img1200x901-17782287288459590u4v6h8.jpg",
+  "serial_on_label": "DMG-RDJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "d307506a409893fc91d666ee6e0b14cccc5a2fb5"
+ },
  "DMG-RNJ_3.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0511/user/291672dedaf984e72b69b146db3cf10009303c0dc171fb97ab77baddabd9bb41/i-img1200x1200-17325095890908jcjgzy285417.jpg",
   "page_url": "https://www.jauce.com/auction/s1162567945",
   "title_on_page": "◆◆ GB ランマ1／2 ケース付き　◆◆ ゲームボーイ ソフトのみ",
   "note": "automatic: query 'らんま１／２ ゲームボーイ', first photo of the listing",
   "sha1": "6b79a3025a5d78f4cc6cbd4f2db75d1ffbb5b1d1"
+ },
+ "DMG-RTJ.jpg": {
+  "original_name": "i-img1080x1080-16507935481jfv4i733199.jpg",
+  "serial_on_label": "DMG-RTJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "89a90ccf37e195c083bfd9311ddac1726fa03602"
+ },
+ "DMG-RTJ_2.jpg": {
+  "original_name": "i-img900x1200-1730690657ai7zem6.jpg",
+  "serial_on_label": "DMG-RTJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b721c5f3322ff0fe6dd626b1e4bb965da1e1d8ee"
+ },
+ "DMG-RUA.jpg": {
+  "original_name": "i-img1200x1200-1768043266278584dubgnh8.jpg",
+  "serial_on_label": "DMG-RUA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "1112e8cdbb9662a15b5022144cacc50e0fb3b49a"
+ },
+ "DMG-SEJ.jpg": {
+  "original_name": "i-img1200x900-1775361306492920aye5sm8.jpg",
+  "serial_on_label": "DMG-SEJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5f5089824743a37b8276da048a961c08bbeb7de0"
+ },
+ "DMG-SEJ_2.jpg": {
+  "original_name": "i-img1200x901-1779776385259886siy6mn8.jpg",
+  "serial_on_label": "DMG-SEJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "94c6b906e807af0c2ef45d703248089cbf75621b"
+ },
+ "DMG-SFJ.jpg": {
+  "original_name": "i-img1200x901-1789786080648600qb9tzs8.jpg",
+  "serial_on_label": "DMG-SFJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "4ba37019cab706a33d679104cf249e1370a90bd6"
+ },
+ "DMG-TAJ.jpg": {
+  "original_name": "i-img1200x1200-17911767228041dqb75o61269.jpg",
+  "serial_on_label": "DMG-TAJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "3002afe331017916d5bdfe997b68108d6a76e8a5"
+ },
+ "DMG-TLA.jpg": {
+  "original_name": "i-img900x1200-17912775806716mgxrta9186.jpg",
+  "serial_on_label": "DMG-TLA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "fc112cab06b566086620bab3e23493ced06ab0be"
+ },
+ "DMG-TYJ.jpg": {
+  "original_name": "i-img1200x900-1777078885401781qymhc28.jpg",
+  "serial_on_label": "DMG-TYJ",
+  "note": "named by the serial read on it (near)",
+  "sha1": "bdb12b61bdd09f1c546b2900d670e06a462fd4b5"
+ },
+ "DMG-UBJ.jpg": {
+  "original_name": "i-img1200x1200-17923822758678dobujm3560.jpg",
+  "serial_on_label": "DMG-UBJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c3a00c01f699e9c16a49d7058ca33f10da108795"
+ },
+ "DMG-UEJ.jpg": {
+  "original_name": "i-img1200x900-178711706417229c9evx40814.jpg",
+  "serial_on_label": "DMG-UEJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "cdf34ef090cbb6c941dd364e79b9da3beba8b343"
  },
  "DMG-UJA_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0112/user/4de85e37f2cc010ee64b5d765ea5758a79581da8e31f1e79dbb068181bd11d56/i-img1200x900-176664434165343kurgr2209.jpg",
@@ -233,6 +712,24 @@
   "note": "automatic: query '最後の忍道 ゲームボーイ', first photo of the listing",
   "sha1": "875304b827efff37fc7211d1de3d08399f5f2b99"
  },
+ "DMG-VKJ.jpg": {
+  "original_name": "i-img1200x901-1778099830369606u1stai8.jpg",
+  "serial_on_label": "DMG-VK",
+  "note": "named by nothing: no serial read",
+  "sha1": "d951af69b0b84a126a812668f6e833d9aa0a1a0c"
+ },
+ "DMG-VXJ.jpg": {
+  "original_name": "i-img1101x1200-17931756959460sn3yb335.jpg",
+  "serial_on_label": "DMG-VXJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "788abb88229bf88b6f14c36eaf01708c9ceae735"
+ },
+ "DMG-WOJ.jpg": {
+  "original_name": "i-img1200x900-174308927488200x3pac16308.jpg",
+  "serial_on_label": "DMG-WOJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "9fa8401f02e00a0d6bf670a6299d6a8e04169a94"
+ },
  "DMG-ZEJ_4.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0108/user/d451ba56b45602e5cf768ef26b967d7bd211e97747488133d40d235e3a206bc0/i-img1200x1200-17565482218260uyt01q34.jpg",
   "page_url": "https://www.jauce.com/auction/q1198280685",
@@ -246,5 +743,11 @@
   "title_on_page": "GB ゲームボーイ ザードの伝説",
   "note": "automatic: query 'ザードの伝説 ゲームボーイ', first photo of the listing",
   "sha1": "0135952d093eb8505dbac10c0f1e720d9c69fe01"
+ },
+ "DMG-ZPJ.jpg": {
+  "original_name": "i-img900x1200-1681752693qnsv87259458.jpg",
+  "serial_on_label": "DMG-ZPJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b398f161729c887836b4f42fb43d0ab79318db33"
  }
 }

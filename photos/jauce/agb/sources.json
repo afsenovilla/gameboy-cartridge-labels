@@ -12,5 +12,17 @@
   "title_on_page": "☆GBA　モンスターファームアドバンス　タクティクスオウガ外伝 The Knight of Lodis　レターパックライトGB30本までGBA30本以上同梱可☆",
   "note": "automatic: query 'モンスター タクティクス ゲームボーイ', first photo of the listing",
   "sha1": "fd71bb2881eed5560e2b52ac4447ea1e92e81152"
+ },
+ "AGB-ANSJ.jpg": {
+  "original_name": "i-img1200x933-17926403827382bixmfc35.jpg",
+  "serial_on_label": "AGB-ANSJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5d2048d0dd3a49b6ca732c080f75df2e091b9b55"
+ },
+ "AGB-FBFJ-JPN_2.jpg": {
+  "original_name": "i-img1200x900-17859142876501h65hoy136381.jpg",
+  "serial_on_label": "AGB-FBFJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "73e88d1234b898551a34b894bc4fb6fa498df4ee"
  }
 }
