@@ -13,11 +13,17 @@
 #   make match-serials
 #   Matches the serial on each photo's label, from its text, against gb-game-list's releases, into generated/match-serials/serials.tsv (src/match_serials.py).
 #
+#   make fit-cartridge
+#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text, into generated/fit-cartridge/<photo>.json: the pose of its plastic (the label is left for a later step), and flags for review; a fit judged good in reviews/fits.json is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py).
+#
+#   make review-fits
+#   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to reviews/fits.json (src/review_fits.py).
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials
+.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -39,6 +45,15 @@ match-serials:
 
 clean-match-serials:
 	rm -rf generated/match-serials
+
+fit-cartridge:
+	$(PYTHON) src/fit_cartridge.py
+
+clean-fit-cartridge:
+	rm -rf generated/fit-cartridge
+
+review-fits:
+	$(PYTHON) src/review_fits.py
 
 # The text recognition tool, built when missing (macOS).
 src/ocr: src/ocr.swift

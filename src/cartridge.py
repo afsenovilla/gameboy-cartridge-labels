@@ -1,0 +1,635 @@
+import csv, re, warnings, cv2, numpy as np
+
+# The models of the Game Boy cartridges' shells, and fitting one to a photo, for fit-cartridge (src/fit_cartridge.py):
+# started from the text read on the photo, points on the model's edges look along their normals for the strongest
+# change, and the model's pose (mm -> photo pixels) is fitted to them. Two shells (Shell): the Game Boy's (DMG), which
+# Game Boy Color games that also play on a Game Boy came in too, and the clear Game Boy Color only cartridge's (CGB,
+# serials CGB-...). In millimetres on the cartridge's front (origin top left of the body, x right, y down): the DMG's
+# body 57 x 65, recess 44 x 39 inset 6.5 from the sides and 18 from the top, label 42.5 x 37 centered in the recess.
+# Only the plastic's pose is fitted: labels are stuck on a little shifted and turned, so their edges only help to get
+# close.
+
+BODY = (57.0, 65.0)
+RECESS = (6.5, 18.0, 50.5, 57.0)
+LABEL = (7.25, 19.0, 49.75, 56.0)
+# The recess's corners' radius: an arc and two straight sides fitted to the wall at each corner, warped to mm through a
+# good fit (IMG_7477: 0.95 to 1.15 mm).
+RECESS_RADIUS = 1.05
+
+
+# Cartridges whose shell isn't this one (rumble, tilt sensor, infrared...), listed by hand: game code -> shell.
+SPECIAL_SHELLS = "special-shells.tsv"
+
+
+def special_shell(serial):
+    """What is special about the shell of the cartridge with this serial or release id (special-shells.tsv), or None."""
+    rows = csv.DictReader((l for l in open(SPECIAL_SHELLS) if not l.startswith("#")), delimiter="\t")
+    return next((r["shell"] for r in rows if re.match(re.escape(r["code"]) + r"[A-Z]?(-|$)", serial)), None)
+
+
+def corners_of(rect):
+    x1, y1, x2, y2 = rect
+    return np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], np.float64)
+
+
+# The embossed "Nintendo GAME BOY™" in the pill, as macOS's text recognition boxes the line (tools/ocr.swift): through
+# 72 unflagged fits of my photos (2026-10-22) it was found in all, its box's corners within 0.15 mm (middle half) of
+# x 10.7 to 46.5 and y 8.5 to 12.5 mm, though the text is read garbled ("NinteendeGAME BOYT"). The line's left end moves
+# when label text beside it is read into it ("しれてたしさしたさにGAIME BOY TT"), so starts use its right end (the ™):
+# the middle of its right edge at 46.48, 10.57 (10 to 90 %: x 46.26 to 46.75, y 10.36 to 10.79), and its height, 3.95
+# mm (10 to 90 %: 3.81 to 4.34).
+EMBOSS = (10.68, 8.5, 46.47, 12.5)
+EMBOSS_RIGHT = (46.48, 10.57)
+EMBOSS_HEIGHT = 3.95
+
+
+def emboss_lines(lines, count=3):
+    """Of the OCR's lines ({"text", "quad"}), the few most like the embossed "Nintendo GAME BOY", best first: other lines
+    can read alike (e.g. "©1993 Nintendo MADE IN JAPAN"), so each is tried as a start. Lines with "COLOR" are left out:
+    on black cartridges the embossing is often too faint to read, and the label's "GAME BOY COLOR" (along its left
+    side, turned 90 degrees) was taken for it."""
+    import difflib, re
+    letters = lambda t: re.sub(r"[^A-Za-z]", "", t).upper()
+    score = lambda t: difflib.SequenceMatcher(None, letters(t), "NINTENDOGAMEBOY").ratio()
+    lines = [l for l in lines if "COLO" not in letters(l["text"]) and "OLOR" not in letters(l["text"])]
+    return sorted((l for l in lines if score(l["text"]) >= 0.4), key=lambda l: -score(l["text"]))[:count]
+
+
+def emboss_start(line, scale=1.0, dy=0.0):
+    """A start for the fit from the embossed line's quadrilateral (top left, top right, bottom right, bottom left): a
+    similarity taking EMBOSS_RIGHT to the middle of its right edge, turned along its top edge, EMBOSS_HEIGHT to the right
+    edge's length times scale, and shifted dy mm down."""
+    q = np.array(line["quad"], np.float64)
+    u = (q[1] - q[0]) / np.linalg.norm(q[1] - q[0])
+    n = np.array([-u[1], u[0]])  # down the text
+    s = np.linalg.norm(q[2] - q[1]) / EMBOSS_HEIGHT * scale
+    A = s * np.c_[u, n]
+    t = (q[1] + q[2]) / 2 - A @ (np.array(EMBOSS_RIGHT) + [0, dy])
+    return np.vstack([np.c_[A, t], [0, 0, 1]])
+
+
+# "GAME BOY COLOR" along the left side of the labels of cartridges that also play on a Game Boy Color (often black ones,
+# whose embossing is too faint to read): read upward, so the text's box (top left, top right, bottom right, bottom left
+# as it reads) lies at these corners, through 13 unflagged fits of my photos (2026-10-22; 10 to 90 % within about 1 mm,
+# as labels are stuck on a little shifted).
+COLOR_TEXT = np.array([[8.77, 53.32], [8.9, 21.75], [13.11, 21.75], [13.08, 53.35]])
+
+
+def color_lines(lines):
+    """Of the OCR's lines, those reading "GAME BOY COLOR"."""
+    import re
+    letters = lambda t: re.sub(r"[^A-Za-z]", "", t).upper()
+    return [l for l in lines if ("COLO" in letters(l["text"]) or "OLOR" in letters(l["text"])) and ("BOY" in letters(l["text"]) or "GAME" in letters(l["text"]))]
+
+
+def color_start(line, scale=1.0, dy=0.0, angle=0.0, text=COLOR_TEXT):
+    """A start for the fit from a "GAME BOY COLOR" line: the similarity (least squares) taking the text's corners in mm
+    (COLOR_TEXT on DMG cartridges) to its quadrilateral, scaled by scale and turned by angle (degrees) about the text's
+    center, and shifted dy mm down."""
+    mm = np.asarray(text) - [0, dy]
+    c = mm.mean(axis=0)
+    a = np.radians(angle)
+    mm = c + (mm - c) @ np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]]) * scale
+    return similarity(mm, line["quad"])
+
+
+def similarity(mm, photo):
+    """The similarity (least squares) taking points in mm to points in the photo, as a homography."""
+    mm, q = np.asarray(mm, np.float64), np.asarray(photo, np.float64)
+    n = len(mm)
+    # x' = a x - b y + tx, y' = b x + a y + ty
+    A = np.vstack([np.c_[mm[:, 0], -mm[:, 1], np.ones(n), np.zeros(n)], np.c_[mm[:, 1], mm[:, 0], np.zeros(n), np.ones(n)]])
+    a, b, tx, ty = np.linalg.lstsq(A, np.r_[q[:, 0], q[:, 1]], rcond=None)[0]
+    return np.array([[a, -b, tx], [b, a, ty], [0, 0, 1]])
+
+
+def turn(H):
+    """The turn of a similarity (or a near one), in degrees."""
+    return float(np.degrees(np.arctan2(H[1, 0], H[0, 0])))
+
+
+# Texts along the label's grey side strips (US and European labels), as read on 111 unflagged fits of my photos
+# (2026-10-22): the text's box (as it reads) at these corners. Across the strip they lie within about 0.5 mm (10 to
+# 90 %), along it within 3 to 7 mm, as the texts differ in length; they fix where the label's sides are, and its turn.
+# "MADE IN JAPAN" also stands anywhere, level, on Japanese labels, so it is only used running down (turned 90 degrees
+# from the embossed line, when that is read). "THIS SIDE OUT" was read on only 6 of about 15 labels with it.
+STRIP_TEXTS = {
+    # Down the left strip: the serial with its region (DMG-ASWP-EUR, DMG-ML-SCN).
+    "serial": np.array([[10.61, 21.59], [10.65, 34.15], [8.83, 34.15], [8.87, 21.58]]),
+    # Down the left strip, below the serial.
+    "made in japan": np.array([[10.74, 39.7], [10.68, 54.04], [9.06, 54.03], [9.12, 39.61]]),
+    # Up the right strip.
+    "this side out": np.array([[45.58, 53.11], [45.43, 44.49], [46.65, 44.48], [46.81, 53.12]]),
+}
+
+
+def strip_lines(lines):
+    """Of the OCR's lines, those reading one of STRIP_TEXTS, as (kind, line)."""
+    import difflib, re
+    letters = lambda t: re.sub(r"[^A-Za-z]", "", t).upper()
+    sim = lambda a, b: difflib.SequenceMatcher(None, a, b).ratio()
+    found = []
+    for l in lines:
+        t = letters(l["text"])
+        if re.match(r"DMG[A-Z0-9]{1,5}(NOE|USA|EUR|UKV|SCN|FRG|FAH|ESP|ITA|GPS|AUS|EUU|HOL|FRA|CAN|SWE)", t):
+            found.append(("serial", l))
+        elif sim(t, "MADEINJAPAN") >= 0.7:
+            found.append(("made in japan", l))
+        elif sim(t, "THISSIDEOUT") >= 0.6:
+            found.append(("this side out", l))
+    return found
+
+
+def text_starts(lines, shell, scales=(0.92, 1.0, 1.08), dys=(-0.5, 0.0, 0.5)):
+    """Starts for the fit from the OCR's lines, each at a few scales and shifts: the embossed "Nintendo GAME BOY" (the
+    few lines most like it); "GAME BOY COLOR", also turned a little (its box's turn was several degrees off on black
+    cartridges); and, only when no embossed line is read, the strip texts. Strip texts as starts beside the embossed
+    line (also one similarity through all their points) found no better fits, only rivals a few mm away that flagged
+    good fits as ambiguous: on my photos 111 -> 113 unflagged, on those found online 41 -> 41, and the excellent
+    DMG-CJ_2 lost. A strip text's start is dropped when it turns the cartridge over 45 degrees from upright: read
+    upside down, or "MADE IN JAPAN" standing level on a Japanese label. On the CGB's shell only "GAME BOY COLOR", where
+    it lies on that shell's label: the others aren't measured there."""
+    if shell.name == "cgb":
+        return [color_start(l, s, d, a, shell.color_text) for l in color_lines(lines) for s in scales for d in dys for a in (-6, -3, 0, 3, 6)]
+    emboss = emboss_lines(lines)
+    starts = [emboss_start(l, s, d) for l in emboss for s in scales for d in dys]
+    starts += [color_start(l, s, d, a) for l in color_lines(lines) for s in scales for d in dys for a in (-6, -3, 0, 3, 6)]
+    if not emboss:
+        for kind, l in strip_lines(lines):
+            mm = STRIP_TEXTS[kind]
+            if abs((turn(similarity(mm, l["quad"])) + 180) % 360 - 180) >= 45:
+                continue
+            c = mm.mean(axis=0)
+            starts += [similarity(c + (mm - c) * s - [0, d], l["quad"]) for s in scales for d in (-2.0, 0.0, 2.0)]
+    return starts
+
+
+def edges_of(rect):
+    x1, y1, x2, y2 = rect
+    # (start, end, outward normal) per side: top, right, bottom, left.
+    return [((x1, y1), (x2, y1), (0, -1)), ((x2, y1), (x2, y2), (1, 0)), ((x2, y2), (x1, y2), (0, 1)), ((x1, y2), (x1, y1), (-1, 0))]
+
+
+# The edges of the cartridge's front face, the plane the label lies in: the top edge left of the notch (5 mm wide and
+# 3 mm deep at the top right), the sides, and the bottom edge between the rounded corners. Along the lower 38 mm (below
+# 27 mm, the part that goes into the Game Boy) the sides step in by 0.3 mm and are bevelled, the bevel's inner edge
+# about 1.7 mm in from the upper side. That inner edge is in the face, but it is faint in photos, and fitting it
+# instead of the outer edge was less precise (at 1.7 mm in: 32 instead of 40 fits within 0.3 mm, both 50 within 1 mm); leaving the lower sides out was
+# much worse. So the lower sides are the outer edge: through the hand-placed recesses it was found within 0.02 mm of
+# there (median), on these nearly head-on photos. The notch's edges made the fits a little worse (33 instead of 36
+# within 0.3 mm), so they are left out.
+FACE_RUNS = [
+    ((2.0, 0.0), (50.0, 0.0), (0, -1)),
+    ((56.85, 4.0), (56.85, 25.0), (1, 0)),
+    ((56.55, 29.0), (56.55, 62.0), (1, 0)),
+    ((54.0, 64.85), (3.0, 64.85), (0, 1)),
+    ((0.3, 62.0), (0.3, 29.0), (-1, 0)),
+    ((0.0, 25.0), (0.0, 4.0), (-1, 0)),
+]
+
+
+# The embossed arrow below the label, pointing at the slot: a triangle with rounded corners, its top edge 1 mm below
+# the recess (8.3 mm wide where visible, measured with calipers), its tip 87 degrees (game-boy-database.com scans lined up
+# on it). As sharp lines: the top edge and the two diagonals, sampled away from the
+# rounded corners. Steps: the arrow's walls are lit or shaded.
+ARROW_TOP = 58.0
+ARROW_HALF_WIDTH = 4.9  # at the top edge, sharp corners (the visible 8.3 mm less the rounding)
+ARROW_HALF_ANGLE = np.radians(43.5)
+ARROW_TIP = (28.5, ARROW_TOP + ARROW_HALF_WIDTH / np.tan(ARROW_HALF_ANGLE))
+ARROW_EDGES = [
+    ((28.5 - ARROW_HALF_WIDTH, ARROW_TOP), (28.5 + ARROW_HALF_WIDTH, ARROW_TOP), (0, -1)),
+    ((28.5 + ARROW_HALF_WIDTH, ARROW_TOP), ARROW_TIP, (np.cos(ARROW_HALF_ANGLE), np.sin(ARROW_HALF_ANGLE))),
+    (ARROW_TIP, (28.5 - ARROW_HALF_WIDTH, ARROW_TOP), (-np.cos(ARROW_HALF_ANGLE), np.sin(ARROW_HALF_ANGLE))),
+]
+
+
+# The pill-shaped cavity with the embossed "Nintendo GAME BOY" above the label: 44.2 x 12 mm, its top 4 mm below the
+# body's top and its bottom 2 mm above the recess (calipers), centered like the recess; the ends are half circles
+# (checked against game-boy-database.com scans). Sampled as steps along its outline, the text inside left out.
+PILL = (28.5 - 22.1, 4.0, 28.5 + 22.1, 16.0)
+PILL_RADIUS = 6.0
+
+
+def pill_samples():
+    """Points on the pill's outline (mm) and their outward normals: the straight top and bottom, and the ends."""
+    x1, y1, x2, y2 = PILL
+    cy = (y1 + y2) / 2
+    points, normals = [], []
+    for x in np.linspace(x1 + PILL_RADIUS + 1, x2 - PILL_RADIUS - 1, 16):
+        points += [(x, y1), (x, y2)]
+        normals += [(0, -1), (0, 1)]
+    for cx, angles in ((x1 + PILL_RADIUS, np.radians(np.linspace(110, 250, 6))), (x2 - PILL_RADIUS, np.radians(np.linspace(-70, 70, 6)))):
+        for a in angles:
+            points.append((cx + PILL_RADIUS * np.cos(a), cy + PILL_RADIUS * np.sin(a)))
+            normals.append((np.cos(a), np.sin(a)))
+    return np.array(points), np.array(normals)
+
+
+# The grooves beside the pill, 5 on each side: 2 mm apart, centered on the pill's middle (10 mm down), 1.2 mm wide;
+# each runs from the face's side edge to 1 mm from the pill's half circle. From 20 hand-placed edges on each side of
+# three photos (experiments: pitch 2.01 mm, centre 9.87, width 1.15, gap to the pill 0.99, median).
+GROOVE_PITCH, GROOVE_WIDTH, GROOVE_GAP = 2.0, 1.2, 1.0
+
+
+def groove_edges():
+    """The grooves' edges in mm: [(outer end, inner end)] x 20, top edge then bottom edge, left side's grooves first."""
+    cy = (PILL[1] + PILL[3]) / 2
+    r = PILL_RADIUS + GROOVE_GAP
+    edges = []
+    for outer_x, center_x, sign in ((0.0, PILL[0] + PILL_RADIUS, -1), (56.85, PILL[2] - PILL_RADIUS, 1)):
+        for k in range(-2, 3):
+            for y in (cy + k * GROOVE_PITCH - GROOVE_WIDTH / 2, cy + k * GROOVE_PITCH + GROOVE_WIDTH / 2):
+                inner_x = center_x + sign * np.sqrt(r * r - (y - cy) ** 2)
+                edges.append((np.array([outer_x, y]), np.array([inner_x, y])))
+    return edges
+
+
+def build_samples(recess=RECESS, label=LABEL, arrow_edges=ARROW_EDGES, pill=True, grooves=True, face_runs=FACE_RUNS, face_points=None,
+                  recess_radius=RECESS_RADIUS):
+    """Sample points (mm), their outward normals, and their kind: "recess" (a thin line: plastic on both sides of the
+    wall), "label", "arrow", "pill", "groove" or "face" (steps; face_points: more of them, (points, normals)). By default
+    the DMG's.
+    The label's sides are sampled along their middle 70 %, clear of its rounded corners. With recess_radius, the
+    recess's sides run to within 1.5 mm of its corners, as densely, and each rounded corner has 3 samples of its own
+    (radial, as on the pill's ends); without, its middle 70 % too. On the photos with a fit placed by hand (2026-10-29),
+    that brought 90 of 142 fits within 0.3 mm of it instead of 70 (108 within 1 mm instead of 88), and 122 of 278 known
+    good photos unflagged instead of 55. On the CGB's shell it didn't help (its corners' radius isn't measured), nor did
+    the bevel line along the DMG's lower sides as more samples (66 within 0.3 mm)."""
+    samples = []
+    for a, b, n in edges_of(label):
+        for t in np.linspace(0.15, 0.85, 18):
+            samples.append(((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t), n, "label"))
+    for a, b, n in edges_of(recess):
+        length = np.hypot(b[0] - a[0], b[1] - a[1])
+        ends, count = (1.5 / length, round((length - 3.0) * 18 / (0.7 * 44.0))) if recess_radius else (0.15, 18)
+        for t in np.linspace(ends, 1 - ends, count):
+            samples.append(((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t), n, "recess"))
+    if recess_radius:
+        x1, y1, x2, y2 = recess
+        r = recess_radius
+        for (cx, cy), a0 in (((x1 + r, y1 + r), np.pi), ((x2 - r, y1 + r), 1.5 * np.pi), ((x2 - r, y2 - r), 0.0), ((x1 + r, y2 - r), 0.5 * np.pi)):
+            for t in np.linspace(a0 + np.pi / 8, a0 + 3 * np.pi / 8, 3):
+                samples.append(((cx + r * np.cos(t), cy + r * np.sin(t)), (np.cos(t), np.sin(t)), "recess"))
+    for a, b, n in arrow_edges:
+        for t in np.linspace(0.3, 0.7, 8):
+            samples.append(((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t), n, "arrow"))
+    for point, n in zip(*pill_samples()) if pill else ():
+        samples.append((tuple(point), tuple(n), "pill"))
+    for a, b in groove_edges() if grooves else ():
+        # Steps across each edge, away from the ends (the search looks both ways, so the normal's sign doesn't matter).
+        for t in np.linspace(0.15, 0.75, 4):
+            samples.append((tuple(a + (b - a) * t), (0, -1), "groove"))
+    for a, b, n in face_runs:
+        count = max(6, int(np.hypot(b[0] - a[0], b[1] - a[1]) / 2.5))
+        for t in np.linspace(0, 1, count):
+            samples.append(((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t), n, "face"))
+    for point, n in zip(*face_points) if face_points is not None else ():
+        samples.append((tuple(point), tuple(n), "face"))
+    points = np.array([s[0] for s in samples], np.float64)
+    normals = np.array([s[1] for s in samples], np.float64)
+    kinds = np.array([s[2] for s in samples])
+    return points, normals, kinds
+
+
+# The clear Game Boy Color only (CGB) cartridge, as measured with calipers on one on 2026-10-16: the body 57 wide and
+# 65 high in the middle, but its top bowed, 64.2 high at the corners (taken as an arc); the recess 44.5 x 38.5, inset
+# 6.25 from the sides, 21.5 from the top (in the middle) and 5 from the bottom. The label, as placed by hand on 11
+# photos (2026-10-23): 42.9 x 37.0 (widths 42.84 to 43.15; wider than DMG labels), centered in the recess within 0.4 mm
+# and 0.5 degrees. Its "GAME BOY COLOR" down the left edge lies within about 0.8 mm of CGB_COLOR_TEXT on all of them.
+# The shell's other features aren't measured (see the arrow below).
+CGB_BODY = (57.0, 65.0)
+CGB_BODY_CORNER_DROP = 0.8
+# The top corners' radius: 2.7 mm, the median of 66 corners on 33 photos whose fit was accepted or placed by hand
+# (2026-10-29; middle half 2.6 to 2.8): a rounded corner fitted to the shell's edge against the background. The fitting
+# samples stay clear of the corners, so it only shapes the outline drawn.
+CGB_TOP_CORNER_RADIUS = 2.7
+CGB_RECESS = (6.25, 21.5, 50.75, 60.0)
+CGB_LABEL = (7.05, 22.25, 49.95, 59.25)
+# "GAME BOY COLOR" on the label: its box (top left, top right, bottom right, bottom left as it reads), median.
+CGB_COLOR_TEXT = np.array([[8.18, 56.69], [8.32, 24.5], [12.85, 25.05], [12.33, 56.99]])
+# The arrow below the recess, smaller and flatter than the DMG's: a 7 x 3 mm triangle (sharp corners; its tip 98.8
+# degrees, the DMG's 87), its top edge 1.2 mm below the recess. Judged by eye on photos (2026-10-23): the top edge
+# 1.2 mm below the recess, the visible tip 0.8 mm above the bottom edge, the tip about 97 to 100 degrees; 7 x 3 is the
+# round size nearest to that (6.96 x 3.08). The top corners are barely rounded, the tip a little more.
+CGB_ARROW_TOP = 61.2
+CGB_ARROW_WIDTH = 7.0
+CGB_ARROW_HEIGHT = 3.0
+
+
+def cgb_top(xs):
+    """The CGB body's top at xs (mm): bowed up by CGB_BODY_CORNER_DROP in the middle, a circular arc through the
+    (sharp) top corners."""
+    w, drop = CGB_BODY[0], CGB_BODY_CORNER_DROP
+    r = ((w / 2) ** 2 + drop ** 2) / (2 * drop)
+    return np.c_[xs, r - np.sqrt(r * r - (np.asarray(xs) - w / 2) ** 2)]
+
+
+def cgb_corner():
+    """The CGB body's top left corner's arc: its center (mm) and its angles from the side to the top (radians, y down),
+    tangent to the side and to the top's tangent at the corner. The top right one is its mirror image."""
+    r = CGB_TOP_CORNER_RADIUS
+    slope = (cgb_top([0.0])[0, 1] - cgb_top([0.01])[0, 1]) / 0.01  # the top rises toward the middle
+    center = np.array([r, CGB_BODY_CORNER_DROP - slope * r + r * np.hypot(1, slope)])  # r from the side and the top
+    return center, np.pi, np.arctan2(-1, -slope) + 2 * np.pi
+
+
+def cgb_body_outline(per_top=24, per_corner=8):
+    """The CGB body's outline in mm, clockwise from the top left: the bowed top, its corners rounded to
+    CGB_TOP_CORNER_RADIUS (cgb_corner), the sides and the bottom straight."""
+    w, h, r = CGB_BODY[0], CGB_BODY[1], CGB_TOP_CORNER_RADIUS
+    center, a0, a1 = cgb_corner()
+    left = [center + r * np.array([np.cos(t), np.sin(t)]) for t in np.linspace(a0, a1, per_corner)]
+    right = [(w - x, y) for x, y in left[::-1]]
+    return np.vstack([left, cgb_top(np.linspace(left[-1][0], w - left[-1][0], per_top)), right, [[w, h], [0, h]]])
+
+
+def cgb_corner_samples(count=5, clear=np.radians(15)):
+    """Points on the CGB body's rounded top corners (mm) and their outward normals, as on the pill's ends: along the
+    arc, clear of its ends, where the side and the top have samples of their own."""
+    center, a0, a1 = cgb_corner()
+    r, w = CGB_TOP_CORNER_RADIUS, CGB_BODY[0]
+    points, normals = [], []
+    for t in np.linspace(a0 + clear, a1 - clear, count):
+        n = np.array([np.cos(t), np.sin(t)])
+        points += [center + r * n, [w - (center + r * n)[0], (center + r * n)[1]]]
+        normals += [n, [-n[0], n[1]]]
+    return np.array(points), np.array(normals)
+
+
+def cgb_arrow_edges():
+    """The CGB's arrow as sharp edges (top, right, left), for sampling."""
+    half = CGB_ARROW_WIDTH / 2
+    left, right, tip = (28.5 - half, CGB_ARROW_TOP), (28.5 + half, CGB_ARROW_TOP), (28.5, CGB_ARROW_TOP + CGB_ARROW_HEIGHT)
+    a = np.arctan2(half, CGB_ARROW_HEIGHT)
+    return [(left, right, (0, -1)), (right, tip, (np.cos(a), np.sin(a))), (tip, left, (-np.cos(a), np.sin(a)))]
+
+
+def cgb_face_runs():
+    """The CGB body's edges as runs for sampling: the straight sides and bottom, and the bowed top as short chords."""
+    w, h = CGB_BODY
+    runs = [((w, 8.0), (w, 58.0), (1, 0)), ((3.0, h), (w - 3.0, h), (0, 1)), ((0.0, 58.0), (0.0, 8.0), (-1, 0))]
+    top = cgb_top(np.linspace(0, w, 9))
+    runs += [(tuple(a), tuple(b), (0, -1)) for a, b in zip(top[1:-2], top[2:-1])]
+    return runs
+
+
+# Tried on the clear CGB shell, and left out (2026-10-29, against the fits accepted or placed by hand): what shows
+# through it (the board's sides, 51.0 mm apart, as in MouseBiteLabs' KiCad replica of the original outline; its 32
+# contacts below the label; its top edge; the CR1616 battery at 37.5, 16.9 mm) and the shell's internal wall (a dark
+# band through the lines placed by hand: the sides at 28.5 +- 25.9 mm, the bottom at 54.25, the top 2.3 mm below the
+# bowed top, with gaps from 7.2 to 19.4 mm either side of the middle). None clearly helped; all lie behind the front
+# face, so on photos taken close or at an angle they show away from where the front's fit puts them (parallax).
+
+
+class Shell:
+    """A cartridge's front, as the fitter sees it: the body (w, h), the recess and the label (x1, y1, x2, y2), the
+    samples, the plain band below the recess for Fitter.band_line (the recess's bottom line's rows, the band's rows, and
+    its columns beside the arrow), and where "GAME BOY COLOR" lies on the label (its box's corners)."""
+
+    def __init__(self, name, body, recess, label, samples, recess_line_rows, band_rows, band_columns, color_text):
+        self.name, self.body, self.recess, self.label = name, body, recess, label
+        self.points, self.normals, self.kinds = samples
+        self.recess_line_rows, self.band_rows, self.band_columns, self.color_text = recess_line_rows, band_rows, band_columns, color_text
+
+
+DMG = Shell("dmg", BODY, RECESS, LABEL, build_samples(), (56.5, 57.5), (58.2, 63.8),
+            np.r_[np.arange(5.0, 22.0, 0.25), np.arange(35.0, 52.0, 0.25)], COLOR_TEXT)
+# Its pill, grooves and embossing aren't measured, so they take no part; "GAME BOY COLOR" lies where it does on DMG
+# labels relative to the label, which is 3.25 mm lower here.
+CGB = Shell("cgb", CGB_BODY, CGB_RECESS, CGB_LABEL,
+            build_samples(CGB_RECESS, CGB_LABEL, cgb_arrow_edges(), pill=False, grooves=False, face_runs=cgb_face_runs(),
+                          face_points=cgb_corner_samples(), recess_radius=None),
+            (59.5, 60.5), (60.6, 64.6), np.r_[np.arange(5.0, 24.0, 0.25), np.arange(33.0, 52.0, 0.25)], CGB_COLOR_TEXT)
+SHELLS = {"dmg": DMG, "cgb": CGB}
+
+
+def shell_of(serial):
+    """The shell of the cartridge with this serial or release id: CGB- ones are Game Boy Color only."""
+    return CGB if serial.startswith("CGB-") else DMG
+
+
+def project(H, pts):
+    p = np.c_[pts, np.ones(len(pts))] @ np.asarray(H).T
+    return p[:, :2] / p[:, 2:]
+
+
+# The photos are taken 20 to 100 cm from the cartridge. A fit (mm on the front -> the photo's pixels) can only come from
+# a camera that far away if, seen from the camera, its two axes are equally scaled and perpendicular: a pinhole camera
+# at distance Z shows the cartridge at s = f / Z pixels per mm, f its constant in pixels, so each distance gives f = Z s;
+# the camera's center is taken anywhere in the photo, as photos found online are cropped. The inconsistency: the axes'
+# scale difference (%) plus 4 x how far from perpendicular they are (degrees), at the distance and center that make it
+# least. On the fits accepted or placed by hand (2026-10-29) it was at most 0.30 on my own photos' hand fits and at
+# most 5.05 on the accepted ones (all but one under 5; online, 4 of 70 hand fits over 5, all CGB placements on jauce's
+# photos), while 193 of 795 rejected online fits were over 5. Above DISTANCE_TOLERANCE a fit is impossible.
+DISTANCES = (200.0, 1000.0)
+DISTANCE_TOLERANCE = 5.0
+
+
+def camera_distance(H, size, steps=40, grid=9):
+    """How far a fit (mm -> the photo's pixels, the photo size (w, h) pixels) is from what a camera 20 to 100 cm away
+    could see, and the range of distances (mm) within DISTANCE_TOLERANCE of it (None if none is): (inconsistency,
+    (nearest, farthest))."""
+    H = np.asarray(H, np.float64)
+    H = H / H[2, 2]
+    c = project(H, [[28.5, 32.5]])[0]
+    J = np.array([project(H, [[28.6, 32.5]])[0] - c, project(H, [[28.5, 32.6]])[0] - c]) / 0.1
+    s = np.sqrt(abs(np.linalg.det(J)))  # pixels per mm at the cartridge's middle
+    z = np.geomspace(*DISTANCES, steps)[:, None, None]
+    cx = np.linspace(0, size[0], grid)[None, :, None]
+    cy = np.linspace(0, size[1], grid)[None, None, :]
+    f = z * s
+    # The axes as the camera sees them: K^-1 H's first two columns, K the camera with constant f and center (cx, cy).
+    a = np.stack(np.broadcast_arrays((H[0, 0] - cx * H[2, 0]) / f, (H[1, 0] - cy * H[2, 0]) / f, H[2, 0] + 0 * f), -1)
+    b = np.stack(np.broadcast_arrays((H[0, 1] - cx * H[2, 1]) / f, (H[1, 1] - cy * H[2, 1]) / f, H[2, 1] + 0 * f), -1)
+    na, nb = np.linalg.norm(a, axis=-1), np.linalg.norm(b, axis=-1)
+    angle = 90 - np.degrees(np.arccos(np.clip(np.abs((a * b).sum(-1)) / na / nb, 0, 1)))
+    error = np.abs(np.log(na / nb)) * 100 + 4 * angle
+    least = error.min(axis=(1, 2))
+    fits = z[least <= DISTANCE_TOLERANCE, 0, 0]
+    return float(least.min()), ((float(fits.min()), float(fits.max())) if len(fits) else None)
+
+
+class Fitter:
+    """Fits a shell's model (the DMG's by default) to one photo."""
+
+    def __init__(self, photo, shell=DMG):
+        self.shell = shell
+        self.photo = photo
+        self.ph, self.pw = photo.shape[:2]
+        # Working copy: about 900 px wide, in Lab, slightly blurred.
+        self.work = min(1.0, 900 / self.pw)
+        small = cv2.resize(photo, None, fx=self.work, fy=self.work, interpolation=cv2.INTER_AREA)
+        self.lab = cv2.GaussianBlur(cv2.cvtColor(small, cv2.COLOR_BGR2LAB).astype(np.float32), (0, 0), 1.0)
+        self.sh, self.sw = self.lab.shape[:2]
+        self.points, self.normals, self.kinds = shell.points, shell.normals, shell.kinds
+        self.is_line = self.kinds == "recess"
+
+    def subset(self, kinds):
+        """The same photo with only some sample kinds, e.g. ("recess",)."""
+        other = object.__new__(Fitter)
+        other.__dict__.update(self.__dict__)
+        keep = np.isin(self.kinds, kinds)
+        other.points, other.normals, other.kinds = self.points[keep], self.normals[keep], self.kinds[keep]
+        other.is_line = other.kinds == "recess"
+        return other
+
+    def without_side(self, side):
+        """The same photo without the recess's and the label's samples on one side (0 top, 1 right, 2 bottom, 3 left):
+        for refitting when label art along that side was taken for the recess's line."""
+        other = object.__new__(Fitter)
+        other.__dict__.update(self.__dict__)
+        normal = np.array(edges_of(self.shell.recess)[side][2], np.float64)
+        keep = ~(np.isin(self.kinds, ("recess", "label")) & (np.abs(self.normals - normal).sum(axis=1) < 1e-9))
+        other.points, other.normals, other.kinds = self.points[keep], self.normals[keep], self.kinds[keep]
+        other.is_line = other.kinds == "recess"
+        return other
+
+    def sample_lab(self, xy):
+        mx, my = xy[..., 0].astype(np.float32), xy[..., 1].astype(np.float32)
+        return cv2.remap(self.lab, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+    def search(self, H, band, step=0.04):
+        """For each sample, the offset along its normal (mm) with the strongest edge within +-band, and its strength."""
+        # Sampled 0.35 mm beyond the band, so a line near the band's end can still be compared with both its sides.
+        margin = 0.36
+        offsets = np.arange(-band - margin, band + margin + step / 2, step)
+        grid = self.points[:, None, :] + self.normals[:, None, :] * offsets[None, :, None]
+        xy = project(H, grid.reshape(-1, 2)).reshape(len(self.points), len(offsets), 2) * self.work
+        values = self.sample_lab(xy)
+        # Steps lie between two offsets; lines at an offset. Both as strength per position, with positions in mm.
+        step_strength = np.linalg.norm(np.diff(values, axis=1), axis=2)
+        step_at = offsets[:-1] + step / 2
+        # A thin line: the color differs from both sides, 0.35 mm out, and the two sides match each other.
+        w = max(1, int(round(0.35 / step)))
+        center = values[:, w:-w]
+        before, after = values[:, : -2 * w], values[:, 2 * w :]
+        line = np.linalg.norm(center - (before + after) / 2, axis=2) * np.exp(-np.linalg.norm(before - after, axis=2) / 8)
+        line_at = offsets[w:-w]
+        inside_xy = (xy[..., 0] > 1) & (xy[..., 1] > 1) & (xy[..., 0] < self.sw - 2) & (xy[..., 1] < self.sh - 2)
+        found = np.zeros(len(self.points))
+        strength = np.zeros(len(self.points))
+        for is_line, positions, strengths, inside in (
+            (True, line_at, line, inside_xy[:, w:-w] & inside_xy[:, : -2 * w] & inside_xy[:, 2 * w :]),
+            (False, step_at, step_strength, inside_xy[:, :-1] & inside_xy[:, 1:]),
+        ):
+            rows = self.is_line == is_line
+            if not rows.any():
+                continue
+            within = np.broadcast_to(np.abs(positions) <= band + 1e-9, (rows.sum(), len(positions)))
+            candidates = np.where(inside[rows] & within, strengths[rows], 0)
+            best = candidates.argmax(axis=1)
+            found[rows] = positions[best]
+            strength[rows] = candidates[np.arange(rows.sum()), best]
+        return found, strength
+
+    def update(self, H, found, weights, projective):
+        """One point-to-line step: the correction M (in mm) that moves each sample across its edge by its found offset,
+        leaving it free to slide along the edge, by weighted least squares. Returns H @ M. Affine unless projective."""
+        x, y = self.points[:, 0] / 30.0, self.points[:, 1] / 30.0  # scaled for conditioning
+        nx, ny = self.normals[:, 0], self.normals[:, 1]
+        # dp = (d0 x + d1 y + d2 - x (d6 x + d7 y), d3 x + d4 y + d5 - y (d6 x + d7 y)) in scaled units; n . dp = found / 30.
+        columns = [nx * x, nx * y, nx, ny * x, ny * y, ny]
+        if projective:
+            columns += [-(nx * x + ny * y) * x, -(nx * x + ny * y) * y]
+        A = np.stack(columns, axis=1) * np.sqrt(weights)[:, None]
+        b = found / 30.0 * np.sqrt(weights)
+        d = np.linalg.lstsq(A, b, rcond=None)[0]
+        d = np.concatenate([d, np.zeros(8 - len(d))])
+        S = np.diag([30.0, 30.0, 1.0])
+        M = np.array([[1 + d[0], d[1], d[2]], [d[3], 1 + d[4], d[5]], [d[6], d[7], 1.0]])
+        return H @ (S @ M @ np.linalg.inv(S))
+
+    def fit(self, H0, bands=(3.0, 2.0, 1.4, 1.0, 0.7, 0.5, 0.4, 0.4), fine_kinds=("recess", "face", "arrow", "pill", "groove"), iterations=3,
+            late_kinds={"pill": 1.4, "groove": 0.5}, kind_weights=None):
+        """Refines H0 with shrinking bands, by point-to-line steps with robust (Tukey) weights; returns the homography
+        and its quality. Bands of 1 mm and less use only fine_kinds: the label isn't placed exactly in the recess, so its
+        edges only help to get close. late_kinds take part only from the given band down: the pill's bottom
+        edge is 2 mm above the recess's top, which a wider search finds instead. kind_weights scale each kind's samples
+        (default 1)."""
+        kind_weight = np.array([(kind_weights or {}).get(k, 1.0) for k in self.kinds])
+        H = np.asarray(H0, np.float64).copy()
+        for band in bands:
+            use = np.isin(self.kinds, fine_kinds) if fine_kinds and band <= 1.0 else np.ones(len(self.kinds), bool)
+            for kind, start in late_kinds.items():
+                use &= ~((self.kinds == kind) & (band > start))
+            for _ in range(iterations):
+                found, strength = self.search(H, band)
+                strong = use & (strength > np.percentile(strength[use], 30))
+                # Edges on both axes, or the correction is underdetermined.
+                if (strong & (np.abs(self.normals[:, 0]) > 0.5)).sum() < 6 or (strong & (np.abs(self.normals[:, 1]) > 0.5)).sum() < 6:
+                    return H, 0.0
+                weights = strong * kind_weight
+                for _ in range(3):
+                    Hn = self.update(H, found, weights, projective=band <= 1.0)
+                    # Residual across the edges after the step, in mm, for the robust weights.
+                    moved = project(np.linalg.inv(Hn) @ H, self.points + self.normals * found[:, None]) - self.points
+                    residual = np.abs((moved * self.normals).sum(axis=1))
+                    scale = max(0.05, 1.4826 * np.median(residual[strong]))
+                    u = residual / (4.685 * scale)
+                    weights = np.where(strong & (u < 1), (1 - u * u) ** 2, 0.0) * kind_weight
+                H = Hn
+        return H, self.quality(H)
+
+    def line_continuity(self, H, band=0.4, step=0.25):
+        """How unbroken the recess's line is on each side (top, right, bottom, left): sampled every step mm (ends 1 mm
+        in), the strongest thin line within +-band of each sample, and the share of samples on one straight line
+        (within 0.12 mm). The real wall runs the whole side; label art that a fit mistakes for it gives short pieces.
+        On the hand-placed recesses the median side was 95 to 98 % on the line (see line_continuity.py)."""
+        points, normals, side_of = [], [], []
+        for k, (a, b, n) in enumerate(edges_of(self.shell.recess)):
+            a, b = np.array(a, float), np.array(b, float)
+            length = np.linalg.norm(b - a)
+            for d in np.arange(1.0, length - 1.0 + 1e-9, step):
+                points.append(a + (b - a) * d / length)
+                normals.append(n)
+                side_of.append(k)
+        f = self.subset(("recess",))
+        f.points, f.normals, side_of = np.array(points), np.array(normals, float), np.array(side_of)
+        f.kinds, f.is_line = np.array(["recess"] * len(points)), np.ones(len(points), bool)
+        found, _ = f.search(H, band)
+        shares = []
+        for k in range(4):
+            off = found[side_of == k]
+            t = np.arange(len(off)) * step
+            keep = np.ones(len(t), bool)
+            for _ in range(3):
+                b, a = np.polyfit(t[keep], off[keep], 1)
+                keep = np.abs(off - (a + b * t)) < 0.12
+                if keep.sum() < 4:
+                    break
+            shares.append(float(keep.mean()))
+        return shares
+
+    def band_line(self, H):
+        """The strongest horizontal line in the plain band below the recess (on the DMG 58.2 to 63.8 mm down, beside the arrow),
+        relative to the recess's bottom line: the rows' medians across the band's width, so that lines running across
+        it count and the frosted texture doesn't. Apart from the arrow's top there should be none; a fit that slid
+        vertically puts the recess's wall or the face's bottom edge there."""
+        xs = self.shell.band_columns
+        (l0, l1), (b0, b1) = self.shell.recess_line_rows, self.shell.band_rows
+        ys = np.arange(l0 - 1.0, min(b1 + 1.8, self.shell.body[1] + 0.6), 0.05)
+        grid = np.stack(np.meshgrid(xs, ys), -1).reshape(-1, 2)
+        xy = (project(H, grid) * self.work).reshape(len(ys), len(xs), 2).astype(np.float32)
+        inside = (xy[..., 0] > 1) & (xy[..., 1] > 1) & (xy[..., 0] < self.sw - 2) & (xy[..., 1] < self.sh - 2)
+        if inside.mean() < 0.5:
+            return 0.0
+        L = np.where(inside, self.sample_lab(xy)[..., 0], np.nan)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # rows wholly outside the photo
+            profile = np.nanmedian(L, axis=1)
+        steps = np.abs(profile[6:] - profile[:-6])  # across 0.3 mm
+        at = ys[3:-3]
+        recess_line = np.nanmax(steps[(at > l0) & (at < l1)])
+        band = np.nanmax(steps[(at > b0) & (at < b1)])
+        return float(band / (recess_line + 1e-9)) if np.isfinite(band) and np.isfinite(recess_line) else 0.0
+
+    def recess_strength(self, H):
+        """The mean strength of the recess's line within 0.12 mm of where H puts it: the most reliable edge (see
+        old experiments), so the best measure for choosing among fits from different starts."""
+        found, strength = self.subset(("recess",)).search(H, 0.12)
+        return float(np.mean(strength))
+
+    def quality(self, H):
+        """The share of samples with a strong edge within 0.12 mm of the place H puts them."""
+        found, strength = self.search(H, 0.4)
+        return float(((np.abs(found) < 0.12) & (strength > np.median(strength) * 0.5)).mean())

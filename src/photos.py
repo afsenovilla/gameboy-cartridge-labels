@@ -75,6 +75,12 @@ def all_sources():
             yield source, system, name, entry
 
 
+def sha1s():
+    """Each photo's SHA-1, by its stem: what the steps' data and the verdicts are tied to, as a name freed by a photo
+    deleted or renamed may be given to another."""
+    return {stem(n): e.get("sha1") for _, _, n, e in all_sources()}
+
+
 def free_name(serial, ext, taken):
     """<serial><ext>, or the first <serial>_<n><ext> from 2 up, whose stem isn't in taken (lower case: macOS's file
     system ignores case)."""
@@ -99,6 +105,15 @@ def add(serial, data, ext, entry, source):
     entries[name] = dict(entry, sha1=hashlib.sha1(data).hexdigest())
     save_sources(source, system, entries)
     return name
+
+
+def delete(path):
+    """Deletes a photo from photos/: its file and its entry."""
+    source, system, name = path.split(os.sep)[-3:]
+    os.remove(path)
+    entries = sources(source, system)
+    entries.pop(name, None)
+    save_sources(source, system, entries)
 
 
 def reconcile(verbose=True):
