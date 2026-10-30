@@ -156,12 +156,13 @@ def distance(verdict, fit):
     return float(np.linalg.norm(project(to_mm, project(np.array(verdict["mm_to_photo"]), body)) - body, axis=1).max())
 
 
-def save_verdicts(verdicts):
-    """Writes reviews/fits.json: one line per photo, so that the file's history reads as verdicts given."""
-    os.makedirs(os.path.dirname(VERDICTS), exist_ok=True)
+def save_verdicts(verdicts, path=VERDICTS):
+    """Writes reviews/fits.json (or another file of verdicts): one line per photo, so that the file's history reads as
+    verdicts given."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     lines = [f"{json.dumps(name)}: {json.dumps(v, ensure_ascii=False)}" for name, v in sorted(verdicts.items())]
-    open(VERDICTS + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
-    os.replace(VERDICTS + ".tmp", VERDICTS)
+    open(path + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
+    os.replace(path + ".tmp", path)
 
 
 class Review:

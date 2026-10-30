@@ -16,8 +16,14 @@
 #   make fit-cartridge
 #   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text, into generated/fit-cartridge/<photo>.json: the pose of its plastic (the label is left for a later step), and flags for review; a fit judged good in reviews/fits.json is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py).
 #
+#   make fit-label
+#   Fits the label in the recess of every photo whose plastic's fit is judged good, into generated/fit-label/<photo>.json: its shift, turn and width, as a homography from the label's model to the photo's pixels; a fit sticking out of the recess is rejected; a label placed by hand is kept (src/fit_label.py).
+#
 #   make review-fits
 #   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to reviews/fits.json (src/review_fits.py).
+#
+#   make review-labels
+#   A tool, not a step: a local page for judging the label's fits by eye, each on its recess straightened, with 5 mm around it, all at one scale, those farthest from the recess's middle first; your verdicts are saved to reviews/labels.json; a plastic fit found off can be demoted to almost in reviews/fits.json (src/review_labels.py). Not while make review-fits runs.
 #
 #   make fit-by-hand
 #   A tool, not a step: a local page for placing the plastic and the label by hand where the fit is off, one photo at a time, those judged almost first: drag the recess's corners and the label into place; saved to reviews/fits.json as great fits, which fit-cartridge keeps (src/fit_by_hand.py). Not while make review-fits runs.
@@ -32,7 +38,7 @@
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge review-fits fit-by-hand search-photos name-photos
+.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge fit-label clean-fit-label review-fits review-labels fit-by-hand search-photos name-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -61,8 +67,17 @@ fit-cartridge:
 clean-fit-cartridge:
 	rm -rf generated/fit-cartridge
 
+fit-label:
+	$(PYTHON) src/fit_label.py
+
+clean-fit-label:
+	rm -rf generated/fit-label
+
 review-fits:
 	$(PYTHON) src/review_fits.py
+
+review-labels:
+	$(PYTHON) src/review_labels.py
 
 fit-by-hand:
 	$(PYTHON) src/fit_by_hand.py
