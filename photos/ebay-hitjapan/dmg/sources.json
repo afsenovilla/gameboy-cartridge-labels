@@ -1231,6 +1231,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "9bc92b0896d15567878bc431be765a7a275291d5"
  },
+ "DMG-PGJ.webp": {
+  "original_name": "s-l1600 (33).webp",
+  "serial_on_label": "DMG-RGJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e238a57266fc31a3c77f6d2dd5f361d7315ca459"
+ },
  "DMG-PRJ_3.jpg": {
   "serial_on_label": "DMG-PRJ",
   "original_sha1": "70b82e2781aa33e578310a7d4472bb573ccb9b27",
@@ -1284,12 +1290,6 @@
   "original_sha1": "a3944be1384672704fb962b009b55dd78920e37b",
   "sha1": "a8d74d6ef704db1a30de00fbacb02876f58d8ee3",
   "original_name": "s-l1600 (9).webp"
- },
- "DMG-RGJ_2.webp": {
-  "original_name": "s-l1600 (33).webp",
-  "serial_on_label": "DMG-RGJ",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e238a57266fc31a3c77f6d2dd5f361d7315ca459"
  },
  "DMG-RNJ.jpg": {
   "serial_on_label": "DMG-RN",

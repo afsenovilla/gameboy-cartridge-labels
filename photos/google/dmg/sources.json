@@ -168,12 +168,6 @@
   "sha1": "aed851ecd48e58aeac7ac4808d2c83c93f484660",
   "original_name": "images (25).jpeg"
  },
- "DMG-ACMJ-JPN_3.jpg": {
-  "serial_on_label": "DMG-I",
-  "original_sha1": "916776f029d79c0830b6d98e6acb80efeb2ba938",
-  "sha1": "31db954d95f40fcaf201b5b6e13df8bbe26367d9",
-  "original_name": "images (4).jpeg"
- },
  "DMG-ACSJ-JPN_2.jpg": {
   "serial_on_label": "DMG-ACSJ-JPN",
   "original_sha1": "11edfe212bbc31eb537714427597f232f75656f6",
@@ -320,11 +314,6 @@
   "original_sha1": "9447e9a0bd6f7063c55439d6ee45b556a3542e99",
   "sha1": "c7e2b4fe646cff0b1bec09a18510648bc8fa2db4",
   "original_name": "s-l1200 (5).jpg"
- },
- "DMG-AJYJ-JPN_5.jpg": {
-  "original_sha1": "4487524967c9b34b148446bd9245a42183c1de13",
-  "sha1": "8f19402828732fb5c516a12b5055aaf83a784747",
-  "original_name": "s-l400.jpg"
  },
  "DMG-AJYJ-JPN_6.jpg": {
   "original_sha1": "f03f7db48fad8439d23c12a56a4813a539980915",
@@ -682,17 +671,6 @@
   "sha1": "2a3010625cd99194b8a874089e86c9707a77a8cd",
   "original_name": "images (6).jpeg"
  },
- "DMG-C5J_2.jpg": {
-  "serial_on_label": "DMG-C5J",
-  "original_sha1": "253494177f3f40140a6ab6ce597d876c5cb6bba2",
-  "sha1": "65e5ab440e3fcf740ebfaee308ad6bc1ca75f5fe",
-  "original_name": "$_57 (5).jpeg"
- },
- "DMG-C5J_5.jpg": {
-  "original_sha1": "67f58bb2440f9c45156e7a7c124633b6d97a108a",
-  "sha1": "0a4f460d1f309cf28ff76fbf5b40d772126c1aaf",
-  "original_name": "s-l1200 (12).jpg"
- },
  "DMG-CEJ_3.jpg": {
   "serial_on_label": "DMG-CEJ",
   "original_sha1": "cc0b7192fdd31988a0c5f7a8d762f48f0e99cef1",
@@ -764,12 +742,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "a7b7bb9aca44316b1fa0504ec4449c3fcd6b229d"
  },
- "DMG-DQJ_2.jpg": {
-  "serial_on_label": "DMG-DQJ",
-  "original_sha1": "1a372c08cc586821d68d5a3ae6029734971e54aa",
-  "sha1": "f18b2c276820355b45cda678d0bbf24c226d4b72",
-  "original_name": "$_57 (9).jpeg"
- },
  "DMG-DRA_3.jpg": {
   "serial_on_label": "DMG-DRA",
   "original_sha1": "1c82bfa8a5a338f6d5b0620594ca5122dd9a38c3",
@@ -824,12 +796,6 @@
   "sha1": "3c0379ec1fc7c18bf5e1d9786bbe3b2d82acb0f9",
   "original_name": "1958847603.jpg"
  },
- "DMG-FIJ.jpg": {
-  "serial_on_label": "DMG-FUJ",
-  "original_sha1": "f993f8681822fc10e8799a96234f19d0ff775b95",
-  "sha1": "9a72bdb3d67fafe66c0f8fe4d092924c57e3af86",
-  "original_name": "$_57 (10).jpeg"
- },
  "DMG-FNA.jpg": {
   "serial_on_label": "DMG-FNA",
   "original_sha1": "927ebd777f5c1d4800e6d18af29f02a16337c2e0",
@@ -865,12 +831,6 @@
   "serial_on_label": "DMG-GIJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "9982d49815ed58777fd44ff6eb9b7aa0d43dbbed"
- },
- "DMG-GM-USA.jpg": {
-  "serial_on_label": "DMG-GM-USA",
-  "original_sha1": "3f9274a307b5be01f0330606ebcd8a6888837b89",
-  "sha1": "acf65157adc5105a3b9431b25aca72df9cec6d2b",
-  "original_name": "image_99af4ede-c458-4b40-a27f-d3356508c778.jpg"
  },
  "DMG-GQ-USA_2.jpg": {
   "serial_on_label": "DMG-GQ-USA",
@@ -928,12 +888,6 @@
   "original_sha1": "3c5544aa03e6213fc979cb60da9fa1ed9638c08c",
   "sha1": "b47c5c50c6680549cb3076f4bff80acae50f98c8",
   "original_name": "s-l1200_yhyhyh.jpg"
- },
- "DMG-JXJ_3.jpg": {
-  "serial_on_label": "DMG-JXJ",
-  "original_sha1": "e6426311bc78d02eb8b7e08dbd36bdc74efc51fe",
-  "sha1": "643f38a0000724d63e532e6e9187847b7ff870b7",
-  "original_name": "$_57 (7).jpeg"
  },
  "DMG-K2J.jpg": {
   "original_name": "m93383345131_2.jpg",
@@ -1012,12 +966,6 @@
   "sha1": "d775b09708261cd32491d0b7f1277e311559dcbd",
   "original_name": "GB-ファンタズム-1.jpg"
  },
- "DMG-PGJ.jpg": {
-  "original_name": "$_57 (2).jpeg",
-  "serial_on_label": "DMG-PGJ",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0ea32a21a5d971c4e263790a2d67eb1746e67650"
- },
  "DMG-QAJ.jpg": {
   "serial_on_label": "DMG-QAJ",
   "original_sha1": "d99101e6b461c39e37ec586922569c1642155358",
@@ -1093,12 +1041,6 @@
   "original_sha1": "fa2ec1638764f34b3da3d38823646ad2fb15b7be",
   "sha1": "982739738cb94fde85a73c1a1799fd5ebb60b9aa",
   "original_name": "s-l1200 (24).jpg"
- },
- "DMG-SUJ_3.jpg": {
-  "serial_on_label": "DMG-SUJ",
-  "original_sha1": "8ba6f8d0082289f7ea1c4ed67932abd456f8927b",
-  "sha1": "be8e089dfa65cf102f8570ae7108b37e60091626",
-  "original_name": "$_57 (11).jpeg"
  },
  "DMG-T3-NOE.jpg": {
   "original_sha1": "9349eba3a2e53e694bbedb076d0aa2b12eb95de3",
