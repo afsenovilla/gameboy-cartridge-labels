@@ -1,20 +1,21 @@
 import concurrent.futures, glob, json, os, sys, cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos
-from cartridge import SHELLS, Fitter, corners_of, edges_of, project
-from fit_cartridge import OUT as PLASTIC, VERDICTS, good_verdict, load
+import fits, photos
+from cartridge import SHELLS, Fitter, corners_of, edges_of, project, shell_of
+from fit_cartridge import load
 
-# fit-label: fits the label in the recess of every photo whose plastic's fit is judged good (generated/fit-cartridge/,
-# make fit-cartridge, judged in make review-fits or placed by hand), into generated/fit-label/<photo>.json. Labels are
+# fit-label: fits the label in the recess of every photo whose plastic is accepted or placed by hand (fits.json,
+# src/fits.py; make fit-cartridge, make review-fits, make fit-by-hand), as that fit's label, not yet reviewed. Labels are
 # stuck on a little shifted and turned, and cut a few tenths of a mm narrower or wider, so with the plastic's pose fixed,
-# the label's is fitted on its own: a shift and a turn in the recess, and its width. Its pose is written as a homography
-# from mm on the label's model (the shell's label: cartridge.LABEL, CGB_LABEL) to the photo's pixels, with the shift
-# (mm), turn (degrees) and width (mm). A label placed by hand with that plastic fit (make fit-by-hand) is kept instead,
-# with "judged": "great". A photo is fitted again when its file is missing or older than its plastic's fit or this step's
-# code, or made from another photo under the same name (each file has the SHA-1 of the photo it was made from; a
-# plastic fit or a verdict made from another photo is ignored). Files of photos without a plastic fit judged good are
-# removed.
+# the label's is fitted on its own: a shift and a turn in the recess, and its width. Its pose is a homography from mm on
+# the label's model (the shell's label: cartridge.LABEL, CGB_LABEL) to the photo's pixels; what this step found on the
+# way (the shift in mm, the turn in degrees, the width in mm, the plastic it was fitted on) goes into
+# generated/fit-label/<photo>.json. A label accepted or placed by hand isn't fitted; one judged almost is, and a
+# different fit takes its place (the almost one goes to the rejected fits); a fit equal to a rejected one, or sticking
+# out of the recess, isn't made current. A photo is fitted again when its file is missing, older than this step's code,
+# made on another plastic fit, or from another photo under the same name (the file has the SHA-1 of the photo it was
+# made from). Files of photos without a good plastic fit are removed.
 # Usage: fit_label.py
 OUT = "generated/fit-label"
 # Label widths, mm: on the DMG's shell 41.7 to 42.5 mm in 20 hand-placed labels (median about 42.15), on the CGB's 42.84
@@ -134,7 +135,7 @@ def fit_label(fitter, H, shell, widths=None, bands=(1.5, 1.0, 0.7, 0.5, 0.4, 0.4
 
 
 def fit(photo_path, plastic):
-    """The label's fit on one photo, its plastic's fit given, as written to its file."""
+    """The label's fit on one photo, its plastic's fit given ({"shell", "mm_to_photo"}), as written to its file."""
     cv2.setNumThreads(1)
     photo = load(photo_path)
     if photo is None:
@@ -165,43 +166,69 @@ def fit(photo_path, plastic):
             "width_at_limit": bool(width_at_limit)}
 
 
-def fit_into(stem, photo_path, plastic, verdict, sha1):
+def fit_into(stem, photo_path, plastic, sha1):
     out = os.path.join(OUT, stem + ".json")
     try:
-        if verdict and "label_mm_to_photo" in verdict:
-            result = {"shell": plastic["shell"], "label_mm_to_photo": verdict["label_mm_to_photo"], "mm_to_photo": plastic["mm_to_photo"], "judged": "great"}
-        else:
-            result = fit(photo_path, plastic)
+        result = fit(photo_path, plastic)
     except Exception as e:
-        result = {"error": f"{type(e).__name__}: {e}"}
+        result = {"error": f"{type(e).__name__}: {e}", "mm_to_photo": plastic["mm_to_photo"]}
     result["sha1"] = sha1
     json.dump(result, open(out, "w"))
     return stem, result
 
 
+def take(e, found):
+    """Puts a photo's label as this step found it (its file) into its entry in fits.json, unless its label is known to
+    be right. Returns whether it's current."""
+    plastic, current = e["fit"]["plastic"], e["fit"].get("label")
+    if fits.good(current):
+        return False
+    if "error" in found or fits.was_rejected(e, plastic, found["label_mm_to_photo"]):
+        if current is not None and "accepted" not in current:
+            del e["fit"]["label"]
+        return False
+    if current is not None and fits.same(current, found["label_mm_to_photo"]):
+        return True
+    if current is not None and current.get("accepted") == "almost":
+        fits.reject_label(e)
+    e["fit"]["label"] = fits.part(found["label_mm_to_photo"])
+    return True
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     paths = {photos.stem(n): os.path.join(photos.ROOT, s, system, n) for s, system, n, _ in photos.all_sources()}
-    verdicts = json.load(open(VERDICTS)) if os.path.exists(VERDICTS) else {}
     sha1s = photos.sha1s()
-    plastics = {}
-    for path in glob.glob(os.path.join(PLASTIC, "*.json")):
-        stem = photos.stem(os.path.basename(path))
-        plastic = json.load(open(path))
-        if "judged" in plastic and stem in paths and plastic.get("sha1") == sha1s[stem]:
-            plastics[stem] = (path, plastic)
+    known = fits.load()
+    plastics = {stem: fits.of(known, stem, sha1s[stem])["fit"] for stem in paths}
+    plastics = {stem: f["plastic"] for stem, f in plastics.items() if fits.good(f.get("plastic"))}
     for path in glob.glob(os.path.join(OUT, "*.json")):
         if photos.stem(os.path.basename(path)) not in plastics:
             os.remove(path)
     code = os.path.getmtime(__file__)
-    todo = []
-    for stem, (plastic_path, plastic) in sorted(plastics.items()):
+    todo, kept = [], 0
+    for stem, plastic in sorted(plastics.items()):
+        if fits.good(fits.of(known, stem, sha1s[stem])["fit"].get("label")):
+            kept += 1
+            continue
         out = os.path.join(OUT, stem + ".json")
-        if not os.path.exists(out) or json.load(open(out)).get("sha1") != sha1s[stem] or os.path.getmtime(out) < max(os.path.getmtime(plastic_path), code):
-            todo.append((stem, paths[stem], plastic, good_verdict(verdicts.get(stem, []), sha1s[stem]), sha1s[stem]))
-    print(f"{len(plastics)} photos with a plastic fit judged good; {len(todo)} to fit")
+        made = json.load(open(out)) if os.path.exists(out) else None
+        if made is None or made.get("sha1") != sha1s[stem] or not fits.same(made["mm_to_photo"], plastic) or os.path.getmtime(out) < code:
+            todo.append((stem, paths[stem], {"shell": shell_of(photos.serial_of(stem)).name, "mm_to_photo": plastic["mm_to_photo"]}, sha1s[stem]))
+    print(f"{len(plastics)} photos with their plastic accepted or placed by hand, {kept} with their label too, kept; {len(todo)} to fit")
     with concurrent.futures.ProcessPoolExecutor() as pool:
         for done, (stem, result) in enumerate(pool.map(fit_into, *zip(*todo)) if todo else (), 1):
-            print(f"{done} of {len(todo)}: {stem}: {result.get('error') or result.get('judged') or 'width %.2f mm' % result['width_mm']}", flush=True)
+            print(f"{done} of {len(todo)}: {stem}: {result.get('error') or 'width %.2f mm' % result['width_mm']}", flush=True)
+    # Every photo's label into fits.json, from the files (so that an interrupted run loses nothing).
+    with fits.editing() as known:
+        current = 0
+        for stem in plastics:
+            e = fits.entry(known, stem, sha1s[stem])
+            out = os.path.join(OUT, stem + ".json")
+            found = json.load(open(out)) if os.path.exists(out) else None
+            # The plastic may have been judged again meanwhile.
+            if found is not None and found.get("sha1") == sha1s[stem] and fits.good(e["fit"].get("plastic")) and fits.same(found["mm_to_photo"], e["fit"]["plastic"]):
+                current += take(e, found)
     results = [json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json"))]
-    print(f"{sum('error' not in r for r in results)} of {len(results)} fitted ({sum(r.get('width_at_limit', False) for r in results)} at the median width, as they stopped at a width limit), {sum('error' in r for r in results)} rejected")
+    print(f"{kept} kept, {current} fitted and not known to be wrong ({sum(r.get('width_at_limit', False) for r in results)} files at the "
+          f"median width, as they stopped at a width limit), {sum('error' in r for r in results)} couldn't be fitted or stuck out of the recess")

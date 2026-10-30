@@ -2,24 +2,22 @@ import json, os, sys, threading, urllib.parse, cv2, numpy as np
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos
+import fits, photos
 from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TOP, CGB_ARROW_WIDTH, RECESS_RADIUS, SHELLS, cgb_body_outline, corners_of, groove_edges, shell_of
-from fit_cartridge import OUT as FITS, VERDICTS, load
-from name_photos import review_running
-from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_outline, rounded_outline, same_fit, save_verdicts, shown
+from fit_cartridge import OUT as DETAILS, load
+from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_outline, rounded_outline
 
-# fit-by-hand: a local page for placing the plastic and the label by hand, one photo at a time, where fit-cartridge's
-# fit (generated/fit-cartridge/, make fit-cartridge) is off: those judged almost first (make review-fits), then the
-# rejected ones and the photos it couldn't fit. A photo starts from its fit (else the model in the box fit-cartridge
-# cropped to, else in the middle), or from the last fit placed by hand. The recess's corners (green squares) are
-# dragged onto the photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label
-# placed" is ticked, the label (cyan) shows: a rectangle in the recess, moving with it: its corners turn it about its
-# center, the dots in its sides move one side, the cross moves it. A magnifier shows 6 mm around the handle held. Saving gives the placement the verdict
-# "great" in reviews/fits.json: {"verdict": "great", "mm_to_photo", "sha1": the photo's}, with "label_mm_to_photo" (the label's model,
-# cartridge's shell.label, to the photo's pixels) once the label has been placed. Like any verdict it judges that fit
-# alone; fit-cartridge keeps it rather than fitting the photo again. Saved again in the same run, a photo's placement
-# replaces the one saved before; the verdicts on other fits are kept. make review-fits and make name-photos rewrite that
-# file too, so this one doesn't run alongside review-fits, and the file is read again before each save.
+# fit-by-hand: a local page for placing the plastic and the label by hand, one photo at a time, where the steps' fits
+# (fits.json, src/fits.py) are off: the plastic judged almost first (make review-fits), then the labels judged almost
+# (make review-labels), the rejected ones and the photos fit-cartridge couldn't fit. A photo starts from its current fit
+# (else its latest rejected one, else the model in the box fit-cartridge cropped to, else in the middle), with its label
+# (else its latest rejected one on that plastic, else the model's). The recess's corners (green squares) are dragged
+# onto the photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label placed" is
+# ticked, the label (cyan) shows: a rectangle in the recess, moving with it: its corners turn it about its center, the
+# dots in its sides move one side, the cross moves it. A magnifier shows 6 mm around the handle held. Saving makes the
+# placement the photo's current fit, placed by hand (the steps keep it), with the label once it's placed (else the
+# current label stays if the plastic wasn't moved, or fit-label fits one); an almost fit it replaces goes to the
+# rejected ones. Saved again in the same run, a photo's placement replaces the one saved before.
 # Usage: fit_by_hand.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8769
 
@@ -50,36 +48,36 @@ def model(shell):
 
 
 class Hand:
-    """The photos to place, their fits and the verdicts, read when the tool starts."""
+    """The photos to place, with their fits, as the tool starts; placements go to fits.json at once."""
 
     def __init__(self):
         self.paths = {photos.stem(n): os.path.join(photos.ROOT, s, system, n) for s, system, n, _ in photos.all_sources()}
-        self.fits = {}
-        self.sha1s = sha1s = photos.sha1s()
-        for name in sorted(os.listdir(FITS)):
-            if name.endswith(".json") and name[:-5] in self.paths:
-                fit = json.load(open(os.path.join(FITS, name)))
-                # A fit made from another photo under the same name waits for its step to run again.
-                if fit.get("sha1") == sha1s[name[:-5]]:
-                    self.fits[name[:-5]] = fit
-        verdicts = self.verdicts()
-        current = lambda n: "error" not in self.fits[n] and next((shown(v["verdict"]) for v in verdicts.get(n, []) if same_fit(v, self.fits[n])), None)
-        names = sorted(self.fits)
-        self.groups = {"almost": [n for n in names if current(n) == "almost"],
-                       "rejected": [n for n in names if current(n) == "rejected"],
-                       "not fitted": [n for n in names if "error" in self.fits[n]],
-                       "not judged": [n for n in names if "error" not in self.fits[n] and current(n) is None],
+        self.sha1s = photos.sha1s()
+        known = fits.load()
+        self.entries, self.details = {}, {}
+        for name in sorted(self.paths):
+            path = os.path.join(DETAILS, name + ".json")
+            details = json.load(open(path)) if os.path.exists(path) else None
+            e = fits.of(known, name, self.sha1s[name])
+            if details is None and not e["fit"] and not e["rejected"]:
+                continue  # never fitted (Game Boy Advance, another shell)
+            self.entries[name] = e
+            self.details[name] = details if details is not None and details.get("sha1") == self.sha1s[name] else None
+        names = sorted(self.entries)
+        plastic = lambda n: self.entries[n]["fit"].get("plastic")
+        label = lambda n: self.entries[n]["fit"].get("label")
+        label_rejected = lambda n: any("label" in r and fits.same(r["plastic"], plastic(n)) for r in self.entries[n]["rejected"])
+        self.groups = {"plastic almost": [n for n in names if plastic(n) and plastic(n).get("accepted") == "almost"],
+                       "label almost": [n for n in names if label(n) and label(n).get("accepted") == "almost"],
+                       "plastic rejected": [n for n in names if not plastic(n) and self.entries[n]["rejected"]],
+                       "label rejected": [n for n in names if fits.good(plastic(n)) and not label(n) and label_rejected(n)],
+                       "not fitted": [n for n in names if not plastic(n) and not self.entries[n]["rejected"]],
+                       "not judged": [n for n in names if plastic(n) and "accepted" not in plastic(n)],
                        "all": names}
-        self.placed = {}  # photo -> the placement saved in this run, which saving it again replaces
         self.cache, self.lock = {}, threading.Lock()
 
-    @staticmethod
-    def verdicts():
-        return json.load(open(VERDICTS)) if os.path.exists(VERDICTS) else {}
-
     def shell(self, name):
-        fit = self.fits[name]
-        return SHELLS[fit["shell"]] if "shell" in fit else shell_of(photos.serial_of(name))
+        return shell_of(photos.serial_of(name))
 
     def image(self, name):
         """The photo, upright, as JPEG bytes (the last few are kept)."""
@@ -95,56 +93,74 @@ class Hand:
 
     def item(self, name):
         """Where a photo starts: the recess's corners in the photo's pixels (None: in the middle of the photo), the
-        label's corners in mm, if placed, and notes on its verdicts."""
-        shell, fit = self.shell(name), self.fits[name]
+        label's corners in mm, if placed, and notes on its fits."""
+        shell, e, details = self.shell(name), self.entries[name], self.details[name]
         recess, label = corners_of(shell.recess), corners_of(shell.label)
-        hand = [v for v in self.verdicts().get(name, []) if v["verdict"] == "great" and v.get("sha1") == fit["sha1"]]
+        plastic = e["fit"].get("plastic")
+        about = lambda part: "placed by hand" if part["source"] == "hand-placed" else {True: "accepted", "almost": "almost", None: "not reviewed"}[part.get("accepted")]
         notes = []
-        if hand:
-            H, start = hand[-1]["mm_to_photo"], "the last fit placed by hand"
-            label_mm = project(np.linalg.inv(H), project(hand[-1]["label_mm_to_photo"], label)).tolist() if "label_mm_to_photo" in hand[-1] else None
-        elif "error" not in fit:
-            H, start, label_mm = fit["mm_to_photo"], "fit-cartridge's fit", None
-        elif "crop" in fit:
+        if plastic is not None:
+            H, start = plastic["mm_to_photo"], f"the current fit ({about(plastic)})"
+        elif e["rejected"]:
+            plastic = e["rejected"][-1]["plastic"]
+            H, start = plastic["mm_to_photo"], "the latest rejected fit"
+        elif details is not None and "crop" in details:
             # The body in the middle of the box fit-cartridge cropped to (the body and 12 % around it).
-            x0, y0, x1, y1 = fit["crop"]
+            x0, y0, x1, y1 = details["crop"]
             s = min((x1 - x0) / shell.body[0], (y1 - y0) / shell.body[1]) / 1.24
             cx, cy = (x0 + x1) / 2 - s * shell.body[0] / 2, (y0 + y1) / 2 - s * shell.body[1] / 2
-            H, start, label_mm = [[s, 0, cx], [0, s, cy], [0, 0, 1]], "the box fit-cartridge cropped to", None
-            notes.append(f'not fitted: {fit["error"]}')
+            H, start = [[s, 0, cx], [0, s, cy], [0, 0, 1]], "the box fit-cartridge cropped to"
+            notes.append(f'not fitted: {details["error"]}')
         else:
-            H, start, label_mm = None, "the middle of the photo", None
-            notes.append(f'not fitted: {fit["error"]}')
+            H, start = None, "the middle of the photo"
+            notes.append(f'not fitted: {details["error"]}' if details is not None else "not fitted")
         notes.insert(0, f"started from {start}")
-        for v in self.verdicts().get(name, []):
-            if "error" not in fit and same_fit(v, fit):
-                notes.append(f'fit-cartridge\'s fit judged {shown(v["verdict"])}')
-        notes.append(f'{len(hand)} placed by hand before' if hand else "not placed by hand before")
+        label_mm = None
+        if plastic is not None:
+            on = e["fit"].get("label") if e["fit"].get("plastic") is plastic else None
+            rejected = [r["label"] for r in e["rejected"] if "label" in r and fits.same(r["plastic"], plastic)]
+            if on is not None or rejected:
+                found = on if on is not None else rejected[-1]
+                label_mm = project(np.linalg.inv(H), project(found["mm_to_photo"], label)).tolist()
+                notes.append(f"label from {'the current fit (' + about(found) + ')' if on is not None else 'the latest rejected label'}")
+        if e["rejected"]:
+            notes.append(f'{len(e["rejected"])} fit{"s" * (len(e["rejected"]) != 1)} rejected before')
         return {"name": name, "path": self.paths[name], "shell": shell.name, "recess": None if H is None else project(H, recess).tolist(),
                 "label": label_mm, "notes": notes}
 
     def save(self, name, recess, label_mm):
-        """Saves a placement as a great fit: the recess's corners in the photo's pixels, and the label's in mm (or None)."""
+        """Makes a placement the photo's current fit, placed by hand: the recess's corners in the photo's pixels, and the
+        label's in mm (or None: the current label stays if the plastic is where it was)."""
         shell = self.shell(name)
         H = homography(corners_of(shell.recess), recess)
-        verdict = {"verdict": "great", "mm_to_photo": H.tolist(), "sha1": self.sha1s[name]}
-        if label_mm is not None:
-            verdict["label_mm_to_photo"] = homography(corners_of(shell.label), project(H, label_mm)).tolist()
-        verdicts = self.verdicts()
-        kept = [v for v in verdicts.get(name, []) if v != self.placed.get(name)]
-        verdicts[name] = kept + [verdict]
-        save_verdicts(verdicts)
-        self.placed[name] = verdict
+        with fits.editing() as known:
+            e = fits.entry(known, name, self.sha1s[name])
+            old = e["fit"]
+            new = {"plastic": fits.part(H, "hand-placed", True)}
+            moved = "plastic" not in old or not fits.same(old["plastic"], H)
+            if label_mm is not None:
+                new["label"] = fits.part(homography(corners_of(shell.label), project(H, label_mm)), "hand-placed", True)
+            elif not moved and "label" in old:
+                new["label"] = old["label"]
+            # An almost fit replaced wasn't right.
+            if moved and old.get("plastic", {}).get("accepted") == "almost" and not fits.was_rejected(e, old["plastic"]):
+                e["rejected"].append({"plastic": fits.bare(old["plastic"])})
+            if old.get("label", {}).get("accepted") == "almost" and not ("label" in new and fits.same(new["label"], old["label"])) and not fits.was_rejected(e, old["plastic"], old["label"]):
+                e["rejected"].append({"plastic": fits.bare(old["plastic"]), "label": fits.bare(old["label"])})
+            fits.unreject(e, H)
+            e["fit"] = new
+            self.entries[name] = e
+
+    def placed(self, name):
+        plastic = self.entries[name]["fit"].get("plastic")
+        return plastic is not None and plastic["source"] == "hand-placed"
 
     def summary(self):
-        """Per group, how many photos it has and how many were placed by hand (ever, not only in this run)."""
-        verdicts = self.verdicts()
-        hand = lambda n: any(v["verdict"] == "great" and v.get("sha1") == self.sha1s[n] for v in verdicts.get(n, []))
-        return {group: {"photos": len(names), "placed": sum(map(hand, names))} for group, names in self.groups.items()}
+        """Per group, how many photos it has and how many have a fit placed by hand."""
+        return {group: {"photos": len(names), "placed": sum(map(self.placed, names))} for group, names in self.groups.items()}
 
     def group(self, group):
-        verdicts = self.verdicts()
-        return [{"name": n, "placed": any(v["verdict"] == "great" and v.get("sha1") == self.sha1s[n] for v in verdicts.get(n, []))} for n in self.groups[group]]
+        return [{"name": n, "placed": self.placed(n)} for n in self.groups[group]]
 
 
 PAGE = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fit by hand</title>
@@ -177,7 +193,7 @@ button#save{background:#070;color:#fff}
 <script>
 const $ = id => document.getElementById(id);
 const c = $("c"), ctx = c.getContext("2d"), lctx = $("loupe").getContext("2d");
-let models, groups, group = "almost", list = [], i = 0, item = null, img = new Image();
+let models, groups, group = "plastic almost", list = [], i = 0, item = null, img = new Image();
 let corners = null, rect = null, sel = 0, drag = -1, grab = null, startCorners = null, startRect = null, pan = null;
 let scale = 1, ox = 0, oy = 0;
 const apply = (H, [x, y]) => { const w = H[2][0] * x + H[2][1] * y + H[2][2]; return [(H[0][0] * x + H[0][1] * y + H[0][2]) / w, (H[1][0] * x + H[1][1] * y + H[1][2]) / w]; };
@@ -423,9 +439,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send(hand.summary())
         elif len(parts) == 2 and parts[0] == "group" and parts[1] in hand.groups:
             self.send(hand.group(parts[1]))
-        elif len(parts) == 2 and parts[0] == "item" and parts[1] in hand.fits:
+        elif len(parts) == 2 and parts[0] == "item" and parts[1] in hand.entries:
             self.send(hand.item(parts[1]))
-        elif len(parts) == 2 and parts[0] == "image" and parts[1] in hand.fits:
+        elif len(parts) == 2 and parts[0] == "image" and parts[1] in hand.entries:
             self.send(hand.image(parts[1]), "image/jpeg")
         else:
             self.send_error(404)
@@ -434,10 +450,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/save":
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-        if data["name"] not in hand.fits or np.shape(data["recess"]) != (4, 2) or data["label"] is not None and np.shape(data["label"]) != (4, 2):
+        if data["name"] not in hand.entries or np.shape(data["recess"]) != (4, 2) or data["label"] is not None and np.shape(data["label"]) != (4, 2):
             return self.send_error(400)
-        if review_running():
-            return self.send_error(409, "make review-fits is running")
         hand.save(data["name"], data["recess"], data["label"])
         self.send(hand.summary())
 
@@ -446,8 +460,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    if review_running():
-        sys.exit("make review-fits is running: it rewrites reviews/fits.json too; stop it first")
     hand = Hand()
-    print(f"{len(hand.fits)} photos, {len(hand.groups['almost'])} with their fit judged almost; place them at http://localhost:{PORT}/ (ctrl-C to stop)")
+    print(f"{len(hand.entries)} photos, {len(hand.groups['plastic almost'])} with their plastic judged almost; place them at http://localhost:{PORT}/ (ctrl-C to stop)")
     ThreadingHTTPServer(("localhost", PORT), Handler).serve_forever()

@@ -14,25 +14,25 @@
 #   Matches the serial on each photo's label, from its text, against gb-game-list's releases, into generated/match-serials/serials.tsv (src/match_serials.py).
 #
 #   make fit-cartridge
-#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text, into generated/fit-cartridge/<photo>.json: the pose of its plastic (the label is left for a later step), and flags for review; a fit judged good in reviews/fits.json is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py).
+#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text, into fits.json: the pose of its plastic (the label is left for a later step), not yet reviewed; what it found on the way, with flags for review, into generated/fit-cartridge/<photo>.json; a plastic fit accepted or placed by hand is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py, src/fits.py).
 #
 #   make fit-label
-#   Fits the label in the recess of every photo whose plastic's fit is judged good, into generated/fit-label/<photo>.json: its shift, turn and width, as a homography from the label's model to the photo's pixels; a fit sticking out of the recess is rejected; a label placed by hand is kept (src/fit_label.py).
+#   Fits the label in the recess of every photo whose plastic is accepted or placed by hand, into fits.json: its pose, as a homography from the label's model to the photo's pixels, not yet reviewed; its shift, turn and width into generated/fit-label/<photo>.json; a fit sticking out of the recess is rejected; a label accepted or placed by hand is kept (src/fit_label.py).
 #
 #   make review-fits
-#   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to reviews/fits.json (src/review_fits.py).
+#   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to fits.json (src/review_fits.py).
 #
 #   make review-labels
-#   A tool, not a step: a local page for judging the label's fits by eye, each on its recess straightened, with 5 mm around it, all at one scale, those farthest from the recess's middle first; your verdicts are saved to reviews/labels.json; a plastic fit found off can be demoted to almost in reviews/fits.json (src/review_labels.py). Not while make review-fits runs.
+#   A tool, not a step: a local page for judging the label's fits by eye, each on its recess straightened, with 5 mm around it, all at one scale, those farthest from the recess's middle first; your verdicts are saved to fits.json; a plastic fit found off can be demoted to almost, rejecting its label (src/review_labels.py).
 #
 #   make fit-by-hand
-#   A tool, not a step: a local page for placing the plastic and the label by hand where the fit is off, one photo at a time, those judged almost first: drag the recess's corners and the label into place; saved to reviews/fits.json as great fits, which fit-cartridge keeps (src/fit_by_hand.py). Not while make review-fits runs.
+#   A tool, not a step: a local page for placing the plastic and the label by hand where the fit is off, one photo at a time, those judged almost first: drag the recess's corners and the label into place; saved to fits.json as the photo's fit, placed by hand, which the steps keep (src/fit_by_hand.py).
 #
 #   make search-photos
 #   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Allegro, Jauce, and Google Lens with the release's cartridge photo from game-boy-database.com or otakaraou photo) for photos of the Game Boy and Game Boy Color releases not in photos/ (those from otakaraou alone apart), into generated/search-photos/index.html (src/search_photos.py).
 #
 #   make name-photos
-#   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its verdicts in reviews/fits.json with it; or delete it (src/name_photos.py). Not while make review-fits runs.
+#   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its fits in fits.json with it; or delete it (src/name_photos.py).
 #
 # Plain make lists these.
 

@@ -1,27 +1,27 @@
 import concurrent.futures, glob, json, os, subprocess, sys, tempfile, cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos
+import fits, photos
 from cartridge import BODY, DISTANCE_TOLERANCE, SPECIAL_SHELLS, Fitter, camera_distance, color_lines, color_start, corners_of, emboss_lines, emboss_start, project, shell_of, special_shell, text_starts
 
 # fit-cartridge: fits the model of the cartridge's shell (src/cartridge.py: the Game Boy's, or the Game Boy Color
 # only cartridge's for CGB- serials) to every photo in photos/ but Game Boy Advance ones (no model) and those of
 # cartridges with another shell (special-shells.tsv: rumble, tilt sensor...), started from its text in
-# generated/read-text/ (make read-text), into generated/fit-cartridge/<photo>.json: the shell, the plastic's pose as a
-# homography from mm on the cartridge's front to the photo's pixels, the camera's distance from the cartridge that
-# explains it (a range, mm; fits no camera 20 to 100 cm away could have seen are left out), and how far to trust it. The label, stuck on a
-# little shifted and turned, is fitted in a later step, once the plastic's fit is known to be right. A photo with a fit judged
-# good in reviews/fits.json (make review-fits) isn't fitted: that fit is kept, with "judged": its verdict (great, else
-# accepted; the latest of them), and no flags, as the work of judging it is what makes it known to be right. Others are fitted
-# again only when its file is missing, older than the photo, its text, or this step's code, or made from another photo
-# under the same name (each file has the SHA-1 of the photo it was made from, as each verdict has the SHA-1 of the photo
-# it judged; verdicts on another photo are ignored); one without its text is
-# skipped and reported, and one renamed since read-text ran waits for it. A photo that can't be fitted gets
-# {"error": why}, so it isn't tried again on every run. Files of photos no longer in photos/ are removed.
+# generated/read-text/ (make read-text). The fit, the plastic's pose as a homography from mm on the cartridge's front to
+# the photo's pixels, goes into fits.json (src/fits.py) as the photo's current plastic, not yet reviewed; what this step
+# found on the way goes into generated/fit-cartridge/<photo>.json: the shell, the fit, the camera's distance from the
+# cartridge that explains it (a range, mm; fits no camera 20 to 100 cm away could have seen are left out), how far to
+# trust it, and the candidates. The label, stuck on a little shifted and turned, is fitted in a later step, once the
+# plastic's fit is known to be right. A photo whose plastic is accepted or placed by hand isn't fitted; one judged almost
+# is, and a different fit takes its place (the almost one goes to the rejected fits, as it wasn't right); a fit equal to
+# a rejected one isn't made current again. A photo is fitted again only when its file is missing, older than the photo,
+# its text, or this step's code, or made from another photo under the same name (the file has the SHA-1 of the photo
+# it was made from); one without its text is skipped and reported, and one renamed since read-text ran waits for it. A
+# photo that can't be fitted gets {"error": why}, so it isn't tried again on every run. Files of photos no longer in
+# photos/ are removed.
 # Usage: fit_cartridge.py
 TEXT = "generated/read-text"
 OUT = "generated/fit-cartridge"
-VERDICTS = "reviews/fits.json"
 SYSTEMS = ("dmg", "cgb", "unknown")
 SIDES = ("top", "right", "bottom", "left")
 
@@ -146,35 +146,33 @@ def fit(photo_path, text_path):
             "candidates": [{"mm_to_photo": to_photo(c["H"]), "recess_strength": c["recess_strength"], "band_line": c["band_line"], "possible": c["possible"]} for c in candidates]}
 
 
-def good_verdict(verdicts, sha1):
-    """Of a photo's verdicts, the one whose fit is kept: great (placed by hand) over accepted, the latest of them, of
-    those on this photo (its SHA-1); or None."""
-    for kind in ("great", "accepted"):
-        good = [v for v in verdicts if v["verdict"] == kind and v.get("sha1") == sha1]
-        if good:
-            return good[-1]
-    return None
-
-
-def keep_judged(photo_path, verdict):
-    """The fit a verdict judged good, as written to its file."""
-    photo = load(photo_path)
-    if photo is None:
-        return {"error": "the photo can't be read"}
-    size = (photo.shape[1], photo.shape[0])
-    return {"shell": shell_of(photos.serial_of(os.path.basename(photo_path))).name, "mm_to_photo": verdict["mm_to_photo"],
-            "photo_size": list(size), "distance_mm": camera_distance(verdict["mm_to_photo"], size)[1], "judged": verdict["verdict"]}
-
-
-def fit_into(stem, photo_path, text_path, verdict, sha1):
+def fit_into(stem, photo_path, text_path, sha1):
     out = os.path.join(OUT, stem + ".json")
     try:
-        result = keep_judged(photo_path, verdict) if verdict else fit(photo_path, text_path)
+        result = fit(photo_path, text_path)
     except Exception as e:
         result = {"error": f"{type(e).__name__}: {e}"}
     result["sha1"] = sha1
     json.dump(result, open(out, "w"))
     return stem, result
+
+
+def take(e, found):
+    """Puts a photo's fit as this step found it (its file; None: not fitted) into its entry in fits.json, unless its
+    plastic is known to be right. Returns whether it's current."""
+    current = e["fit"].get("plastic")
+    if fits.good(current):
+        return False
+    if found is None or "error" in found or fits.was_rejected(e, found["mm_to_photo"]):
+        if current is not None and "accepted" not in current:
+            e["fit"] = {}
+        return False
+    if current is not None and fits.same(current, found["mm_to_photo"]):
+        return True
+    if current is not None and current.get("accepted") == "almost":
+        fits.reject_plastic(e)
+    e["fit"] = {"plastic": fits.part(found["mm_to_photo"])}
+    return True
 
 
 if __name__ == "__main__":
@@ -188,27 +186,32 @@ if __name__ == "__main__":
         if photos.stem(os.path.basename(path)) not in paths:
             os.remove(path)
     code = max(os.path.getmtime(p) for p in ("src/cartridge.py", __file__))
-    verdicts = json.load(open(VERDICTS)) if os.path.exists(VERDICTS) else {}
     sha1s = photos.sha1s()
-    judged = {stem: v for stem in paths if (v := good_verdict(verdicts.get(stem, []), sha1s[stem]))}
-    todo, no_text = [], []
+    known = fits.load()
+    todo, no_text, kept = [], [], 0
     for stem, path in sorted(paths.items()):
+        if fits.good(fits.of(known, stem, sha1s[stem])["fit"].get("plastic")):
+            kept += 1
+            continue
         text = os.path.join(TEXT, stem + ".json")
         out = os.path.join(OUT, stem + ".json")
-        made = json.load(open(out)) if os.path.exists(out) else None
-        stale = made is None or made.get("sha1") != sha1s[stem] or os.path.getmtime(out) < max(os.path.getmtime(path), code)
-        if stem in judged:
-            if stale or made.get("judged") != judged[stem]["verdict"] or made.get("mm_to_photo") != judged[stem]["mm_to_photo"]:
-                todo.append((stem, path, text, judged[stem], sha1s[stem]))
-        elif not os.path.exists(text):
+        if not os.path.exists(text):
             no_text.append(stem)
-        elif stale or "judged" in made or os.path.getmtime(out) < os.path.getmtime(text):
-            todo.append((stem, path, text, None, sha1s[stem]))
-    refit = sum(v is None for _, _, _, v, _ in todo)
-    print(f"{len(paths)} photos ({len(special)} of cartridges with another shell left out, {SPECIAL_SHELLS}), {len(judged)} with a fit judged good, kept; {refit} to fit" + (f"; {len(no_text)} without their text (make read-text): {' '.join(no_text)}" if no_text else ""))
+        elif not os.path.exists(out) or json.load(open(out)).get("sha1") != sha1s[stem] or os.path.getmtime(out) < max(os.path.getmtime(path), os.path.getmtime(text), code):
+            todo.append((stem, path, text, sha1s[stem]))
+    print(f"{len(paths)} photos ({len(special)} of cartridges with another shell left out, {SPECIAL_SHELLS}), {kept} with their plastic accepted or placed by hand, kept; {len(todo)} to fit" + (f"; {len(no_text)} without their text (make read-text): {' '.join(no_text)}" if no_text else ""))
     with concurrent.futures.ProcessPoolExecutor() as pool:
         for done, (stem, result) in enumerate(pool.map(fit_into, *zip(*todo)) if todo else (), 1):
-            print(f"{done} of {len(todo)}: {stem}: {result.get('error') or ('kept, judged ' + result['judged'] if 'judged' in result else 'quality %.2f' % result['quality'])}", flush=True)
+            print(f"{done} of {len(todo)}: {stem}: {result.get('error') or 'quality %.2f' % result['quality']}", flush=True)
+    # Every photo's fit into fits.json, from the files (so that an interrupted run loses nothing).
+    with fits.editing() as known:
+        current = 0
+        for stem in paths:
+            out = os.path.join(OUT, stem + ".json")
+            found = json.load(open(out)) if os.path.exists(out) else None
+            if found is not None and found.get("sha1") != sha1s[stem]:
+                found = None
+            current += take(fits.entry(known, stem, sha1s[stem]), found)
     results = [json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json"))]
-    fitted = [r for r in results if "error" not in r]
-    print(f"{len(fitted)} of {len(results)} fitted ({sum('judged' in r for r in fitted)} kept as judged), {sum('judged' in r or not r['ambiguous'] and not r['broken_line'] for r in fitted)} not flagged (ambiguous or broken recess line)")
+    print(f"{kept} kept, {current} fitted and not known to be wrong; {sum('error' in r for r in results)} couldn't be fitted, "
+          f"{sum('error' not in r and not r['ambiguous'] and not r['broken_line'] for r in results)} files not flagged (ambiguous or broken recess line)")

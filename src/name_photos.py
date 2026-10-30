@@ -1,30 +1,17 @@
-import json, os, socket, sys, urllib.parse, cv2
+import json, os, sys, urllib.parse, cv2
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos
-from fit_cartridge import VERDICTS, load
-from review_fits import PORT as REVIEW_PORT, save_verdicts
-from review_labels import PORT as LABELS_PORT, VERDICTS as LABEL_VERDICTS
+import fits, photos
+from fit_cartridge import load
 
 # name-photos: a local page for naming the photos in photos/ whose serial isn't known (in a source's unknown/ folder),
 # one at a time: type the serial on its label and press enter (or Rename), and the next one is shown. The photo is
 # renamed in photos/ (photos.rename: tidied, numbered if taken, moved to its system's folder), and its verdicts in
-# reviews/fits.json and reviews/labels.json go with it. A photo not worth keeping can be deleted instead
-# (photos.delete), its verdicts with it. make review-fits and make review-labels rewrite those files too, so photos
-# aren't renamed or deleted while either runs.
+# fits.json go with it (fits.reconcile). A photo not worth keeping can be deleted instead (photos.delete), its fits
+# with it.
 # Usage: name_photos.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8768
-
-
-def review_running(port=REVIEW_PORT):
-    with socket.socket() as s:
-        return s.connect_ex(("localhost", port)) == 0
-
-
-def reviews_running():
-    """Which of make review-fits and make review-labels are running."""
-    return [name for name, port in (("make review-fits", REVIEW_PORT), ("make review-labels", LABELS_PORT)) if review_running(port)]
 
 
 def image(path, longest=1600):
@@ -51,21 +38,15 @@ class Naming:
 
     def rename(self, path, name):
         new_path = photos.rename(path, name)
-        old, new = photos.stem(os.path.basename(path)), photos.stem(os.path.basename(new_path))
-        for path in (VERDICTS, LABEL_VERDICTS):
-            verdicts = json.load(open(path)) if os.path.exists(path) else {}
-            if old in verdicts:
-                verdicts[new] = verdicts.get(new, []) + verdicts.pop(old)
-                save_verdicts(verdicts, path)
+        with fits.editing():
+            pass  # its fits follow it (fits.reconcile)
         self.todo.remove(path)
         return new_path
 
     def delete(self, path):
         photos.delete(path)
-        for file in (VERDICTS, LABEL_VERDICTS):
-            verdicts = json.load(open(file)) if os.path.exists(file) else {}
-            if verdicts.pop(photos.stem(os.path.basename(path)), None):
-                save_verdicts(verdicts, file)
+        with fits.editing():
+            pass  # its fits go with it
         self.todo.remove(path)
 
 
@@ -141,8 +122,6 @@ class Handler(BaseHTTPRequestHandler):
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if data["path"] not in naming.todo:
             return self.send(b"not a photo to name", "text/plain", 400)
-        if running := reviews_running():
-            return self.send(f"{' and '.join(running)} running: stop it first, as it rewrites the verdicts".encode(), "text/plain", 409)
         if self.path == "/delete":
             naming.delete(data["path"])
             print(f"{data['path']} deleted", flush=True)
@@ -161,6 +140,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     naming = Naming()
     print(f"{len(naming.todo)} photos to name; name them at http://localhost:{PORT}/ (ctrl-C to stop)")
-    if running := reviews_running():
-        print(f"{' and '.join(running)} running: stop it before renaming, as it rewrites the verdicts")
     ThreadingHTTPServer(("localhost", PORT), Handler).serve_forever()

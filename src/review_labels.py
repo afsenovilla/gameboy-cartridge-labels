@@ -1,27 +1,24 @@
-import json, os, socket, sys, threading, urllib.parse, cv2, numpy as np
+import copy, json, os, sys, threading, urllib.parse, cv2, numpy as np
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos
-from cartridge import CGB_RECESS, RECESS, SHELLS, project
+import fits, photos
+from cartridge import CGB_RECESS, RECESS, SHELLS, project, shell_of
 from fit_cartridge import load
-from fit_label import OUT as FITS, label_pose
-from review_fits import BUTTONS, PORT as FITS_PORT, VERDICTS as PLASTIC_VERDICTS, VERDICTS_GIVEN, dense, rounded_outline, same_fit as same_plastic, save_verdicts
+from fit_label import OUT as DETAILS, label_pose
+from review_fits import BUTTONS, GIVEN, SHOWN, VERDICTS_GIVEN, dense, rounded_outline
 
-# review-labels: a local page for judging fit-label's fits of the label (generated/fit-label/, make fit-label) by eye, a
-# page of photos at a time. Each shows the recess straightened (the photo seen through the plastic's fit, perspective
-# removed), with 5 mm around it, all at the same scale whatever the photo's resolution; the fitted label drawn red (a
-# fit rejected for sticking out of the recess: orange). The labels farthest from the recess's middle
-# come first. A verdict (reject, almost, accept; clicked again, it's taken back; or for all the page's photos not yet
-# judged at once) is on the fit shown, and saved to reviews/labels.json with it: photo name -> [{"verdict",
-# "label_mm_to_photo", "sha1"}...], one per fit judged, with the SHA-1 of the photo it judged; when fit-label changes, a verdict stays with the fit it judged. Labels
-# placed by hand (make fit-by-hand) are kept by fit-label and shown as accepted.
-# Where the plastic's fit turns out to be off, "Plastic: almost" beside the photo's name demotes it in reviews/fits.json:
-# its verdict becomes almost, as in make review-fits (so fit-label drops the photo on its next run, and make fit-by-hand
-# lists it first), and the label's fit, made on it, is rejected; clicked again, the verdicts on both are put back. Not while make review-fits runs, which rewrites that file.
+# review-labels: a local page for judging the labels' fits (fits.json, src/fits.py; make fit-label) by eye, a page of
+# photos at a time. Each shows the recess straightened (the photo seen through the plastic's fit, perspective removed),
+# with 5 mm around it, all at the same scale whatever the photo's resolution, and the current label drawn red; a photo
+# without one shows its latest rejected label on that plastic, or the fit fit-label rejected for sticking out of the
+# recess (orange, from generated/fit-label/). The labels farthest from the recess's middle come first. A verdict
+# (reject, almost, accept; clicked again, it's taken back; or for all the page's photos not yet judged at once) changes
+# the label shown in fits.json (fits.judge_label). Labels placed by hand are shown as accepted, and can't be judged here.
+# Where the plastic's fit turns out to be off, "Plastic: almost" beside the photo's name makes it almost and rejects the
+# label (fitted on it); clicked again, the photo's fits are put back as they were. The groups are as the tool starts.
 # Usage: review_labels.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8770
-VERDICTS = "reviews/labels.json"
 PER_PAGE = 24
 # The straightened view: px per mm, and the margin around the recess (mm). Framed alike on both shells, around the
 # recess's middle, as wide and high as the larger recess.
@@ -29,7 +26,6 @@ SCALE = 12
 MARGIN = 5.0
 FRAME = (max(r[2] - r[0] for r in (RECESS, CGB_RECESS)) + 2 * MARGIN, max(r[3] - r[1] for r in (RECESS, CGB_RECESS)) + 2 * MARGIN)
 LABEL_RADIUS = 1.4
-shown = lambda verdict: "accepted" if verdict == "great" else verdict
 
 
 def straightened(path, fit):
@@ -60,111 +56,118 @@ def straightened(path, fit):
     return cv2.imencode(".jpg", view, [cv2.IMWRITE_JPEG_QUALITY, 90])[1].tobytes()
 
 
-def notes(fit):
-    if "error" in fit:
-        return [("REJECTED: " if "sticks out" in fit["error"] else "") + fit["error"]]
-    if "judged" in fit:
-        return ["placed by hand: kept by fit-label"]
-    dx, dy = fit["offset_mm"]
-    found = [f'shifted {dx:+.2f}, {dy:+.2f} mm, turned {fit["angle_degrees"]:+.2f}°, {fit["width_mm"]:.2f} mm wide']
-    if fit["width_at_limit"]:
+def notes(details):
+    """What fit-label found on the label shown."""
+    if details is None:
+        return []
+    if "error" in details:
+        return [("REJECTED: " if "sticks out" in details["error"] else "") + details["error"]]
+    dx, dy = details["offset_mm"]
+    found = [f'shifted {dx:+.2f}, {dy:+.2f} mm, turned {details["angle_degrees"]:+.2f}°, {details["width_mm"]:.2f} mm wide']
+    if details["width_at_limit"]:
         found.append("stopped at a width limit: fitted again at the median width")
     return found
 
 
-def same_fit(verdict, fit):
-    return "error" not in fit and verdict.get("sha1") == fit["sha1"] and np.allclose(verdict["label_mm_to_photo"], fit["label_mm_to_photo"])
-
-
 class Review:
-    """The label fits, the photos and the verdicts, read when the tool starts."""
+    """The photos with a good plastic fit, each with the label it shows, as the tool starts; verdicts go to fits.json
+    at once."""
 
     def __init__(self):
         self.paths = {photos.stem(n): os.path.join(photos.ROOT, s, system, n) for s, system, n, _ in photos.all_sources()}
-        self.fits = {}
         sha1s = photos.sha1s()
-        for name in sorted(os.listdir(FITS)):
-            if name.endswith(".json") and name[:-5] in self.paths:
-                fit = json.load(open(os.path.join(FITS, name)))
-                # A fit made from another photo under the same name waits for its step to run again.
-                if fit.get("sha1") == sha1s[name[:-5]]:
-                    self.fits[name[:-5]] = fit
-        # Farthest from the recess's middle first (the shift, plus the turn's reach at the label's corners); placed by
-        # hand next; rejected last.
-        reach = lambda f: np.hypot(*f["offset_mm"]) + 28 * abs(np.radians(f["angle_degrees"]))
-        self.order = sorted(self.fits, key=lambda n: (2, 0) if "error" in self.fits[n] else (1, 0) if "judged" in self.fits[n] else (0, -reach(self.fits[n])))
-        fitted = [n for n in self.order if "error" not in self.fits[n]]
-        self.verdicts = json.load(open(VERDICTS)) if os.path.exists(VERDICTS) else {}
-        self.groups = {"all": self.order, "Game Boy Color only": [n for n in fitted if self.fits[n]["shell"] == "cgb"],
-                       # Fits without a verdict on them, or with one, as the tool starts.
-                       "not judged": [n for n in fitted if self.current(n) is None],
-                       **{v: [n for n in fitted if shown(self.current(n)) == v] for v in VERDICTS_GIVEN},
-                       "rejected by fit-label": [n for n in self.order if "error" in self.fits[n]]}
-        self.demoted = {}  # photo -> its plastic's verdicts before it was demoted in this run
+        known = fits.load()
+        self.entries, self.plastic, self.shown, self.details = {}, {}, {}, {}
+        for name in sorted(self.paths):
+            e = fits.of(known, name, sha1s[name])
+            plastic = e["fit"].get("plastic")
+            if not fits.good(plastic):
+                continue
+            path = os.path.join(DETAILS, name + ".json")
+            details = json.load(open(path)) if os.path.exists(path) else None
+            if details is not None and (details.get("sha1") != sha1s[name] or not fits.same(details["mm_to_photo"], plastic)):
+                details = None
+            label = e["fit"].get("label") or next((r["label"] for r in reversed(e["rejected"]) if "label" in r and fits.same(r["plastic"], plastic)), None)
+            if label is None and (details is None or "offset_mm" not in details):
+                continue  # no label yet
+            self.entries[name], self.plastic[name] = e, plastic["mm_to_photo"]
+            self.shown[name] = label and label["mm_to_photo"]
+            # What fit-label found, if it's about the label shown.
+            self.details[name] = details if details is not None and ("error" in details and label is None or "error" not in details and label is not None and fits.same(details["label_mm_to_photo"], label)) else None
+        # Farthest from the recess's middle first (the shift, plus the turn's reach at the label's corners), then those
+        # without what fit-label found (placed by hand); rejected by fit-label last.
+        reach = lambda d: np.hypot(*d["offset_mm"]) + 28 * abs(np.radians(d["angle_degrees"]))
+        self.order = sorted(self.entries, key=lambda n: (2, 0) if self.shown[n] is None else (1, 0) if self.details[n] is None else (0, -reach(self.details[n])))
+        labelled = [n for n in self.order if self.shown[n] is not None]
+        self.groups = {"all": self.order, "Game Boy Color only": [n for n in labelled if shell_of(photos.serial_of(n)).name == "cgb"],
+                       "not judged": [n for n in labelled if self.state(n) is None],
+                       **{v: [n for n in labelled if SHOWN[self.state(n)] == v] for v in VERDICTS_GIVEN},
+                       "placed by hand": [n for n in labelled if self.state(n) == "hand-placed"],
+                       "rejected by fit-label": [n for n in self.order if self.shown[n] is None]}
+        self.demoted = {}  # photo -> its entry before its plastic was demoted in this run
         self.cache, self.lock = {}, threading.Lock()
+
+    def state(self, name):
+        return fits.state(self.entries[name], self.plastic[name], self.shown[name])
+
+    def view(self, name):
+        """The label shown, as straightened draws it."""
+        if self.shown[name] is None:
+            return dict(self.details[name], shell=shell_of(photos.serial_of(name)).name)
+        return {"shell": shell_of(photos.serial_of(name)).name, "mm_to_photo": self.plastic[name], "label_mm_to_photo": self.shown[name]}
 
     def image(self, name):
         """The straightened recess, rendered once (the last few pages are kept)."""
         with self.lock:
             if name in self.cache:
                 return self.cache[name]
-        image = straightened(self.paths[name], self.fits[name])
+        image = straightened(self.paths[name], self.view(name))
         with self.lock:
             self.cache[name] = image
             while len(self.cache) > 4 * PER_PAGE:
                 self.cache.pop(next(iter(self.cache)))
         return image
 
-    def current(self, name):
-        """The verdict on the fit shown, or None; a label placed by hand is great."""
-        if "judged" in self.fits[name]:
-            return "great"
-        return next((v["verdict"] for v in self.verdicts.get(name, []) if same_fit(v, self.fits[name])), None)
-
     def judge(self, names, verdict):
-        """Gives the fits shown a verdict (None: takes it back), keeping the verdicts on other fits."""
-        for name in names:
-            others = [v for v in self.verdicts.get(name, []) if not same_fit(v, self.fits[name])]
-            if verdict is not None:
-                others.append({"verdict": verdict, "label_mm_to_photo": self.fits[name]["label_mm_to_photo"], "sha1": self.fits[name]["sha1"]})
-            self.verdicts[name] = others
-            if not others:
-                del self.verdicts[name]
-        save_verdicts(self.verdicts, VERDICTS)
-
-    def summary(self):
-        """Per group, how many fits there are and the verdicts on them (only those judging the current fit)."""
-        counts = {}
-        for group, names in self.groups.items():
-            judged = [shown(self.current(n)) for n in names]
-            counts[group] = {"fits": len(names), **{v: judged.count(v) for v in VERDICTS_GIVEN}}
-        return counts
+        """Gives the labels shown a verdict (None: takes it back)."""
+        sha1s = photos.sha1s()
+        with fits.editing() as known:
+            for name in names:
+                e = fits.entry(known, name, sha1s[name])
+                if fits.good(e["fit"].get("plastic")) and fits.same(e["fit"]["plastic"], self.plastic[name]):
+                    fits.judge_label(e, self.shown[name], GIVEN[verdict])
+                    self.entries[name] = e
 
     def demote(self, name, demote):
-        """Gives the plastic's fit the verdict almost in reviews/fits.json (read again first) and rejects the label's
-        fit, or puts back the verdicts both had before."""
-        verdicts = json.load(open(PLASTIC_VERDICTS)) if os.path.exists(PLASTIC_VERDICTS) else {}
-        fit = self.fits[name]
-        if demote:
-            self.demoted[name] = (verdicts.get(name, []), self.verdicts.get(name, []))
-            verdicts[name] = [v for v in self.demoted[name][0] if not same_plastic(v, fit)] + [{"verdict": "almost", "mm_to_photo": fit["mm_to_photo"], "sha1": fit["sha1"]}]
-            if "error" not in fit and "judged" not in fit:
-                self.judge([name], "rejected")
-        else:
-            verdicts[name], self.verdicts[name] = self.demoted.pop(name)
-            if not self.verdicts[name]:
-                del self.verdicts[name]
-            save_verdicts(self.verdicts, VERDICTS)
-        save_verdicts(verdicts, PLASTIC_VERDICTS)
+        """Makes the plastic's fit almost and rejects the label on it, or puts the photo's fits back as they were."""
+        sha1s = photos.sha1s()
+        with fits.editing() as known:
+            e = fits.entry(known, name, sha1s[name])
+            if demote:
+                self.demoted[name] = copy.deepcopy(e)
+                if self.shown[name] is not None and self.state(name) != "hand-placed":
+                    fits.judge_label(e, self.shown[name], "rejected")
+                fits.judge_plastic(e, self.plastic[name], "almost")
+            else:
+                known[name] = e = self.demoted.pop(name)
+            self.entries[name] = e
+
+    def summary(self):
+        """Per group, how many photos there are and the verdicts on the labels shown."""
+        counts = {}
+        for group, names in self.groups.items():
+            judged = [SHOWN[self.state(n)] for n in names if self.shown[n] is not None]
+            counts[group] = {"fits": len(names), **{v: judged.count(v) for v in VERDICTS_GIVEN}}
+        return counts
 
     def page(self, group, number):
         names = self.groups[group][number * PER_PAGE:(number + 1) * PER_PAGE]
         items = []
         for name in names:
-            fit = self.fits[name]
-            others = [f'{v["verdict"]} on another fit' for v in self.verdicts.get(name, []) if v.get("sha1") == fit["sha1"] and not same_fit(v, fit)]
-            items.append({"name": name, "path": self.paths[name], "judgeable": "error" not in fit and "judged" not in fit,
-                          "notes": notes(fit) + others, "verdict": shown(self.current(name)), "demoted": name in self.demoted})
+            state = self.state(name) if self.shown[name] is not None else None
+            more = ["placed by hand"] if state == "hand-placed" else []
+            items.append({"name": name, "path": self.paths[name], "judgeable": self.shown[name] is not None and state != "hand-placed" and name not in self.demoted,
+                          "notes": notes(self.details[name]) + more, "verdict": SHOWN[state], "demoted": name in self.demoted})
         return {"items": items, "pages": max(1, -(-len(self.groups[group]) // PER_PAGE))}
 
 
@@ -293,7 +296,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send({"groups": list(review.groups), "summary": review.summary()})
         elif len(parts) == 3 and parts[0] == "page" and parts[1] in review.groups and parts[2].isdigit():
             self.send(review.page(parts[1], int(parts[2])))
-        elif len(parts) == 2 and parts[0] == "image" and parts[1] in review.fits:
+        elif len(parts) == 2 and parts[0] == "image" and parts[1] in review.entries:
             self.send(review.image(parts[1]), "image/jpeg")
         else:
             self.send_error(404)
@@ -303,14 +306,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if self.path == "/plastic":
-            if data["name"] not in review.fits or data["demote"] == (data["name"] in review.demoted):
+            if data["name"] not in review.entries or data["demote"] == (data["name"] in review.demoted):
                 return self.send_error(400)
-            with socket.socket() as s:
-                if s.connect_ex(("localhost", FITS_PORT)) == 0:
-                    return self.send_error(409, "make review-fits is running: stop it first, as it rewrites reviews/fits.json")
             review.demote(data["name"], data["demote"])
-            return self.send({"summary": review.summary(), "verdict": shown(review.current(data["name"]))})
-        if any(n not in review.fits or "error" in review.fits[n] or "judged" in review.fits[n] for n in data["names"]) or data["verdict"] not in VERDICTS_GIVEN + (None,):
+            state = review.state(data["name"]) if review.shown[data["name"]] is not None else None
+            return self.send({"summary": review.summary(), "verdict": SHOWN[state]})
+        if any(n not in review.entries or review.shown[n] is None or review.state(n) == "hand-placed" or n in review.demoted for n in data["names"]) or data["verdict"] not in VERDICTS_GIVEN + (None,):
             return self.send_error(400)
         review.judge(data["names"], data["verdict"])
         self.send({"summary": review.summary()})
@@ -321,5 +322,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     review = Review()
-    print(f"{len(review.fits)} label fits, {len(review.verdicts)} with verdicts; review them at http://localhost:{PORT}/ (ctrl-C to stop)")
+    print(f"{len(review.entries)} photos with a label, {len(review.groups['not judged'])} not judged; review them at http://localhost:{PORT}/ (ctrl-C to stop)")
     ThreadingHTTPServer(("localhost", PORT), Handler).serve_forever()

@@ -8,5 +8,7 @@ generated/
 # Photos waiting for make add-photos: only the folder's README is kept.
 save-new-images-here/*
 !save-new-images-here/README.md
+# The lock steps and tools take on fits.json (src/fits.py).
+fits.json.lock
 # macOS Finder metadata.
 .DS_Store
