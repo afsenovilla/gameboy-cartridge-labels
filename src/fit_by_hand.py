@@ -221,6 +221,18 @@ const LOCAL = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]], NORMALS = [[0, -1], 
 const rot = (a, [x, y]) => [Math.cos(a) * x - Math.sin(a) * y, Math.sin(a) * x + Math.cos(a) * y];
 const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 const copy = r => ({c: r.c.slice(), a: r.a, w: r.w, h: r.h});
+// The label's outline with its corners rounded (1.4 mm, as review-labels draws it), in the recess's mm.
+function roundedOutline(r, radius = 1.4, per = 6) {
+  const pts = [];
+  [[-1, -1, Math.PI], [1, -1, 1.5 * Math.PI], [1, 1, 0], [-1, 1, 0.5 * Math.PI]].forEach(([sx, sy, a0]) => {
+    for (let k = 0; k <= per; k++) {
+      const t = a0 + k / per * Math.PI / 2;
+      const d = rot(r.a, [sx * (r.w / 2 - radius) + radius * Math.cos(t), sy * (r.h / 2 - radius) + radius * Math.sin(t)]);
+      pts.push([r.c[0] + d[0], r.c[1] + d[1]]);
+    }
+  });
+  return pts;
+}
 function rectCorners(r) { return LOCAL.map(([u, v]) => { const d = rot(r.a, [u * r.w, v * r.h]); return [r.c[0] + d[0], r.c[1] + d[1]]; }); }
 function rectFrom(q) {
   const t = [q[1][0] - q[0][0] + q[2][0] - q[3][0], q[1][1] - q[0][1] + q[2][1] - q[3][1]], l = [q[3][0] - q[0][0] + q[2][0] - q[1][0], q[3][1] - q[0][1] + q[2][1] - q[1][1]];
@@ -323,7 +335,7 @@ const toScreen = q => [ox + q[0] * scale, oy + q[1] * scale], toImage = (x, y) =
 // The model's lines and, if placed, the label in the photo's pixels: [points, color, dashed, closed].
 function shapes() {
   const H = toPhoto(), lines = model().lines.map(([pts, col, dash, closed]) => [pts.map(q => apply(H, q)), col, dash, closed]);
-  return placed() ? lines.concat([[rectCorners(rect).map(q => apply(H, q)), "#3cf", false, true]]) : lines;
+  return placed() ? lines.concat([[roundedOutline(rect).map(q => apply(H, q)), "#3cf", false, true]]) : lines;
 }
 function stroke(g, pts, closed, at) {
   g.beginPath();
