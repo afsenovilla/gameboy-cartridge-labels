@@ -7,20 +7,23 @@ import photos, serials
 # cartridge photo in gb-game-list, and no photo in photos/ (a photo's release from match-serials, else from its name),
 # whether or not its fit works. Releases with photos from otakaraou alone are listed apart: they are worth replacing.
 # A table, one row per release, with a column per place to search:
-# Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, and, for Japanese
-# releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese title, with ゲームボーイ and
-# カセット on the image searches (listings there are titled in Japanese, rarely with the serial), the others by their
-# English title, with "game boy" and cartridge; the eBay sellers title their listings in English, so they get the
-# English title alone. Long titles are cut at their subtitle. Last, Google Lens searches by image: with the release's
-# cartridge photo from game-boy-database.com, and with its otakaraou photo (by the URLs they're found at, so Lens can
-# fetch them). gb-game-list has only the box photos from game-boy-database.com; the cartridge's is next to it, by the
-# same number (vizu/3741.jpg, cartridges/3741.jpg), for most games.
+# Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, Allegro (in its Game Boy
+# category), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
+# title, with ゲームボーイ and カセット on the image searches (listings there are titled in Japanese, rarely with the serial), the
+# others by their English title, with "game boy" and cartridge; the eBay sellers and Allegro's sellers title their
+# listings in English, so they get the English title alone. Long titles are cut at their subtitle. Last, Google Lens
+# searches by image: with the release's cartridge photo from game-boy-database.com, and with its otakaraou photo (by the
+# URLs they're found at, so Lens can fetch them). gb-game-list has only the box photos from game-boy-database.com; the
+# cartridge's is next to it, by the same number (vizu/3741.jpg, cartridges/3741.jpg), for most games.
 # Usage: search_photos.py
 RELEASES = serials.RELEASES
 SERIALS = "generated/match-serials/serials.tsv"
 OUT = "generated/search-photos/index.html"
 SYSTEMS = ("dmg", "cgb")
 LENS = "https://lens.google.com/uploadbyurl?url="
+# Allegro's category for each system, searched within.
+ALLEGRO = {"dmg": "https://allegro.pl/kategoria/nintendo-game-boy-122237", "cgb": "https://allegro.pl/kategoria/nintendo-game-boy-122237",
+           "agb": "https://allegro.pl/kategoria/nintendo-game-boy-advance-122234"}
 # eBay's sellers: name shown, seller id, store name.
 EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
 
@@ -53,6 +56,7 @@ def links(release):
              ("Bing", "https://www.bing.com/images/search?q=" + q(image_query))]
     found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"])}))
               for name, seller, store in EBAY_SELLERS]
+    found.append(("Allegro", ALLEGRO[release["system"]] + "?string=" + q(short(release["title"]))))
     found.append(("Jauce", "https://www.jauce.com/search/" + urllib.parse.quote(f"{title} ゲームボーイ", safe="")) if japanese(release) else None)
     box = next((i["url"] for i in release["images"] if i["kind"] == "box"), None)
     found.append(("Lens game-boy-database", LENS + q(box.replace("/vizu/", "/cartridges/"))) if box else None)

@@ -23,7 +23,7 @@
 #   A tool, not a step: a local page for placing the plastic and the label by hand where the fit is off, one photo at a time, those judged almost first: drag the recess's corners and the label into place; saved to reviews/fits.json as great fits, which fit-cartridge keeps (src/fit_by_hand.py). Not while make review-fits runs.
 #
 #   make search-photos
-#   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Jauce, and Google Lens with the release's cartridge photo from game-boy-database.com or otakaraou photo) for photos of the Game Boy and Game Boy Color releases not in photos/ (those from otakaraou alone apart), into generated/search-photos/index.html (src/search_photos.py).
+#   A tool, not a step: a local page of searches (Google, Bing, the eBay sellers elrocinante and Hit-Japan, Allegro, Jauce, and Google Lens with the release's cartridge photo from game-boy-database.com or otakaraou photo) for photos of the Game Boy and Game Boy Color releases not in photos/ (those from otakaraou alone apart), into generated/search-photos/index.html (src/search_photos.py).
 #
 #   make name-photos
 #   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its verdicts in reviews/fits.json with it; or delete it (src/name_photos.py). Not while make review-fits runs.
