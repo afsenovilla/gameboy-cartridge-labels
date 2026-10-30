@@ -105,6 +105,12 @@
   "note": "named by nothing: no serial read",
   "sha1": "771cafa88f62b6860aec1d8813f3c8d99084d034"
  },
+ "DMG-ABKJ-JPN_2.jpg": {
+  "original_name": "i-img1200x900-17930762352320a1dt4734.jpg",
+  "serial_on_label": "DMG-ADKJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "64bd01c8660d6171e372b55795481218cbb3ce1c"
+ },
  "DMG-AC2J-JPN.jpg": {
   "original_name": "i-img900x1200-17859982114829pd8kxq469.jpg",
   "serial_on_label": "DMG-AC2J-JPN",
@@ -116,12 +122,6 @@
   "serial_on_label": "DMG-ADAJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "0dd3eb0ff684f311a13dc31b9d95e3a2ba79359a"
- },
- "DMG-ADKJ-JPN.jpg": {
-  "original_name": "i-img1200x900-17930762352320a1dt4734.jpg",
-  "serial_on_label": "DMG-ADKJ-JPN",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "64bd01c8660d6171e372b55795481218cbb3ce1c"
  },
  "DMG-ADNJ-JPN_4.jpg": {
   "original_name": "i-img1200x1200-17843907050634bpskaj14842.jpg",
