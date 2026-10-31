@@ -33,5 +33,13 @@ search-photos, name-photos.
 - **A tool comparing labels by their look against their serials**: similar labels with different serials (likely
   misreads: about 2 % of photos named by their text are wrong), and identical serials that look different (misnamed
   photos, or real variants such as reprints).
+- **Verify photos against game-boy-database.com's scans.** Its cartridge scans (`cartridges/<id>.jpg`, next to the box
+  photos gb-game-list lists, ~660 × 760, tightly cropped, original Game Boy only, one per country serial) are
+  watermarked, so hardly usable themselves, but their labels are easy to find. Where a photo's label matches the
+  unmasked part of the scan's label (allowing for lightness and the like), the photo counts as verified: its serial
+  and its label. The watermark's mask was made on `collection-pipeline` (`experiments/wm_mask.py`; old PLAN.md,
+  Pipeline 2): one overlay, scaled to the scan's width and centered vertically; in a 660 × 800 frame, the letters
+  (pink in the average of many scans) widened by a 13 px ellipse, plus the robot logo at x 250–410, y 0–215; 16 % of
+  the frame. Likely real scans, not composites like the fakes.
 - **gb-game-list's serials** are incomplete (AGB 47 %, serials without region): fix later.
 - **Cleanup of the branch's history** (hand fits, fits.json redesign): later.
