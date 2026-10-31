@@ -1,0 +1,41 @@
+# Plan
+
+The goal: for each Game Boy and Game Boy Color cartridge release, a clean, straight-on image of its label, made from
+photos of cartridges, and composited onto a clean cartridge of the right type. For the card images of the cartridge
+database in [gb-game-list](../gb-game-list) (`database/releases.json`). Nothing runs unsupervised: every fit and every
+image is reviewed before it's used.
+
+## Sources, best first
+
+Photos of a release from a better source replace those from a worse one, whenever one turns up.
+
+1. Real photos: my own (`my-collection`), gbhwdb, and photos from listings and searches (eBay, Jauce, Mercari, Google…).
+2. `otakaraou`: real photos, but small (median short side 800 px). Kept only for releases with no photo from (1).
+3. `emumovies` and `launchbox-abeezy1388`: **the lowest quality. Not photos but fakes**: one rendered cartridge with a
+   label made from box art pasted in. Kept only for releases with nothing else, and never a reason to delete a photo
+   from (1) or (2). A release with only these still counts as missing a photo.
+   - `launchbox-abeezy1388`: 193 images, one template (1000 × 1132 px, the label in (131, 333)–(868, 980)), so one
+     hand fit (DMG-MH-USA_2's) is copied to them all.
+   - `emumovies`: 356 images, two templates: 199 at 994 × 1132 px (the same render as abeezy, 3 px narrower; 90 of
+     them with the label in abeezy's box, shifted 3 px), 155 at 878 × 1000 px (not fitted yet), and 2 at 995 × 1132 px
+     that match neither.
+
+## Steps
+
+Done, run with `make` (see the Makefile): add-photos, read-text, fit-cartridge (the plastic), fit-label (the label in its
+recess). Tools for judging and fixing fits: review-fits, review-labels, fit-by-hand; for finding and naming photos:
+search-photos, name-photos.
+
+## Open work
+
+- **Check fit-label and review-labels** (built, awaiting my check).
+- **Fits of the emumovies templates**: copy abeezy's fit, shifted 3 px, to the 994 × 1132 group; hand fit one of the
+  878 × 1000 group and see whether its label sits in one box too.
+- **search-photos**: list the releases covered only by emumovies or launchbox-abeezy1388, as it lists the otakaraou-only ones.
+- **Depth layers for the CGB shell** (board and walls behind the front face): waits for my measurements.
+- Then: rectify (straighten the label), group the artwork, pick the best photo of each release.
+- **A tool comparing labels by their look against their serials**: similar labels with different serials (likely
+  misreads: about 2 % of photos named by their text are wrong), and identical serials that look different (misnamed
+  photos, or real variants such as reprints).
+- **gb-game-list's serials** are incomplete (AGB 47 %, serials without region): fix later.
+- **Cleanup of the branch's history** (hand fits, fits.json redesign): later.
