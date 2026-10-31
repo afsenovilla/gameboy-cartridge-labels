@@ -1029,6 +1029,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "abcf52f49bf731df1d8c4801a8154c52773ff328"
  },
+ "DMG-EKA.jpg": {
+  "original_name": "m66792917337_1.jpg",
+  "serial_on_label": "DMG-AEKAS",
+  "note": "named by nothing: no serial read",
+  "sha1": "bb47691f4ecdb081e2f7dcdd26bfff328bce1ae1"
+ },
  "DMG-ESJ.jpg": {
   "original_name": "images (5).jpeg",
   "serial_on_label": "DMG-ESJ",
@@ -1282,6 +1288,12 @@
   "note": "named by nothing: no serial read",
   "sha1": "3791ba7be3427ad30f796d4f7220dc453fb07786"
  },
+ "DMG-NIJ_2.jpg": {
+  "original_name": "s-l1200.jpg",
+  "serial_on_label": "DMG-NUJ",
+  "note": "named by nothing: no serial read",
+  "sha1": "365bc7f51bcfb904b53b920cfdd0d393cd62f9f6"
+ },
  "DMG-NXJ_3.jpg": {
   "serial_on_label": "DMG-NXJ",
   "original_sha1": "c0ec006fde94d5feca16041f36885a7b7681f18f",
@@ -1411,6 +1423,11 @@
   "sha1": "bb1812d269997e4ef9779841eaaa462e2d31bb80",
   "original_name": "Tumble-Pop---Game-Boy.jpeg"
  },
+ "DMG-TBJ_2.webp": {
+  "original_name": "580634652_11fca46e-a32b-4001-9f94-918914cc16fc.webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "9dd3bdcf3c5798dc3767c9562f3e7d7b558d252a"
+ },
  "DMG-TEA.jpg": {
   "original_name": "m40954736595_2.jpg",
   "serial_on_label": "DMG-TEA",
@@ -1512,6 +1529,12 @@
   "original_sha1": "9ccf09496fd65543b1b53bb79befcbe28405b38a",
   "sha1": "4ca5ccb46332f7a158b216fc43c419db4f46c40c",
   "original_name": "imgrc0084822635.jpg"
+ },
+ "DMG-W9A.jpg": {
+  "original_name": "m78302055582_1.jpg",
+  "serial_on_label": "DMG-WSASU",
+  "note": "named by nothing: no serial read",
+  "sha1": "7315f852759c59b99966e0251df598f65a7fcf63"
  },
  "DMG-WQJ_3.jpg": {
   "serial_on_label": "DMG-20S0T",
