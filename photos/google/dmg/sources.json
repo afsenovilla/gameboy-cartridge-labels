@@ -584,6 +584,12 @@
   "sha1": "54d823d62e436e565ab22b3d97defc015a416f52",
   "original_name": "81CoA0PhaOL.jpg"
  },
+ "DMG-BGNJ-JPN.png": {
+  "original_name": "r2_c06f0c11-be28-44a6-8b62-ade0313947ad.png",
+  "serial_on_label": "DMG-BGNJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7ae00bd7b9e941d2bdc71889461bcdce15f9a6ac"
+ },
  "DMG-BGZJ-JPN_3.jpg": {
   "serial_on_label": "DMG-BGZJ-JPN",
   "original_sha1": "90c7f16d4cb8a73c9c1ba9ce5e0a7003f297000b",
