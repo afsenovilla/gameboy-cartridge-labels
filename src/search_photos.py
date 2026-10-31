@@ -14,7 +14,7 @@ import photos, serials
 # category), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
 # title, with ゲームボーイ and カセット on the image searches (listings there are titled in Japanese, rarely with the serial), the
 # others by their English title, with "game boy" and cartridge; the eBay sellers and Allegro's sellers title their
-# listings in English, so they get the English title alone. Long titles are cut at their subtitle. Last, Google Lens
+# listings in English, so they get the English title alone. Each serial links to Google's image search for it, quoted. Long titles are cut at their subtitle. Last, Google Lens
 # searches by image: with the release's cartridge photo from game-boy-database.com, and with its otakaraou photo (by the
 # URLs they're found at, so Lens can fetch them). gb-game-list has only the box photos from game-boy-database.com; the
 # cartridge's is next to it, by the same number (vizu/3741.jpg, cartridges/3741.jpg), for most games.
@@ -68,6 +68,13 @@ def links(release):
     return found
 
 
+
+def serial_links(release):
+    """The release's serials, each linking to Google's image search for it."""
+    return " ".join(f'<a href="https://www.google.com/search?udm=2&q={urllib.parse.quote(chr(34) + s + chr(34))}" target="_blank">{html.escape(s)}</a>'
+                    for s in release["cartridgeSerials"])
+
+
 releases = [r for r in json.load(open(RELEASES)) if r["system"] in SYSTEMS and r["cartridgeSerials"]]
 release_of = serials.releases_by_serial()
 covered, otakaraou, fake = set(), {}, set()  # otakaraou: release -> the URL of its otakaraou photo
@@ -98,7 +105,7 @@ for heading, group in groups:
         title = japanese_title(r) if japanese(r) else r["title"]
         searches = "".join(f'<td><a href="{html.escape(link[1])}" target="_blank">{link[0]}</a></td>' if link else "<td></td>" for link in links(r))
         marks = "fake only" if r["id"] in fake and r["id"] not in otakaraou else ""
-        rows.append(f'<tr><td>{html.escape(title)}</td><td><small title="{html.escape(r["title"])}">{html.escape(" ".join(r["cartridgeSerials"]))}</small></td><td><small>{marks}</small></td>{searches}</tr>')
+        rows.append(f'<tr><td>{html.escape(title)}</td><td><small title="{html.escape(r["title"])}">{serial_links(r)}</small></td><td><small>{marks}</small></td>{searches}</tr>')
     sections.append(f"<h2>{heading} ({len(group)})</h2><table>{''.join(rows)}</table>")
 
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
