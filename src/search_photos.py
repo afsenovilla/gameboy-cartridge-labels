@@ -17,7 +17,7 @@ import photos, serials
 # only in their subtitles.
 # A table, one row per release, with a column per place to search:
 # Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan (and,
-# for releases not Japanese, ASANOSHOP, which sells western releases mostly), Allegro (in its Game Boy
+# for releases not Japanese, ASANOSHOP, which sells western releases mostly), GameStop (for releases not Japanese), Allegro (in its Game Boy
 # category; not for Japanese releases), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
 # title, with ゲームボーイ and カセット on the image searches (listings there are titled in Japanese, rarely with the serial), the
 # others by their English title, with "game boy" and cartridge; the eBay sellers and Allegro's sellers title their
@@ -90,6 +90,7 @@ def links(release):
               for name, seller, store in EBAY_SELLERS]
     found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
               if not japanese(release) else None for name, seller, store in WESTERN_EBAY_SELLERS]
+    found.append(("GameStop", "https://www.gamestop.com/search-new/?" + urllib.parse.urlencode({"q": short(release["title"], release)})) if not japanese(release) else None)
     found.append(("Allegro", ALLEGRO[release["system"]] + "?string=" + q(short(release["title"], release))) if not japanese(release) else None)
     found.append(("Jauce", "https://www.jauce.com/search/" + urllib.parse.quote(f"{title} ゲームボーイ", safe="")) if japanese(release) else None)
     box = next((i["url"] for i in release["images"] if i["kind"] == "box"), None)
