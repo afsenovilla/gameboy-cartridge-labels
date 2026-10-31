@@ -16,9 +16,9 @@ import photos, serials
 # (GB-Memory Multi Menu) is no game, and left out. Their titles are kept whole: the Loppi Puzzle Magazine issues differ
 # only in their subtitles.
 # A table, one row per release, with a column per place to search:
-# Google's image search, the stores of the eBay sellers elrocinante and Hit-Japan (and, for releases not Japanese,
-# ASANOSHOP, which sells western releases mostly), GameStop (for releases not Japanese), and, for Japanese releases,
-# Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese title, with ゲームボーイ and カセット on
+# Google's image search; for Japanese releases, the stores of the eBay sellers elrocinante and Hit-Japan and Yahoo!
+# Auctions through Jauce; for the others, the store of the eBay seller ASANOSHOP and GameStop (each sells the one kind
+# alone, nearly). Japanese releases are searched by their Japanese title, with ゲームボーイ and カセット on
 # the image search (listings there are titled in Japanese, rarely with the serial), the others by their English title,
 # with "game boy" and cartridge; the eBay sellers title their listings in English, so they get the English title alone. Each serial links to Google's image search for it, quoted. Long titles are cut at their subtitle. Last, Google Lens
 # searches by image: with the release's cartridge photo from game-boy-database.com, and with its otakaraou photo (by the
@@ -29,11 +29,10 @@ RELEASES = serials.RELEASES
 OUT = "generated/search-photos/index.html"
 SYSTEMS = ("dmg", "cgb")
 LENS = "https://lens.google.com/uploadbyurl?url="
-# eBay's sellers: name shown, seller id, store name.
 # The sources of fakes made from box art, which don't count as photos.
 FAKES = ("emumovies", "launchbox-abeezy1388")
-EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
-# eBay's sellers of western releases mostly: searched for the others alone.
+# eBay's sellers, of Japanese releases and of the others: name shown, seller id, store name.
+JAPANESE_EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
 WESTERN_EBAY_SELLERS = (("ASANOSHOP", "thorgans1", "asanoshop"),)
 
 
@@ -82,9 +81,8 @@ def links(release):
         image_query = f'"{title}" "game boy" cartridge'
     found = [("Google", "https://www.google.com/search?udm=2&q=" + q(image_query))]
     found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
-              for name, seller, store in EBAY_SELLERS]
-    found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
-              if not japanese(release) else None for name, seller, store in WESTERN_EBAY_SELLERS]
+              if japanese(release) == of_japanese else None
+              for sellers, of_japanese in ((JAPANESE_EBAY_SELLERS, True), (WESTERN_EBAY_SELLERS, False)) for name, seller, store in sellers]
     found.append(("GameStop", "https://www.gamestop.com/search-new/?" + urllib.parse.urlencode({"q": short(release["title"], release)})) if not japanese(release) else None)
     found.append(("Jauce", "https://www.jauce.com/search/" + urllib.parse.quote(f"{title} ゲームボーイ", safe="")) if japanese(release) else None)
     box = next((i["url"] for i in release["images"] if i["kind"] == "box"), None)
