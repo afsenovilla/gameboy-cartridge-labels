@@ -8,7 +8,13 @@ import photos, serials
 # its region, if gb-game-list lacks that), whether or not its fit works. Releases with photos from otakaraou alone are
 # listed apart: they are worth replacing. The emumovies and launchbox-abeezy1388 images aren't photos but fakes, labels
 # made from box art on a rendered cartridge: they don't count, so releases with only those are listed as without a
-# photo (marked "fake only").
+# photo (marked "fake only"). Releases sold only through Nintendo Power, written to its flash cartridge at a kiosk, are
+# listed apart too: No-Intro tags their ROMs (NP), and these are the games whose every No-Intro ROM has it, so there's no
+# ordinary cartridge of them (as far as No-Intro knows). Nintendo Power was Japanese, so they're searched as Japanese
+# releases. Their cartridge's label is Nintendo Power's (DMG-MMSA-JPN), so they're listed whether or not gb-game-list
+# has a serial for them; releases.json lists some twice, so they're listed once per title. The cartridge's own menu
+# (GB-Memory Multi Menu) is no game, and left out. Their titles are kept whole: the Loppi Puzzle Magazine issues differ
+# only in their subtitles.
 # A table, one row per release, with a column per place to search:
 # Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, Allegro (in its Game Boy
 # category), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
@@ -32,19 +38,38 @@ FAKES = ("emumovies", "launchbox-abeezy1388")
 EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
 
 
-def short(title):
-    """The title before its subtitle, if that leaves enough to search by."""
+def short(title, release=None):
+    """The title before its subtitle, if that leaves enough to search by (whole for a release sold only on Nintendo Power)."""
     t = unicodedata.normalize("NFKC", title).strip()
+    if release and release["id"] in nintendo_power:
+        return t
     head = re.split(r"\s+-\s+|\s{2,}|[~～〜:：「『]|\s(?=[(（])", t)[0].strip()
     return head if len(head) >= 3 else t
 
 
 def japanese(release):
-    return any(s.endswith("-JPN") for s in release["cartridgeSerials"]) or release["id"].endswith("J")
+    return any(s.endswith("-JPN") for s in release["cartridgeSerials"]) or release["id"].endswith("J") or release["id"] in nintendo_power
+
+
+def no_intro_game(label):
+    """No-Intro's name for the game, without the tags of its ROM: "Balloon Fight GB (Japan) (NP)" -> "Balloon Fight GB"."""
+    return re.sub(r"\s*\(.*$", "", label)
+
+
+def nintendo_power_only(all_releases):
+    """The ids of the releases whose every No-Intro ROM, and every other ROM of their game, is tagged (NP)."""
+    no_intro = lambda r: [l["label"] for l in r.get("links", []) if l["source"] == "no-intro.org"]
+    tagged = {}
+    for r in all_releases:
+        for label in no_intro(r):
+            tagged.setdefault(no_intro_game(label), []).append("(NP)" in label)
+    return {r["id"] for r in all_releases
+            if r["system"] in SYSTEMS and no_intro(r) and all(all(tagged[no_intro_game(l)]) for l in no_intro(r))
+            and r["title"] != "GB-Memory Multi Menu"}
 
 
 def japanese_title(release):
-    return short(next((t["title"] for t in release["titles"] if "ja" in t["languages"]), release["title"]))
+    return short(next((t["title"] for t in release["titles"] if "ja" in t["languages"]), release["title"]), release)
 
 
 def links(release):
@@ -54,13 +79,13 @@ def links(release):
         title = japanese_title(release)
         image_query = f'"{title}" ゲームボーイ カセット'
     else:
-        title = short(release["title"])
+        title = short(release["title"], release)
         image_query = f'"{title}" "game boy" cartridge'
     found = [("Google", "https://www.google.com/search?udm=2&q=" + q(image_query)),
              ("Bing", "https://www.bing.com/images/search?q=" + q(image_query))]
-    found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"])}))
+    found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
               for name, seller, store in EBAY_SELLERS]
-    found.append(("Allegro", ALLEGRO[release["system"]] + "?string=" + q(short(release["title"]))))
+    found.append(("Allegro", ALLEGRO[release["system"]] + "?string=" + q(short(release["title"], release))))
     found.append(("Jauce", "https://www.jauce.com/search/" + urllib.parse.quote(f"{title} ゲームボーイ", safe="")) if japanese(release) else None)
     box = next((i["url"] for i in release["images"] if i["kind"] == "box"), None)
     found.append(("Lens game-boy-database", LENS + q(box.replace("/vizu/", "/cartridges/"))) if box else None)
@@ -75,7 +100,9 @@ def serial_links(release):
                     for s in release["cartridgeSerials"])
 
 
-releases = [r for r in json.load(open(RELEASES)) if r["system"] in SYSTEMS and r["cartridgeSerials"]]
+all_releases = json.load(open(RELEASES))
+nintendo_power = nintendo_power_only(all_releases)
+releases = [r for r in all_releases if r["system"] in SYSTEMS and (r["cartridgeSerials"] or r["id"] in nintendo_power)]
 release_of = serials.releases_by_serial()
 covered, otakaraou, fake = set(), {}, set()  # otakaraou: release -> the URL of its otakaraou photo
 for source, _, name, entry in photos.all_sources():
@@ -92,11 +119,20 @@ for source, _, name, entry in photos.all_sources():
 missing = [r for r in releases if r["id"] not in covered and not any(i["kind"] == "cartridgePhoto" for i in r["images"])]
 replace = [r for r in missing if r["id"] in otakaraou]
 missing = [r for r in missing if r["id"] not in otakaraou]
+# One per title: a title with a photo for any of its releases is covered.
+np_covered = {r["title"] for r in releases if r["id"] in nintendo_power and r not in missing}
+np_missing = {}
+for r in missing:
+    if r["id"] in nintendo_power and r["title"] not in np_covered:
+        np_missing.setdefault(r["title"], dict(r, cartridgeSerials=[]))["cartridgeSerials"] += r["cartridgeSerials"]
+np_missing = list(np_missing.values())
+missing = [r for r in missing if r["id"] not in nintendo_power]
 fake_only = sum(r["id"] in fake for r in missing)
 
 groups = [(f"{system_name}: {label}", [r for r in missing if r["system"] == system and japanese(r) == ja])
           for system, system_name in (("dmg", "Game Boy"), ("cgb", "Game Boy Color"))
           for ja, label in ((True, "Japanese releases"), (False, "Other releases"))]
+groups.append(("Only on Nintendo Power", np_missing))
 groups.append(("Only from otakaraou: worth replacing", replace))
 sections = []
 for heading, group in groups:
@@ -114,11 +150,12 @@ page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 td{{padding:3px 8px;white-space:nowrap}}tr:nth-child(odd){{background:#fff}}small{{color:#888}}</style></head><body>
 <h1>Photo searches</h1>
 <p>{len(missing)} Game Boy and Game Boy Color releases without a cartridge photo in gb-game-list or in photos/ ({fake_only} of them
-with only fakes made from box art, from emumovies or launchbox-abeezy1388), and
+with only fakes made from box art, from emumovies or launchbox-abeezy1388),
+{len(np_missing)} sold only on Nintendo Power (their cartridge's label reads DMG-MMSA-JPN), and
 {len(replace)} with photos from otakaraou alone. Save the photos found in a subfolder of save-new-images-here/ named after where they came from, and file them with
 make add-photos.</p>
 {''.join(sections)}
 </body></html>"""
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 open(OUT, "w").write(page)
-print(f"{len(missing)} releases to search ({fake_only} with fakes alone), {len(replace)} from otakaraou alone -> {pathlib.Path(OUT).resolve().as_uri()}")
+print(f"{len(missing)} releases to search ({fake_only} with fakes alone), {len(np_missing)} only on Nintendo Power, {len(replace)} from otakaraou alone -> {pathlib.Path(OUT).resolve().as_uri()}")
