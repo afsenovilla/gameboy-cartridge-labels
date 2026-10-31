@@ -6,7 +6,9 @@ import photos, serials
 # search-photos: a local page of searches for photos of the Game Boy and Game Boy Color releases still without one: no
 # cartridge photo in gb-game-list, and no photo in photos/ (a photo's release from its name, or from its name without
 # its region, if gb-game-list lacks that), whether or not its fit works. Releases with photos from otakaraou alone are
-# listed apart: they are worth replacing.
+# listed apart: they are worth replacing. The emumovies and launchbox-abeezy1388 images aren't photos but fakes, labels
+# made from box art on a rendered cartridge: they don't count, so releases with only those are listed as without a
+# photo (marked "fake only").
 # A table, one row per release, with a column per place to search:
 # Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, Allegro (in its Game Boy
 # category), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
@@ -25,6 +27,8 @@ LENS = "https://lens.google.com/uploadbyurl?url="
 ALLEGRO = {"dmg": "https://allegro.pl/kategoria/nintendo-game-boy-122237", "cgb": "https://allegro.pl/kategoria/nintendo-game-boy-122237",
            "agb": "https://allegro.pl/kategoria/nintendo-game-boy-advance-122234"}
 # eBay's sellers: name shown, seller id, store name.
+# The sources of fakes made from box art, which don't count as photos.
+FAKES = ("emumovies", "launchbox-abeezy1388")
 EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
 
 
@@ -66,7 +70,7 @@ def links(release):
 
 releases = [r for r in json.load(open(RELEASES)) if r["system"] in SYSTEMS and r["cartridgeSerials"]]
 release_of = serials.releases_by_serial()
-covered, otakaraou = set(), {}  # otakaraou: release -> the URL of its otakaraou photo
+covered, otakaraou, fake = set(), {}, set()  # otakaraou: release -> the URL of its otakaraou photo
 for source, _, name, entry in photos.all_sources():
     serial = photos.serial_of(name)
     serial = next((s for s in (serial, re.sub(r"-[A-Z]{3}$", "", serial)) if s in release_of), None)  # DMG-A8-UKV: a region gb-game-list lacks
@@ -74,11 +78,14 @@ for source, _, name, entry in photos.all_sources():
     if release:
         if source == "otakaraou":
             otakaraou.setdefault(release, entry["image_url"])
+        elif source in FAKES:
+            fake.add(release)
         else:
             covered.add(release)
 missing = [r for r in releases if r["id"] not in covered and not any(i["kind"] == "cartridgePhoto" for i in r["images"])]
 replace = [r for r in missing if r["id"] in otakaraou]
 missing = [r for r in missing if r["id"] not in otakaraou]
+fake_only = sum(r["id"] in fake for r in missing)
 
 groups = [(f"{system_name}: {label}", [r for r in missing if r["system"] == system and japanese(r) == ja])
           for system, system_name in (("dmg", "Game Boy"), ("cgb", "Game Boy Color"))
@@ -90,7 +97,8 @@ for heading, group in groups:
     for r in sorted(group, key=lambda r: r["title"]):
         title = japanese_title(r) if japanese(r) else r["title"]
         searches = "".join(f'<td><a href="{html.escape(link[1])}" target="_blank">{link[0]}</a></td>' if link else "<td></td>" for link in links(r))
-        rows.append(f'<tr><td>{html.escape(title)}</td><td><small title="{html.escape(r["title"])}">{html.escape(" ".join(r["cartridgeSerials"]))}</small></td>{searches}</tr>')
+        marks = "fake only" if r["id"] in fake and r["id"] not in otakaraou else ""
+        rows.append(f'<tr><td>{html.escape(title)}</td><td><small title="{html.escape(r["title"])}">{html.escape(" ".join(r["cartridgeSerials"]))}</small></td><td><small>{marks}</small></td>{searches}</tr>')
     sections.append(f"<h2>{heading} ({len(group)})</h2><table>{''.join(rows)}</table>")
 
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -98,11 +106,12 @@ page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <style>body{{font:14px system-ui;margin:16px;background:#f4f4f4;color:#222}}table{{border-collapse:collapse}}
 td{{padding:3px 8px;white-space:nowrap}}tr:nth-child(odd){{background:#fff}}small{{color:#888}}</style></head><body>
 <h1>Photo searches</h1>
-<p>{len(missing)} Game Boy and Game Boy Color releases without a cartridge photo in gb-game-list or in photos/, and
+<p>{len(missing)} Game Boy and Game Boy Color releases without a cartridge photo in gb-game-list or in photos/ ({fake_only} of them
+with only fakes made from box art, from emumovies or launchbox-abeezy1388), and
 {len(replace)} with photos from otakaraou alone. Save the photos found in a subfolder of save-new-images-here/ named after where they came from, and file them with
 make add-photos.</p>
 {''.join(sections)}
 </body></html>"""
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 open(OUT, "w").write(page)
-print(f"{len(missing)} releases to search, {len(replace)} from otakaraou alone -> {pathlib.Path(OUT).resolve().as_uri()}")
+print(f"{len(missing)} releases to search ({fake_only} with fakes alone), {len(replace)} from otakaraou alone -> {pathlib.Path(OUT).resolve().as_uri()}")
