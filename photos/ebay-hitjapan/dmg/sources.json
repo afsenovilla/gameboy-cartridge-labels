@@ -1409,6 +1409,12 @@
   "note": "named by nothing: no serial read",
   "sha1": "480a2da112e725846887781e0986e55e2db6c868"
  },
+ "DMG-T9J.webp": {
+  "original_name": "s-l1600 (5).webp",
+  "serial_on_label": "DMG-TOJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "30fe3b58754166fd0468734ee1c783bd159ed9dc"
+ },
  "DMG-TDJ.webp": {
   "original_name": "s-l1600 (11).webp",
   "serial_on_label": "DMG-TDJ",
@@ -1448,12 +1454,6 @@
   "original_name": "s-l1600.webp",
   "note": "named by nothing: no serial read",
   "sha1": "2d0aca1acf70daa80e41071866cf5f0884af404b"
- },
- "DMG-TOJ_2.webp": {
-  "original_name": "s-l1600 (5).webp",
-  "serial_on_label": "DMG-TOJ",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "30fe3b58754166fd0468734ee1c783bd159ed9dc"
  },
  "DMG-TPJ_2.jpg": {
   "serial_on_label": "DMG-TPJ",

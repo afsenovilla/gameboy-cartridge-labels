@@ -225,11 +225,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "cc6ecc5f5d9611d7d9916b908739ade7167e9478"
  },
- "DMG-AGAJ-JPN_5.jpg": {
-  "original_name": "yugiyahirano-43407-9.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "68541be0cc00dbff0f78cba447d2781d14bab6ac"
- },
  "DMG-AGCJ-JPN_3.jpg": {
   "original_name": "yugiyahirano-39565.jpg",
   "note": "named by nothing: no serial read",
@@ -1155,11 +1150,6 @@
   "original_name": "yugiyahirano-43837.jpg",
   "note": "named by nothing: no serial read",
   "sha1": "34a70558df471dabf115978b4dc4f065daa312c8"
- },
- "DMG-MEA_4.jpg": {
-  "original_name": "yugiyahirano-43923-12.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "7ccc3de232e5f0385bcdaddcfe6d348b2ff70b09"
  },
  "DMG-MIJ_2.jpg": {
   "original_name": "yugiyahirano-41460.jpg",

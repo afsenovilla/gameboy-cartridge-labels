@@ -630,11 +630,29 @@
   "sha1": "bbfbd8fc211e321a75587ae52d2108a3529f8411",
   "original_name": "$_57.jpeg"
  },
+ "DMG-ATBJ-JPN.jpg": {
+  "original_name": "m88153350448_1.jpg",
+  "serial_on_label": "DMG-ATBJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "38baa0a2cc139a428fbece5c46e415b011706fe6"
+ },
+ "DMG-ATGJ-JPN_2.jpg": {
+  "original_name": "m99322575597_9.jpg",
+  "serial_on_label": "DMG-ATGJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e0c535d922c9cfeeda5751df2ea090ef2d6c5e68"
+ },
  "DMG-ATJ_3.jpg": {
   "serial_on_label": "DMG-ATJ",
   "original_sha1": "246246183efd959b214ddc3b52ff231307f13400",
   "sha1": "00438c5d8ae84423c50edb6593b8df6eaf734605",
   "original_name": "images (16).jpeg"
+ },
+ "DMG-ATKJ-JPN_2.jpg": {
+  "original_name": "$_57 (2).jpeg",
+  "serial_on_label": "DMG-ATKJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "07e3b461a13aff36b30aee8d77ea3f47b5bd461a"
  },
  "DMG-ATLP-EUR.jpg": {
   "original_sha1": "b3b9e58aa07b600b934674f18f5484180d1612b1",
@@ -686,6 +704,12 @@
   "original_sha1": "2887feff8a6942b7749cbc12664e14f6a4103b4b",
   "sha1": "329acf8854e00dae9fc6ca2ee9448de891f0779d",
   "original_name": "1910270103.webp"
+ },
+ "DMG-AWNJ-JPN.jpg": {
+  "original_name": "images (1).jpeg",
+  "serial_on_label": "DMG-AWNJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "6205f0119c73d01335c817a22d7a7abe5612b100"
  },
  "DMG-AXOP-FAH.webp": {
   "original_name": "662074157_24ceecf4-2118-44a3-8e78-18938e4e594d.webp",
@@ -1152,6 +1176,18 @@
   "sha1": "b47c5c50c6680549cb3076f4bff80acae50f98c8",
   "original_name": "s-l1200_yhyhyh.jpg"
  },
+ "DMG-J8A.jpg": {
+  "original_name": "$_57 (3).jpeg",
+  "serial_on_label": "DMG-J8A",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5f4902046a3eb537fb454928ab70dc06bc5898af"
+ },
+ "DMG-JYA.jpg": {
+  "original_name": "s-l1200 (2).jpg",
+  "serial_on_label": "DMG-JYA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "254b1502b5a8ee9f8cf9a28d8a6672ff758c2427"
+ },
  "DMG-K2J.jpg": {
   "original_name": "m93383345131_2.jpg",
   "note": "named by nothing: no serial read",
@@ -1215,6 +1251,12 @@
   "serial_on_label": "DMG-LUA",
   "note": "named by the serial read on it (exact)",
   "sha1": "c60db10c409004a3cae62a0cf1fc9d369df3589a"
+ },
+ "DMG-LWJ.jpg": {
+  "original_name": "images.jpeg",
+  "serial_on_label": "DMG-LWJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "d0f7db7a9e9c0b9c9b8f3206826cd802d100ed0e"
  },
  "DMG-M3J.jpg": {
   "serial_on_label": "DMG-M3J",
@@ -1369,6 +1411,12 @@
   "sha1": "bb1812d269997e4ef9779841eaaa462e2d31bb80",
   "original_name": "Tumble-Pop---Game-Boy.jpeg"
  },
+ "DMG-TEA.jpg": {
+  "original_name": "m40954736595_2.jpg",
+  "serial_on_label": "DMG-TEA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "914abf6735c0875165aa09d73c53f231f5b41fc2"
+ },
  "DMG-TGJ.jpg": {
   "original_name": "fullsizeoutput_ae0.jpeg",
   "serial_on_label": "DMG-TGJ",
@@ -1386,6 +1434,24 @@
   "serial_on_label": "DMG-TTA",
   "note": "named by the serial read on it (exact)",
   "sha1": "87eade102709b09cbfdd9d121272e8ff8ae4df4a"
+ },
+ "DMG-TVJ.jpg": {
+  "original_name": "s-l1200 (1).jpg",
+  "serial_on_label": "DMG-TVJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "358c61888686cd7c955c44f4096213ee85d33de4"
+ },
+ "DMG-TWJ_2.jpg": {
+  "original_name": "$_57 (1).jpeg",
+  "serial_on_label": "DMG-TWJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "a769a19177a4efd5a6fadfebe63ad13ecd7e83a0"
+ },
+ "DMG-TXJ.webp": {
+  "original_name": "s-l1200.webp",
+  "serial_on_label": "DMG-TXJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "37f0d9cc6634a9b892d305f23601a52cf34c1263"
  },
  "DMG-U3J.jpg": {
   "serial_on_label": "DMG-U3J",
@@ -1422,6 +1488,18 @@
   "original_sha1": "9f98a8f6afd90579b44a388d4956cd3e8c191d56",
   "sha1": "4310790f6153a929261fa575a911d35ddfd5a8b6",
   "original_name": "0910114515_66dfb2bb628c1.jpg"
+ },
+ "DMG-VGA.webp": {
+  "original_name": "vattle-giuce-gb-used-loose-en.webp",
+  "serial_on_label": "DMG-VGA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "61da3b5603b444b8ebec8677fb29c1d24b34062a"
+ },
+ "DMG-VTJ.jpg": {
+  "original_name": "$_57.jpeg",
+  "serial_on_label": "DMG-VTJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7672d2f8e927d5b7d7e595e95fb18a195a2242a4"
  },
  "DMG-VVJ.jpg": {
   "serial_on_label": "DMG-VVJ",
@@ -1474,6 +1552,12 @@
   "original_sha1": "2d9515a591a89a48711db6e2d53e42d8d3c8f2bf",
   "sha1": "9d41690957a9a1cafe60638ce937293780d0ea10",
   "original_name": "winter-gold.jpeg"
+ },
+ "DMG-YNJ_2.avif": {
+  "original_name": "m21098275041_1.avif",
+  "serial_on_label": "DMG-YNJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7e708f5038e0068c258ed6fbf697457acbadfea9"
  },
  "DMG-YSA.jpg": {
   "original_sha1": "0ce68dfa451de476e5f804ec0ddb9c568209948a",
