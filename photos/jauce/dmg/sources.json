@@ -265,6 +265,18 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "9a2704b45465b0a2e573384877742fe8d7cc5e89"
  },
+ "DMG-ATEA-JPN_6.jpg": {
+  "original_name": "i-img1200x900-17890978724486ze12q326.jpg",
+  "serial_on_label": "DMG-ATEA-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "442354f8f9540147ca336606a19a04c975ac0fa3"
+ },
+ "DMG-ATMJ-JPN.jpg": {
+  "original_name": "i-img1200x900-174713803227204ubnfv15702.jpg",
+  "serial_on_label": "DMG-ATMJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "49ac39fa31e42482443eec01c1f1d5b4797deb04"
+ },
  "DMG-AWIJ-JPN.jpg": {
   "original_name": "i-img600x600-1791819876016666ta6v15439.jpg",
   "serial_on_label": "DMG-AWIJ-JPN",
@@ -299,6 +311,12 @@
   "original_name": "i-img1200x1200-1676021724x6rv9b642586.jpg",
   "note": "named by nothing: no serial read",
   "sha1": "8871cf0a613fa453e5832dc11a1afea8d78b6159"
+ },
+ "DMG-BGBJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-176904782302751vko1p123228.jpg",
+  "serial_on_label": "DMG-BGBJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "910d945ce970882d8432216dc8f467219dbf8b2b"
  },
  "DMG-BORJ-JPN_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0204/user/6ee80e603de58c4594c48c839cc4e2734ae0c0871491ac076099a7565377eeb8/i-img1200x901-1777092614860490tbs0zz8.jpg",

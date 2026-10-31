@@ -29,6 +29,12 @@
   "sha1": "bd27c7fc63a362fa974151a543689596d7b3c0e6",
   "original_name": "images (5).jpeg"
  },
+ "DMG-A2TJ-JPN.jpg": {
+  "original_name": "m79408114071_1.jpg",
+  "serial_on_label": "DMG-A2TJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f7187cf98fadda3d7ee0545f4494bd83489da02d"
+ },
  "DMG-A2TP.jpg": {
   "serial_on_label": "DMG-A2TP-EUR",
   "original_sha1": "2e2211a5ab95ac33e9193723b87c8355bb53103a",
@@ -729,6 +735,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "a254d121a74c26b51550ea9ef26ea393d33c0f56"
  },
+ "DMG-AZAJ_2.jpg": {
+  "original_name": "m88399457780_1.jpg",
+  "serial_on_label": "DMG-AZAJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "cb58f8a6afc07a37d30ba3e6f298b13ab6cdce31"
+ },
  "DMG-AZJ.jpg": {
   "serial_on_label": "DMG-AZJ",
   "original_sha1": "2b77dbdfebb7bdc542f63c1d5b8566e6350e66ca",
@@ -1353,6 +1365,12 @@
   "serial_on_label": "DMG-RIJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "c7a9c0a7052706d158b202ede85d1a135c7e63ba"
+ },
+ "DMG-RLJ.jpg": {
+  "original_name": "m16847881594_1.jpg",
+  "serial_on_label": "DMG-RLJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c5d03ad8385aece41039a882c63449ce51474a08"
  },
  "DMG-RUA_2.jpg": {
   "original_name": "images (7).jpeg",
