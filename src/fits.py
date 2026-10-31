@@ -44,14 +44,15 @@ def editing():
 
 def reconcile(fits):
     """Each entry under the name of the photo with its SHA-1 (one renamed keeps its fits); those of photos no longer in
-    photos/ dropped."""
-    names = {sha1: name for name, sha1 in photos.sha1s().items()}
-    moved = {}
-    # Entries already under their photo's name first.
-    for name, e in sorted(fits.items(), key=lambda item: names.get(item[1]["sha1"]) != item[0]):
-        if e["sha1"] in names and names[e["sha1"]] not in moved:
-            moved[names[e["sha1"]]] = e
-    return moved
+    photos/ dropped. A photo filed under two names (the same cartridge sold as two releases) has an entry under each."""
+    sha1s = photos.sha1s()
+    kept = {name: e for name, e in fits.items() if sha1s.get(name) == e["sha1"]}
+    for name, e in sorted(fits.items()):
+        if name not in kept:  # renamed: to a name with its SHA-1 that has no entry yet
+            free = [n for n, sha1 in sorted(sha1s.items()) if sha1 == e["sha1"] and n not in kept]
+            if free:
+                kept[free[0]] = e
+    return kept
 
 
 def entry(fits, name, sha1):
