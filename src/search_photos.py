@@ -94,7 +94,7 @@ def links(release):
 
 def serial_links(release):
     """The release's serials, each linking to Google's image search for it."""
-    return " ".join(f'<a href="https://www.google.com/search?udm=2&q={urllib.parse.quote(chr(34) + s + chr(34))}" target="_blank">{html.escape(s)}</a>'
+    return "<br>".join(f'<a href="https://www.google.com/search?udm=2&q={urllib.parse.quote(chr(34) + s + chr(34))}" target="_blank">{html.escape(s)}</a>'
                     for s in release["cartridgeSerials"])
 
 
