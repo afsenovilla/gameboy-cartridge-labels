@@ -1,11 +1,12 @@
-import csv, html, json, os, pathlib, re, sys, unicodedata, urllib.parse
+import html, json, os, pathlib, re, sys, unicodedata, urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, serials
 
 # search-photos: a local page of searches for photos of the Game Boy and Game Boy Color releases still without one: no
-# cartridge photo in gb-game-list, and no photo in photos/ (a photo's release from match-serials, else from its name),
-# whether or not its fit works. Releases with photos from otakaraou alone are listed apart: they are worth replacing.
+# cartridge photo in gb-game-list, and no photo in photos/ (a photo's release from its name, or from its name without
+# its region, if gb-game-list lacks that), whether or not its fit works. Releases with photos from otakaraou alone are
+# listed apart: they are worth replacing.
 # A table, one row per release, with a column per place to search:
 # Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, Allegro (in its Game Boy
 # category), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
@@ -17,7 +18,6 @@ import photos, serials
 # cartridge's is next to it, by the same number (vizu/3741.jpg, cartridges/3741.jpg), for most games.
 # Usage: search_photos.py
 RELEASES = serials.RELEASES
-SERIALS = "generated/match-serials/serials.tsv"
 OUT = "generated/search-photos/index.html"
 SYSTEMS = ("dmg", "cgb")
 LENS = "https://lens.google.com/uploadbyurl?url="
@@ -66,11 +66,11 @@ def links(release):
 
 releases = [r for r in json.load(open(RELEASES)) if r["system"] in SYSTEMS and r["cartridgeSerials"]]
 release_of = serials.releases_by_serial()
-matched = {row[0]: row[3] for row in csv.reader(open(SERIALS), delimiter="\t") if row[1] in ("exact", "near") and row[3]}
 covered, otakaraou = set(), {}  # otakaraou: release -> the URL of its otakaraou photo
 for source, _, name, entry in photos.all_sources():
-    stem = photos.stem(name)
-    release = matched.get(stem) or (release_of[photos.serial_of(stem)]["id"] if photos.serial_of(stem) in release_of else None)
+    serial = photos.serial_of(name)
+    serial = next((s for s in (serial, re.sub(r"-[A-Z]{3}$", "", serial)) if s in release_of), None)  # DMG-A8-UKV: a region gb-game-list lacks
+    release = release_of[serial]["id"] if serial else None
     if release:
         if source == "otakaraou":
             otakaraou.setdefault(release, entry["image_url"])

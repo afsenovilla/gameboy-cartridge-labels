@@ -1,7 +1,7 @@
 import glob, json, os, re, unicodedata
 from difflib import SequenceMatcher
 
-# The serial on each photo's label, for add-photos and match-serials: the serial-like strings in its text (src/text.py)
+# The serial on each photo's label, for add-photos: the serial-like strings in its text (src/text.py)
 # matched against gb-game-list's serials: "exact", "near" (one character off, e.g. DMG-UKJ for DMG-HKJ, with a single
 # closest serial), or "unknown" (a serial-like read that matches nothing: a misread, or a serial missing from the list);
 # "none" when nothing serial-like was read. O and 0, I and 1 are tried both ways. Early Japanese labels print the serial
@@ -28,9 +28,9 @@ def releases_by_serial():
     for r in releases:
         for s in r["cartridgeSerials"]:
             release_of.setdefault(s, r)
-    for r in releases:
-        for s in (r["id"], r["gameId"]):
-            release_of.setdefault(s, r)
+    for key in ("id", "gameId"):  # a release's own id before another's game id (DMG-AVBJ, not DMG-AVBE of game DMG-AVBJ)
+        for r in releases:
+            release_of.setdefault(r[key], r)
     return release_of
 
 

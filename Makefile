@@ -10,9 +10,6 @@
 #   make read-text
 #   Reads the text on every photo in photos/ into generated/read-text/<photo>.json: every line of text found, and where it is (src/read_text.py).
 #
-#   make match-serials
-#   Matches the serial on each photo's label, from its text, against gb-game-list's releases, into generated/match-serials/serials.tsv (src/match_serials.py).
-#
 #   make fit-cartridge
 #   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text, into fits.json: the pose of its plastic (the label is left for a later step), not yet reviewed; what it found on the way, with flags for review, into generated/fit-cartridge/<photo>.json; a plastic fit accepted or placed by hand is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py, src/fits.py).
 #
@@ -38,7 +35,7 @@
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text match-serials clean-match-serials fit-cartridge clean-fit-cartridge fit-label clean-fit-label review-fits review-labels fit-by-hand search-photos name-photos
+.PHONY: help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label review-fits review-labels fit-by-hand search-photos name-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -54,12 +51,6 @@ read-text: | src/ocr
 
 clean-read-text:
 	rm -rf generated/read-text
-
-match-serials:
-	$(PYTHON) src/match_serials.py
-
-clean-match-serials:
-	rm -rf generated/match-serials
 
 fit-cartridge:
 	$(PYTHON) src/fit_cartridge.py
