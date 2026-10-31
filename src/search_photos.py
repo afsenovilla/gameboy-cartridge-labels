@@ -31,9 +31,10 @@ SYSTEMS = ("dmg", "cgb")
 LENS = "https://lens.google.com/uploadbyurl?url="
 # The sources of fakes made from box art, which don't count as photos.
 FAKES = ("emumovies", "launchbox-abeezy1388")
-# eBay's sellers, of Japanese releases and of the others: name shown, seller id, store name.
-JAPANESE_EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
-WESTERN_EBAY_SELLERS = (("ASANOSHOP", "thorgans1", "asanoshop"),)
+# eBay's sellers, of Japanese releases and of the others: name shown, seller id, store name, eBay's site.
+JAPANESE_EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop", "www.ebay.com"),
+                         ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime", "www.ebay.com"))
+WESTERN_EBAY_SELLERS = (("ASANOSHOP", "thorgans1", "asanoshop", "www.ebay.fr"),)
 
 
 def short(title, release=None):
@@ -80,9 +81,9 @@ def links(release):
         title = short(release["title"], release)
         image_query = f'"{title}" "game boy" cartridge'
     found = [("Google", "https://www.google.com/search?udm=2&q=" + q(image_query))]
-    found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
+    found += [(f"eBay {name}", f"https://{site}/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
               if japanese(release) == of_japanese else None
-              for sellers, of_japanese in ((JAPANESE_EBAY_SELLERS, True), (WESTERN_EBAY_SELLERS, False)) for name, seller, store in sellers]
+              for sellers, of_japanese in ((JAPANESE_EBAY_SELLERS, True), (WESTERN_EBAY_SELLERS, False)) for name, seller, store, site in sellers]
     found.append(("GameStop", "https://www.gamestop.com/search-new/?" + urllib.parse.urlencode({"q": short(release["title"], release)})) if not japanese(release) else None)
     found.append(("Jauce", "https://www.jauce.com/search/" + urllib.parse.quote(f"{title} ゲームボーイ", safe="")) if japanese(release) else None)
     box = next((i["url"] for i in release["images"] if i["kind"] == "box"), None)
