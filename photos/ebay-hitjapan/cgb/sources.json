@@ -127,6 +127,12 @@
   "sha1": "5e108568919accb35cc807d3a62f88f4faebf2c7",
   "original_name": "s-l1600 (92).webp"
  },
+ "CGB-BS9J-JPN_2.webp": {
+  "original_name": "s-l1600 (2).webp",
+  "serial_on_label": "CGB-BS9J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "99a8db7f491e166215d1e0623f8ce7d9b3016333"
+ },
  "CGB-BSBJ-JPN_2.jpg": {
   "serial_on_label": "CGB-BSBIK",
   "original_sha1": "8d0f6c08678a4dc88477d8939e707f2c59ef7443",

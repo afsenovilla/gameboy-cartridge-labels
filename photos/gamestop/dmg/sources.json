@@ -1,0 +1,26 @@
+{
+ "DMG-AQME-USA.avif": {
+  "original_name": "Bassmasters-Classic---Game-Boy-Color.avif",
+  "serial_on_label": "DMG-AQME-USA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "ad30b476aa85cb76ec4a1a629bb02a9777f2122d"
+ },
+ "DMG-AVIE-USA_4.avif": {
+  "original_name": "Beavis-and-Butt-head.avif",
+  "serial_on_label": "DMG-AVIE-USA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7ca1f890295b5bee1bd71d22289d27a793ed384f"
+ },
+ "DMG-NB-USA_4.avif": {
+  "original_name": "Battleship---Game-Boy.avif",
+  "serial_on_label": "DMG-NB-USA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "1261e310555a22f33fbbd12930c77611b81829fc"
+ },
+ "DMG-R7-USA_3.avif": {
+  "original_name": "Battletoads-in-Ragnaroks-World---Game-Boy.avif",
+  "serial_on_label": "DMG-R7-USA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "20299e333a42306f07e7a7a2fec3d522d4cf428b"
+ }
+}
