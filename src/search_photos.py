@@ -16,7 +16,8 @@ import photos, serials
 # (GB-Memory Multi Menu) is no game, and left out. Their titles are kept whole: the Loppi Puzzle Magazine issues differ
 # only in their subtitles.
 # A table, one row per release, with a column per place to search:
-# Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan, Allegro (in its Game Boy
+# Google's and Bing's image searches, the stores of the eBay sellers elrocinante and Hit-Japan (and,
+# for releases not Japanese, ASANOSHOP, which sells western releases mostly), Allegro (in its Game Boy
 # category; not for Japanese releases), and, for Japanese releases, Yahoo! Auctions through Jauce. Japanese releases are searched by their Japanese
 # title, with ゲームボーイ and カセット on the image searches (listings there are titled in Japanese, rarely with the serial), the
 # others by their English title, with "game boy" and cartridge; the eBay sellers and Allegro's sellers title their
@@ -36,6 +37,8 @@ ALLEGRO = {"dmg": "https://allegro.pl/kategoria/nintendo-game-boy-122237", "cgb"
 # The sources of fakes made from box art, which don't count as photos.
 FAKES = ("emumovies", "launchbox-abeezy1388")
 EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop"), ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime"))
+# eBay's sellers of western releases mostly: searched for the others alone.
+WESTERN_EBAY_SELLERS = (("ASANOSHOP", "thorgans1", "asanoshop"),)
 
 
 def short(title, release=None):
@@ -85,6 +88,8 @@ def links(release):
              ("Bing", "https://www.bing.com/images/search?q=" + q(image_query))]
     found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
               for name, seller, store in EBAY_SELLERS]
+    found += [(f"eBay {name}", "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_ssn": seller, "store_name": store, "_nkw": short(release["title"], release)}))
+              if not japanese(release) else None for name, seller, store in WESTERN_EBAY_SELLERS]
     found.append(("Allegro", ALLEGRO[release["system"]] + "?string=" + q(short(release["title"], release))) if not japanese(release) else None)
     found.append(("Jauce", "https://www.jauce.com/search/" + urllib.parse.quote(f"{title} ゲームボーイ", safe="")) if japanese(release) else None)
     box = next((i["url"] for i in release["images"] if i["kind"] == "box"), None)
