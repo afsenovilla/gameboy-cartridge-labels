@@ -188,10 +188,10 @@ if __name__ == "__main__":
     code = max(os.path.getmtime(p) for p in ("src/cartridge.py", __file__))
     sha1s = photos.sha1s()
     known = fits.load()
-    todo, no_text, kept = [], [], 0
+    todo, no_text, kept = [], [], set()
     for stem, path in sorted(paths.items()):
         if fits.good(fits.of(known, stem, sha1s[stem])["fit"].get("plastic")):
-            kept += 1
+            kept.add(stem)
             continue
         text = os.path.join(TEXT, stem + ".json")
         out = os.path.join(OUT, stem + ".json")
@@ -199,7 +199,7 @@ if __name__ == "__main__":
             no_text.append(stem)
         elif not os.path.exists(out) or json.load(open(out)).get("sha1") != sha1s[stem] or os.path.getmtime(out) < max(os.path.getmtime(path), os.path.getmtime(text), code):
             todo.append((stem, path, text, sha1s[stem]))
-    print(f"{len(paths)} photos ({len(special)} of cartridges with another shell left out, {SPECIAL_SHELLS}), {kept} with their plastic accepted or placed by hand, kept; {len(todo)} to fit" + (f"; {len(no_text)} without their text (make read-text): {' '.join(no_text)}" if no_text else ""))
+    print(f"{len(paths)} photos ({len(special)} of cartridges with another shell left out, {SPECIAL_SHELLS}), {len(kept)} with their plastic accepted or placed by hand, kept; {len(todo)} to fit" + (f"; {len(no_text)} without their text (make read-text): {' '.join(no_text)}" if no_text else ""))
     with concurrent.futures.ProcessPoolExecutor() as pool:
         for done, (stem, result) in enumerate(pool.map(fit_into, *zip(*todo)) if todo else (), 1):
             print(f"{done} of {len(todo)}: {stem}: {result.get('error') or 'quality %.2f' % result['quality']}", flush=True)
@@ -212,6 +212,7 @@ if __name__ == "__main__":
             if found is not None and found.get("sha1") != sha1s[stem]:
                 found = None
             current += take(fits.entry(known, stem, sha1s[stem]), found)
-    results = [json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json"))]
-    print(f"{kept} kept, {current} fitted and not known to be wrong; {sum('error' in r for r in results)} couldn't be fitted, "
+    # Only the photos this step fits: the files of kept ones may be of an older version of it.
+    results = [json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json")) if photos.stem(os.path.basename(p)) not in kept]
+    print(f"{len(kept)} kept, {current} fitted and not known to be wrong; {sum('error' in r for r in results)} couldn't be fitted, "
           f"{sum('error' not in r and not r['ambiguous'] and not r['broken_line'] for r in results)} files not flagged (ambiguous or broken recess line)")
