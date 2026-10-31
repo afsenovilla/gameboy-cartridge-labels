@@ -157,8 +157,9 @@ class Review:
             self.entries[name] = e
             plastic = e["fit"].get("plastic") or (e["rejected"][-1]["plastic"] if e["rejected"] else None)
             self.shown[name] = plastic and plastic["mm_to_photo"]
-            # What fit-cartridge found, if it's about the fit shown.
-            self.details[name] = details if details is not None and details.get("sha1") == sha1s[name] and (
+            # What fit-cartridge found, if it's about the fit shown; files of kept fits may be of an older version of it,
+            # without the flags.
+            self.details[name] = details if details is not None and details.get("sha1") == sha1s[name] and ("error" in details or "ambiguous" in details) and (
                 "error" in details and plastic is None or "error" not in details and plastic is not None and fits.same(details["mm_to_photo"], plastic)) else None
         unreviewed = lambda n: self.shown[n] is not None and self.state(n) is None
         flagged = lambda n: unreviewed(n) and self.details[n] is not None and (self.details[n]["ambiguous"] or self.details[n]["broken_line"])
