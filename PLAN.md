@@ -28,7 +28,6 @@ search-photos, name-photos.
 ## Open work
 
 - **Check fit-label and review-labels** (built, awaiting my check).
-- **search-photos**: list the releases covered only by emumovies or launchbox-abeezy1388, as it lists the otakaraou-only ones.
 - **Depth layers for the CGB shell** (board and walls behind the front face): waits for my measurements.
 - Then: rectify (straighten the label), group the artwork, pick the best photo of each release.
 - **A tool comparing labels by their look against their serials**: similar labels with different serials (likely
