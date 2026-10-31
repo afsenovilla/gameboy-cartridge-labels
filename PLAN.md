@@ -16,9 +16,8 @@ Photos of a release from a better source replace those from a worse one, wheneve
    from (1) or (2). A release with only these still counts as missing a photo.
    - `launchbox-abeezy1388`: 193 images, one template (1000 × 1132 px, the label in (131, 333)–(868, 980)), so one
      hand fit (DMG-MH-USA_2's) is copied to them all.
-   - `emumovies`: 356 images, two templates: 199 at 994 × 1132 px (the same render as abeezy, 3 px narrower; 90 of
-     them with the label in abeezy's box, shifted 3 px), 155 at 878 × 1000 px (not fitted yet), and 2 at 995 × 1132 px
-     that match neither.
+   - `emumovies`: 356 images, three templates, each with one hand fit copied to the rest: 199 at 994 × 1132 px
+     (DMG-A2BE-USA's), 155 at 878 × 1000 px (DMG-602-CHN's), 2 at 995 × 1132 px (DMG-AK-USA's).
 
 ## Steps
 
@@ -29,8 +28,6 @@ search-photos, name-photos.
 ## Open work
 
 - **Check fit-label and review-labels** (built, awaiting my check).
-- **Fits of the emumovies templates**: copy abeezy's fit, shifted 3 px, to the 994 × 1132 group; hand fit one of the
-  878 × 1000 group and see whether its label sits in one box too.
 - **search-photos**: list the releases covered only by emumovies or launchbox-abeezy1388, as it lists the otakaraou-only ones.
 - **Depth layers for the CGB shell** (board and walls behind the front face): waits for my measurements.
 - Then: rectify (straighten the label), group the artwork, pick the best photo of each release.
