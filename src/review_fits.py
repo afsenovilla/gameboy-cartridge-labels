@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fits, photos
 from cartridge import (ARROW_HALF_ANGLE, ARROW_HALF_WIDTH, ARROW_TOP, BODY, CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, CGB_RECESS, PILL,
-                       PILL_RADIUS, RECESS, RECESS_RADIUS, cgb_bevel_line, cgb_outline_seen, cgb_ridge_lines, corners_of, groove_edges, project, shell_of)
+                       PILL_RADIUS, RECESS, RECESS_RADIUS, cgb_outline_seen, cgb_ridge_lines, corners_of, groove_edges, project, shell_of)
 from fit_cartridge import OUT as DETAILS, load
 
 # review-fits: a local page for judging the plastic's fits (fits.json, src/fits.py; make fit-cartridge) by eye, a page
@@ -104,9 +104,8 @@ def render(path, fit, width=800):
         if fit["shell"] == "cgb":
             # The CGB's arrow: its top corners barely rounded, the tip a little more.
             half = CGB_ARROW_WIDTH / 2
-            # The outline 2 mm behind the face (the bevels), and where the face ends: the bevels' inner edge.
+            # The outline: its top and sides 2 mm behind the face (the bevels), its bottom in it.
             cv2.polylines(photo, [P(dense(cgb_outline_seen()))], True, (0, 0, 255), t, cv2.LINE_AA)
-            cv2.polylines(photo, [P(dense(cgb_bevel_line(), False))], False, (0, 0, 180), max(1, t // 2), cv2.LINE_AA)
             arrow = arrow_outline(CGB_ARROW_TOP_RADIUS, CGB_ARROW_TIP_RADIUS, top=CGB_ARROW_TOP, half_width=half, half_angle=np.arctan2(half, CGB_ARROW_HEIGHT))
             cv2.polylines(photo, [P(arrow)], True, (0, 150, 255), t, cv2.LINE_AA)
             # The internal ridges, seen through the clear shell (drawn as if in the front face).
