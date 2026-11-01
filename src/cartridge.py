@@ -380,23 +380,26 @@ def cgb_face_runs():
 # bowed top, with gaps from 7.2 to 19.4 mm either side of the middle). None clearly helped; all lie behind the front
 # face, so on photos taken close or at an angle they show away from where the front's fit puts them (parallax).
 
-# The CGB shell's internal ridges, measured with calipers (2026-11-01), in mm on the front as above: a rectangle of
-# ridges, the sides 1.2 thick (outer 52.4 apart, inner 50.0, centered), the top and bottom 1.4 thick (inner 50.0 apart;
-# the top's inner edge 3.5 below the body's top in the middle, the bottom's 11.5 above the bottom: less sure, hard to
-# measure, but 3.5 + 50 + 11.5 = 65 checks out). The outer height measured 53.2, 0.4 more than 50 + 2 x 1.4; the
-# thicknesses are taken. The top ridge has two 12 mm gaps, 14 apart in the middle, starting 7 from the side ridges'
-# outer edges (7 + 12 + 14 + 12 + 7 = 52.0 of the 52.4; taken centered: 7 to 19 from the middle, 7.2 from the edges).
-# The hand-placed band above lies within 0.5 mm of all of it (sides 25.9 from the middle, bottom 54.25, gaps 7.2 to
-# 19.4 from the middle).
+# The CGB shell's internal ridges, measured with calipers (2026-11-01; to 0.1 mm), in mm on the front as above: a
+# rectangle of ridges, the sides 1.2 thick (outer 52.4 apart, inner 50.0, centered), the top and bottom 1.4 thick (outer
+# 53.2 apart in the middle, inner 50.4). Where it lies vertically was hard to measure: the top's inner edge 3.5 below
+# the body's top, the bottom's 11.5 above its bottom, which leaves 50.0 between them, not 50.4. The bottom is kept and
+# the top moved up: the hand-placed band (below) had the bottom ridge's middle at 54.25 (here 54.2) and the top's at
+# 2.3 (here 2.4; 2.8 had the top been kept). The top ridge has two 12 mm gaps, 14 apart in the middle, starting 7 from
+# the side ridges' outer edges (7 + 12 + 14 + 12 + 7 = 52.0 of the 52.4; taken centered: 7 to 19 from the middle).
+# The hand-placed band lies within 0.5 mm of all of it (sides 25.9 from the middle, gaps 7.2 to 19.4 from the middle).
 CGB_RIDGE_SIDE = 1.2
 CGB_RIDGE_TOP = 1.4
-CGB_RIDGES_INNER = (28.5 - 25.0, 3.5, 28.5 + 25.0, 53.5)  # x1, y1, x2, y2 of the ridges' inner edges
+CGB_RIDGES_INNER = (28.5 - 25.0, 53.5 - 50.4, 28.5 + 25.0, 53.5)  # x1, y1, x2, y2 of the ridges' inner edges
 CGB_RIDGE_GAPS = [(28.5 - 19.0, 28.5 - 7.0), (28.5 + 7.0, 28.5 + 19.0)]  # x ranges of the top ridge's gaps
-# Depth, from the back's outside: the board (0.8 thick) lies on the back shell (1.44 thick), its contacts' plane 2.2 from
-# the back; the shell is 8.5 thick at the recess's floor, and the recess 0.2 deep (DMG too). So the board's front lies
-# 6.3 mm behind the recess's floor, 6.5 behind the front face.
-CGB_THICKNESS_AT_RECESS = 8.5
-CGB_BOARD_FRONT_FROM_BACK = 2.2
+# Depths behind the front face (mm). The shell is 8.5 thick, front face to back, its walls 1.4 thick; the board
+# (0.8 thick) lies on the back wall, so its front (the contacts' plane) is 2.2 from the back: 6.3 behind the face. The
+# ridges show where they meet the front wall's inside: 1.4 behind the face. The recess is 0.2 deep (the DMG's too).
+# These are true depths; seen through the front wall they look shallower (refraction).
+CGB_THICKNESS = 8.5
+CGB_WALL = 1.4
+CGB_BOARD_DEPTH = CGB_THICKNESS - CGB_WALL - 0.8
+CGB_RIDGE_DEPTH = CGB_WALL
 RECESS_DEPTH = 0.2
 
 
