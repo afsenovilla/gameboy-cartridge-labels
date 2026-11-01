@@ -307,13 +307,30 @@ CGB_RECESS = (6.25, 21.5, 50.75, 60.0)
 CGB_LABEL = (7.05, 22.25, 49.95, 59.25)
 # "GAME BOY COLOR" on the label: its box (top left, top right, bottom right, bottom left as it reads), median.
 CGB_COLOR_TEXT = np.array([[8.18, 56.69], [8.32, 24.5], [12.85, 25.05], [12.33, 56.99]])
-# The arrow below the recess, smaller and flatter than the DMG's: a 6 x 3 mm triangle (sharp corners, the rounding
-# taken into account; its tip 90 degrees, the DMG's 87), its top edge 1 mm below the recess. Measured with calipers
-# (2026-11-01). Before, judged by eye on photos (2026-10-23): 7 x 3, 1.2 mm below the recess. The top corners are
-# barely rounded, the tip a little more.
-CGB_ARROW_TOP = CGB_RECESS[3] + 1.0
-CGB_ARROW_WIDTH = 6.0
-CGB_ARROW_HEIGHT = 3.0
+# The arrow below the recess, smaller and flatter than the DMG's. Measured with calipers (2026-11-01): its visible
+# size, the rounded corners included, 6 wide and 3 tall, its top edge 1 mm below the recess. Before, judged by eye on
+# photos (2026-10-23): 7 x 3, 1.2 mm below the recess. The visible size is what's measured; the sharp triangle the
+# fitter samples (its sides meeting at imaginary corners) is derived from it through the corners' radii, which are
+# only judged by eye (the top corners barely rounded, the tip a little more) and so the less certain part.
+CGB_ARROW_VISIBLE = (6.0, 3.0)
+CGB_ARROW_TOP_RADIUS = 0.15
+CGB_ARROW_TIP_RADIUS = 0.25
+CGB_ARROW_TOP = CGB_RECESS[3] + 1.0  # the top edge: the top corners' rounding doesn't move it
+
+
+def sharp_arrow(visible_width, visible_height, top_radius, tip_radius):
+    """The sharp triangle (width, height) whose corners, rounded to these radii, give this visible width and height.
+    A top corner rounded by r loses r / tan(a / 2) - r of the half width (a: its angle), the tip
+    r / sin(b / 2) - r of the height (b: its angle)."""
+    half, height = visible_width / 2, visible_height
+    for _ in range(50):
+        a, b = np.arctan2(height, half), 2 * np.arctan2(half, height)
+        half = visible_width / 2 + top_radius * (1 / np.tan(a / 2) - 1)
+        height = visible_height + tip_radius * (1 / np.sin(b / 2) - 1)
+    return 2 * half, height
+
+
+CGB_ARROW_WIDTH, CGB_ARROW_HEIGHT = sharp_arrow(*CGB_ARROW_VISIBLE, CGB_ARROW_TOP_RADIUS, CGB_ARROW_TIP_RADIUS)
 
 
 def cgb_top(xs):

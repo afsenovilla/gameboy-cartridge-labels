@@ -3,7 +3,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fits, photos
-from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TOP, CGB_ARROW_WIDTH, RECESS_RADIUS, SHELLS, cgb_body_outline, corners_of, groove_edges, shell_of
+from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, RECESS_RADIUS, SHELLS, cgb_body_outline, corners_of, groove_edges, shell_of
 from fit_cartridge import OUT as DETAILS, load
 from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_outline, rounded_outline
 
@@ -38,7 +38,7 @@ def model(shell):
     lines = [[dense(rounded_outline(shell.recess, RECESS_RADIUS)), "#3d3", False, True]]
     if shell.name == "cgb":
         half = CGB_ARROW_WIDTH / 2
-        arrow = arrow_outline(0.15, 0.25, top=CGB_ARROW_TOP, half_width=half, half_angle=np.arctan2(half, CGB_ARROW_HEIGHT))
+        arrow = arrow_outline(CGB_ARROW_TOP_RADIUS, CGB_ARROW_TIP_RADIUS, top=CGB_ARROW_TOP, half_width=half, half_angle=np.arctan2(half, CGB_ARROW_HEIGHT))
         lines += [[cgb_body_outline(), "#f33", False, True], [arrow, "#f90", False, True]]
     else:
         lines += [[dense(face_outline()), "#f33", False, True], *[[dense(l, False), "#f33", True, False] for l in bevel_lines()],
