@@ -407,6 +407,30 @@ def cgb_ridge_samples():
     return np.array(points), np.array(normals, np.float64)
 
 
+def cgb_ridge_lines(per_mm=2):
+    """The internal ridges' visible edges as open polylines in mm, for drawing: both edges of the side ridges, of the
+    top ridge (closed off at its gaps) and of the bottom ridge beside the recess (the label hides the rest)."""
+    x1, y1, x2, y2 = CGB_RIDGES_INNER
+    side, top = CGB_RIDGE_SIDE, CGB_RIDGE_TOP
+    outer_x1, outer_x2, outer_y1, outer_y2 = x1 - side, x2 + side, y1 - top, y2 + top
+    bow = lambda xs: cgb_top(xs)[:, 1] - cgb_top([28.5])[0, 1]
+    run = lambda a, b: np.linspace(a, b, max(2, int(abs(b - a) * per_mm) + 1))
+    curve = lambda a, b, y: (lambda xs: np.c_[xs, y + bow(xs)])(run(a, b))
+    (g0a, g0b), (g1a, g1b) = CGB_RIDGE_GAPS
+    lines = []
+    for a, b in ((outer_x1, g0a), (g0b, g1a), (g1b, outer_x2)):
+        lines.append(curve(a, b, outer_y1))
+    for a, b in ((x1, g0a), (g0b, g1a), (g1b, x2)):
+        lines.append(curve(a, b, y1))
+    for g in (g0a, g0b, g1a, g1b):  # the gaps' ends
+        lines.append(np.array([[g, outer_y1 + bow([g])[0]], [g, y1 + bow([g])[0]]]))
+    for x, y_top, y_bottom in ((outer_x1, outer_y1, outer_y2), (outer_x2, outer_y1, outer_y2), (x1, y1, y2), (x2, y1, y2)):
+        lines.append(np.c_[np.full(2, x), [y_top + bow([x])[0], y_bottom]])
+    for y, a, b in ((outer_y2, outer_x1, CGB_RECESS[0]), (y2, x1, CGB_RECESS[0]), (outer_y2, CGB_RECESS[2], outer_x2), (y2, CGB_RECESS[2], x2)):
+        lines.append(np.c_[run(a, b), np.full(len(run(a, b)), y)])
+    return lines
+
+
 def cgb_face_points():
     """The CGB's extra face samples: its top corners' and the ridges'."""
     corners, ridges = cgb_corner_samples(), cgb_ridge_samples()
