@@ -396,6 +396,20 @@ def cgb_face_runs():
 # band through the lines placed by hand: the sides at 28.5 +- 25.9 mm, the bottom at 54.25, the top 2.3 mm below the
 # bowed top, with gaps from 7.2 to 19.4 mm either side of the middle). None clearly helped; all lie behind the front
 # face, so on photos taken close or at an angle they show away from where the front's fit puts them (parallax).
+# The depth model (camera_of, seen_at, 2026-11-01) was then tried against that: the measured ridges (as steps at their
+# edges, 1.4 mm deep) and the board (its top edge and contacts, 6.3 mm deep) added to the CGB's samples, flat or seen
+# through the wall, compared with the good fits (58 placed by hand, 86 accepted; within 1 mm / within 0.3 mm):
+#   none (as now)               hand 11 / 2, accepted 58 / 57
+#   ridges, flat                hand 23 / 2, accepted 60 / 50
+#   ridges, camera 40 cm away   hand 23 / 3, accepted 57 / 47
+#   ridges + board, flat        hand 24 / 2, accepted 54 / 41
+#   ridges + board, 40 cm       hand 22 / 3, accepted 54 / 38   (25 cm: hand 20)
+#   board, flat / 40 cm         hand 15 / 2, accepted 54 / 50  /  hand 17 / 4, accepted 43 / 38
+# Seeing them through the wall made no clear difference: the ridges' shift (0.1 to 0.25 mm) is within the hand fits'
+# error, and where the camera is can't be told well from the fit (camera_of, with the photo's center as the view's
+# center, put it on average 74 mm below the cartridge, and lined the features up worse than taking it straight in
+# front). The ridges themselves (flat) help the hard photos, at a cost on the accepted ones; not taken in yet.
+# Scripts: ../gameboy-labels-archive/tools-2026-11-01/.
 
 # The CGB shell's internal ridges, measured with calipers (2026-11-01; to 0.1 mm), in mm on the front as above: a
 # rectangle of ridges, the sides 1.2 thick (outer 52.4 apart, inner 50.0, centered), the top and bottom 1.4 thick (outer
@@ -493,6 +507,73 @@ def camera_distance(H, size, steps=40, grid=9):
     least = error.min(axis=(1, 2))
     fits = z[least <= DISTANCE_TOLERANCE, 0, 0]
     return float(least.min()), ((float(fits.min()), float(fits.max())) if len(fits) else None)
+
+
+# Depth: features behind the front face (the CGB's ridges and board, seen through its clear front wall) show in the
+# photo where the line of sight to them crosses the face, which depends on where the camera is. The camera, in mm on
+# the face (x, y, and its height above the face), comes from the fit: a pinhole camera with square pixels, its center
+# at the photo's center (photos found online may be cropped, and then it's off), and the focal length that makes the
+# fit's two axes most nearly equal and perpendicular, kept to a camera 20 to 100 cm away; where the fit has too little
+# perspective to tell, the middle of that range in perspective (40 cm). The line of sight bends where it enters and
+# leaves the front wall (Snell's law; see the depths above).
+FOCAL_FALLBACK_DISTANCE = 400.0
+
+
+def camera_of(H, center):
+    """The camera that sees the front face as H (mm -> pixels) shows it, the center of its view at pixel center:
+    (x, y, height) in mm, the face's x and y and the height above it."""
+    H = np.asarray(H, np.float64)
+    H = H / H[2, 2]
+    c = project(H, [[28.5, 32.5]])[0]
+    J = np.array([project(H, [[28.6, 32.5]])[0] - c, project(H, [[28.5, 32.6]])[0] - c]) / 0.1
+    s = np.sqrt(abs(np.linalg.det(J)))  # pixels per mm at the middle
+    A = H[:2, 0] - np.array(center) * H[2, 0]
+    B = H[:2, 1] - np.array(center) * H[2, 1]
+    # 1 / f^2 from the axes' perpendicularity and their equal length (each linear in it), by least squares, each
+    # equation scaled to the size of its terms.
+    rows = [(A @ B, -H[2, 0] * H[2, 1]), (A @ A - B @ B, H[2, 1] ** 2 - H[2, 0] ** 2)]
+    num = sum(a * b for a, b in rows)
+    den = sum(a * a for a, b in rows)
+    lo, hi = DISTANCES[0] * s, DISTANCES[1] * s
+    g = num / den if den > 0 else 0.0  # 1 / f^2
+    f = float(np.clip(1 / np.sqrt(g), lo, hi)) if g > 0 else FOCAL_FALLBACK_DISTANCE * s
+    K = np.array([[f, 0, center[0]], [0, f, center[1]], [0, 0, 1]])
+    M = np.linalg.inv(K) @ H
+    scale = 2 / (np.linalg.norm(M[:, 0]) + np.linalg.norm(M[:, 1]))
+    r1, r2, t = M[:, 0] * scale, M[:, 1] * scale, M[:, 2] * scale
+    if t[2] < 0:
+        r1, r2, t = -r1, -r2, -t
+    U, _, Vt = np.linalg.svd(np.c_[r1, r2, np.cross(r1, r2)])
+    R = U @ Vt
+    C = -R.T @ t
+    return np.array([C[0], C[1], abs(C[2])])
+
+
+def seen_at(points, depth, camera, wall=CGB_WALL, n=CGB_REFRACTIVE_INDEX):
+    """Where on the front face points (mm) depth mm behind it are seen from the camera (camera_of): the line of sight
+    from the camera to the face, bent through the front wall (wall mm thick, refractive index n) and straight again
+    behind it. Points at depth 0 stay where they are."""
+    points = np.asarray(points, np.float64)
+    if depth <= 0:
+        return points
+    foot, height = camera[:2], camera[2]
+    away = points - foot
+    target = np.linalg.norm(away, axis=1)
+    glass, air = min(depth, wall), max(0.0, depth - wall)
+    r = target * height / (height + depth)  # straight lines first
+    for _ in range(8):  # Newton's method on r + offset(r) = target
+        tan = r / height
+        sin = tan / np.sqrt(1 + tan * tan)
+        sin_r = sin / n
+        tan_r = sin_r / np.sqrt(1 - sin_r * sin_r)
+        offset = glass * tan_r + air * tan
+        # d offset / d r: through d tan = dr / height, d tan_r / d tan = (cos^3 / n) / cos_r^3
+        cos, cos_r = 1 / np.sqrt(1 + tan * tan), np.sqrt(1 - sin_r * sin_r)
+        slope = (glass * cos ** 3 / n / cos_r ** 3 + air) / height
+        r = r - (r + offset - target) / (1 + slope)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        k = np.where(target > 1e-9, r / target, 1.0)
+    return foot + away * k[:, None]
 
 
 class Fitter:
