@@ -9,8 +9,8 @@ import photos, serials
 # listed apart: they are worth replacing. The emumovies and launchbox-abeezy1388 images aren't photos but fakes, labels
 # made from box art on a rendered cartridge: they don't count, so releases with only those are listed as without a
 # photo (marked "fake only"). Releases sold only through Nintendo Power, written to its flash cartridge at a kiosk, are
-# listed apart too: No-Intro tags their ROMs (NP), and these are the games whose every No-Intro ROM has it, so there's no
-# ordinary cartridge of them (as far as No-Intro knows). Nintendo Power was Japanese, so they're searched as Japanese
+# listed apart too: No-Intro tags their ROMs (NP), and these are the games whose every Japanese No-Intro ROM has it, so
+# there's no ordinary Japanese cartridge of them (as far as No-Intro knows); Batman Beyond had one in the USA alone. Nintendo Power was Japanese, so they're searched as Japanese
 # releases. Their cartridge's label is Nintendo Power's (DMG-MMSA-JPN), so they're listed whether or not gb-game-list
 # has a serial for them; releases.json lists some twice, so they're listed once per title. The cartridge's own menu
 # (GB-Memory Multi Menu) is no game, and left out. Their titles are kept whole: the Loppi Puzzle Magazine issues differ
@@ -56,14 +56,16 @@ def no_intro_game(label):
 
 
 def nintendo_power_only(all_releases):
-    """The ids of the releases whose every No-Intro ROM, and every other ROM of their game, is tagged (NP)."""
+    """The ids of the releases whose every No-Intro ROM, and every other Japanese ROM of their game, is tagged (NP).
+    Nintendo Power was Japanese, so the game's ROMs from elsewhere (Batman Beyond's from the USA) don't count."""
     no_intro = lambda r: [l["label"] for l in r.get("links", []) if l["source"] == "no-intro.org"]
     tagged = {}
     for r in all_releases:
         for label in no_intro(r):
-            tagged.setdefault(no_intro_game(label), []).append("(NP)" in label)
+            if "(Japan" in label:
+                tagged.setdefault(no_intro_game(label), []).append("(NP)" in label)
     return {r["id"] for r in all_releases
-            if r["system"] in SYSTEMS and no_intro(r) and all(all(tagged[no_intro_game(l)]) for l in no_intro(r))
+            if r["system"] in SYSTEMS and no_intro(r) and all("(NP)" in l and all(tagged[no_intro_game(l)]) for l in no_intro(r))
             and r["title"] != "GB-Memory Multi Menu"}
 
 
