@@ -22,7 +22,7 @@ Photos of a release from a better source replace those from a worse one, wheneve
 ## Steps
 
 Done, run with `make` (see the Makefile): add-photos, read-text, fit-cartridge (the plastic), fit-label (the label in its
-recess). Tools for judging and fixing fits: review-fits, review-labels, fit-by-hand; for finding and naming photos:
+recess). Tools for judging and fixing fits: review-fits, review-labels, fit-by-hand; learn-choice (fit-cartridge's choice among its fits, learned from the verdicts: run it again as verdicts grow); for finding and naming photos:
 search-photos, name-photos.
 
 ## Open work

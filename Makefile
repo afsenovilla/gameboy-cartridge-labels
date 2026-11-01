@@ -11,10 +11,13 @@
 #   Reads the text on every photo in photos/ into generated/read-text/<photo>.json: every line of text found, and where it is (src/read_text.py).
 #
 #   make fit-cartridge
-#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text (where that gives no fit, from the outlines in the photo), into fits.json: the pose of its plastic (the label is left for a later step), not yet reviewed; what it found on the way, with flags for review, into generated/fit-cartridge/<photo>.json; a plastic fit accepted or placed by hand is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py, src/fits.py).
+#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text and from the outlines in the photo, the fit chosen by a score learned from your verdicts (make learn-choice), into fits.json: the pose of its plastic (the label is left for a later step), not yet reviewed; what it found on the way, with flags for review, into generated/fit-cartridge/<photo>.json; a plastic fit accepted or placed by hand is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py, src/fits.py).
 #
 #   make fit-label
 #   Fits the label in the recess of every photo whose plastic is accepted or placed by hand, into fits.json: its pose, as a homography from the label's model to the photo's pixels, not yet reviewed; its shift, turn and width into generated/fit-label/<photo>.json; a fit sticking out of the recess is rejected; a label accepted or placed by hand is kept (src/fit_label.py).
+#
+#   make learn-choice
+#   A tool, not a step: learns how fit-cartridge chooses among a photo's fits from the photos whose plastic is accepted or placed by hand, into src/choice.json (committed; fit-cartridge then fits again the photos not yet known to be right), and prints how many each choice gets right (src/learn_choice.py).
 #
 #   make review-fits
 #   A tool, not a step: a local page for judging the plastic's fits by eye, each drawn on its photo, flagged ones first; your verdicts are saved to fits.json (src/review_fits.py).
@@ -35,7 +38,7 @@
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label review-fits review-labels fit-by-hand search-photos name-photos
+.PHONY: help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -63,6 +66,9 @@ fit-label:
 
 clean-fit-label:
 	rm -rf generated/fit-label
+
+learn-choice:
+	$(PYTHON) src/learn_choice.py
 
 review-fits:
 	$(PYTHON) src/review_fits.py

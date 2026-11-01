@@ -937,6 +937,24 @@ class Fitter:
         found, strength = self.subset(("recess",)).search(H, 0.12)
         return float(np.mean(strength))
 
+    def features(self, H):
+        """What fit-cartridge's choice among fits weighs, of one fit: for each kind of sample, the share with a strong
+        edge within 0.12 mm (near), their mean strength there (str) and the median offset of the strongest edge within
+        0.4 mm (offset); the recess's strength, the band's line, the quality, and the recess line's continuity (least
+        and mean side)."""
+        found, strength = self.search(H, 0.4)
+        median = np.median(strength)
+        f = {}
+        for kind in ("recess", "label", "face", "arrow", "pill", "groove"):
+            m = self.kinds == kind
+            near = np.abs(found[m]) < 0.12
+            f[f"{kind}_near"] = float((near & (strength[m] > median * 0.5)).mean()) if m.any() else 0.0
+            f[f"{kind}_str"] = float(np.mean(strength[m] * near)) if m.any() else 0.0
+            f[f"{kind}_offset"] = float(np.median(np.abs(found[m]))) if m.any() else 0.0
+        continuity = self.line_continuity(H)
+        return f | {"recess_strength": self.recess_strength(H), "band_line": self.band_line(H), "quality": self.quality(H),
+                    "cont_min": float(min(continuity)), "cont_mean": float(np.mean(continuity))}
+
     def quality(self, H):
         """The share of samples with a strong edge within 0.12 mm of the place H puts them."""
         found, strength = self.search(H, 0.4)

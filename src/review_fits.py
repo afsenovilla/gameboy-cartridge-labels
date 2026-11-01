@@ -133,9 +133,8 @@ def notes(details):
         return [details["error"]]
     found = []
     if details["ambiguous"]:
-        # The rival's strength is a share of the winner's, which can be next to nothing.
-        strength = f'{details["rival_strength"]:.0%} as strong' if details["rival_strength"] < 10 else "far stronger"
-        found.append(f'AMBIGUOUS: a rival {strength} lands {details["rival_distance_mm"]:.1f} mm away')
+        # How likely the rival is, as a share of the winner's likelihood (by fit-cartridge's score).
+        found.append(f'AMBIGUOUS: a rival {details["rival_strength"]:.0%} as likely lands {details["rival_distance_mm"]:.1f} mm away')
     if details["broken_line"]:
         side = ("top", "right", "bottom", "left")[int(np.argmin(details["line_continuity"]))]
         found.append(f'BROKEN LINE: the {side} side is {min(details["line_continuity"]):.0%} on one line')
