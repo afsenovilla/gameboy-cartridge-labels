@@ -369,17 +369,32 @@ def cgb_body_outline(per_top=24, per_corner=8):
     return np.vstack([left, cgb_top(np.linspace(left[-1][0], w - left[-1][0], per_top)), right, [[w, h], [0, h]]])
 
 
-def cgb_outline_seen(camera=None):
-    """The CGB body's outline as seen in the face, closed: its top and sides (cgb_body_outline) CGB_BEVEL_DEPTH behind
-    the face, seen from the camera (default: straight in front of the middle, FOCAL_FALLBACK_DISTANCE away; where the
-    camera was can't be told well from a fit, see camera_of); its bottom edge in the face, CGB_BEVEL_SIDE in from the
-    sides (the bevels end there), joined to the sides' bottom ends."""
+def cgb_outline_points():
+    """The CGB body's outline, closed, in mm, and each point's depth behind the face: its top and sides
+    (cgb_body_outline) CGB_BEVEL_DEPTH behind it; its bottom edge in it, CGB_BEVEL_SIDE in from the sides (the bevels
+    end there), joined to the sides' bottom ends."""
     w, h = CGB_BODY
-    camera = np.array([28.5, 32.5, FOCAL_FALLBACK_DISTANCE]) if camera is None else camera
     outline = cgb_body_outline()[:-2]  # from the left side's top round to the right side's top: without the bottom
-    back = np.vstack([[[0.0, h]], outline, [[w, h]]])
-    seen = seen_at(dense_line(back), CGB_BEVEL_DEPTH, camera, wall=0.0, n=1.0)
-    return np.vstack([seen, dense_line([[w - CGB_BEVEL_SIDE, h], [CGB_BEVEL_SIDE, h]])])
+    back = dense_line(np.vstack([[[0.0, h]], outline, [[w, h]]]))
+    bottom = dense_line([[w - CGB_BEVEL_SIDE, h], [CGB_BEVEL_SIDE, h]])
+    return np.vstack([back, bottom]), np.r_[np.full(len(back), CGB_BEVEL_DEPTH), np.zeros(len(bottom))]
+
+
+def cgb_outline_seen(camera):
+    """The CGB body's outline (cgb_outline_points) as seen in the face from the camera (camera_of)."""
+    points, depths = cgb_outline_points()
+    seen = points.copy()
+    back = depths > 0
+    seen[back] = seen_at(points[back], CGB_BEVEL_DEPTH, camera, wall=0.0, n=1.0)
+    return seen
+
+
+def cgb_handles():
+    """The rectangle fit-by-hand's handles hold on the CGB, in mm: the ridges' outer corners (where the outer edges of
+    the side ridges meet those of the top and bottom ridges), easier to see on the clear shell than the recess's."""
+    x1, y1, x2, y2 = CGB_RIDGES_INNER
+    top = y1 - CGB_RIDGE_TOP + cgb_top([x1 - CGB_RIDGE_SIDE])[0, 1] - cgb_top([28.5])[0, 1]
+    return (x1 - CGB_RIDGE_SIDE, top, x2 + CGB_RIDGE_SIDE, y2 + CGB_RIDGE_TOP)
 
 
 def dense_line(points, closed=False, per_mm=2):
@@ -630,9 +645,8 @@ def camera_of(H, center):
     r1, r2, t = M[:, 0] * scale, M[:, 1] * scale, M[:, 2] * scale
     if t[2] < 0:
         r1, r2, t = -r1, -r2, -t
-    U, _, Vt = np.linalg.svd(np.c_[r1, r2, np.cross(r1, r2)])
-    R = U @ Vt
-    C = -R.T @ t
+    r3 = np.cross(r1, r2)
+    C = -np.linalg.solve(np.c_[r1, r2, r3 / np.linalg.norm(r3)], t)  # as fit_by_hand's page does it
     return np.array([C[0], C[1], abs(C[2])])
 
 
