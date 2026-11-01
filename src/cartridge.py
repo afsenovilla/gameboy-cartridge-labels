@@ -304,7 +304,7 @@ CGB_BODY_CORNER_DROP = 0.8
 # samples stay clear of the corners, so it only shapes the outline drawn.
 CGB_TOP_CORNER_RADIUS = 2.7
 # The top and the sides are bevelled, 2 mm deep (measured, 2026-11-01): the body's outline (CGB_BODY, the widest
-# extent) lies 2 mm behind the front face, and the face itself ends inside it, where the bevel starts: on the sides
+# extent, all the way round) lies 2 mm behind the front face, and the face itself ends inside it, where the bevel starts: on the sides
 # about 2 mm in (the bevel looks about 45 degrees), on the top about 3 mm down (judged by eye; hard to make out).
 # Drawn only: the bevels' inner edge as fitting samples (steps 2 mm in on the sides, 3 mm down on the top) made fits
 # worse (2026-11-01, against 58 hand-placed and 108 accepted fits: within 1 mm 25 -> 21 and 79 -> 63), and in place of
@@ -379,15 +379,19 @@ def cgb_bevel_line(per_top=24):
 
 
 def cgb_outline_seen(camera=None):
-    """The CGB body's outline (cgb_body_outline) as seen in the face: its top and sides CGB_BEVEL_DEPTH behind it, seen
-    from the camera (default: straight in front of the middle, FOCAL_FALLBACK_DISTANCE away; where the camera was can't
-    be told well from a fit, see camera_of), its bottom corners in the face."""
-    outline = cgb_body_outline()
+    """The CGB body's outline (cgb_body_outline) as seen in the face: all of it CGB_BEVEL_DEPTH behind it, seen from
+    the camera (default: straight in front of the middle, FOCAL_FALLBACK_DISTANCE away; where the camera was can't be
+    told well from a fit, see camera_of)."""
     camera = np.array([28.5, 32.5, FOCAL_FALLBACK_DISTANCE]) if camera is None else camera
-    seen = seen_at(outline, CGB_BEVEL_DEPTH, camera, wall=0.0, n=1.0)
-    bottom = outline[:, 1] >= CGB_BODY[1] - 1e-9
-    seen[bottom] = outline[bottom]
-    return seen
+    return seen_at(dense_line(cgb_body_outline(), closed=True), CGB_BEVEL_DEPTH, camera, wall=0.0, n=1.0)
+
+
+def dense_line(points, closed=False, per_mm=2):
+    """Points along a polyline (mm) every 1 / per_mm mm or closer, so that it bends as it should when seen at depth."""
+    points = np.asarray(points, np.float64)
+    ends = np.vstack([points[1:], points[:1]]) if closed else points[1:]
+    parts = [np.linspace(a, b, max(2, int(np.linalg.norm(b - a) * per_mm) + 1), endpoint=False) for a, b in zip(points, ends)]
+    return np.vstack(parts + ([] if closed else [points[-1:]]))
 
 
 def cgb_corner_samples(count=5, clear=np.radians(15)):
