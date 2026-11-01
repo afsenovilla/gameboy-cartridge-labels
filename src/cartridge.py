@@ -394,8 +394,8 @@ def cgb_outline_seen(camera):
 
 
 def cgb_handles():
-    """The rectangle fit-by-hand's handles hold on the CGB, in mm: the ridges' outer corners (where the outer edges of
-    the side ridges meet those of the top and bottom ridges), easier to see on the clear shell than the recess's."""
+    """The CGB's ridges' outer corners in mm (where the outer edges of the side ridges meet those of the top and bottom
+    ridges): fit-by-hand's handles held them for a while (2026-11-01); unused for now, as they're seen behind the face."""
     x1, y1, x2, y2 = CGB_RIDGES_INNER
     top = y1 - CGB_RIDGE_TOP + cgb_top([x1 - CGB_RIDGE_SIDE])[0, 1] - cgb_top([28.5])[0, 1]
     return (x1 - CGB_RIDGE_SIDE, top, x2 + CGB_RIDGE_SIDE, y2 + CGB_RIDGE_TOP)

@@ -3,7 +3,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fits, photos
-from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, RECESS_RADIUS, SHELLS, cgb_handles, cgb_outline_points, cgb_ridge_lines, corners_of, groove_edges, shell_of
+from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, RECESS_RADIUS, CGB_REFRACTIVE_INDEX, CGB_RIDGE_DEPTH, CGB_WALL, SHELLS, cgb_outline_points, cgb_ridge_lines, corners_of, groove_edges, shell_of
 from fit_cartridge import OUT as DETAILS, load
 from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_outline, rounded_outline
 
@@ -12,8 +12,7 @@ from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_ou
 # (make review-labels), the rejected ones and the photos fit-cartridge couldn't fit. A photo starts from its current fit
 # (else its latest rejected one, else the model in the box fit-cartridge cropped to, else in the middle), with its label
 # (else its latest rejected one on that plastic, else the model's). The handles (green squares) sit on the recess's
-# corners (on the clear CGB, on its internal ridges' outer corners: cartridge.cgb_handles) and are dragged onto the
-# photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label placed" is
+# corners and are dragged onto the photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label placed" is
 # ticked, the label (cyan) shows: a rectangle in the recess, moving with it: its corners turn it about its center, the
 # dots in its sides move one side, the cross moves it. A magnifier shows 6 mm around the handle held. Saving makes the
 # placement the photo's current fit, placed by hand (the steps keep it), with the label once it's placed (else the
@@ -36,26 +35,28 @@ def project(H, pts):
 
 
 def anchor(shell):
-    """The rectangle (mm) the handles hold: the recess's on the DMG, the ridges' outer corners on the clear CGB."""
-    return corners_of(cgb_handles() if shell.name == "cgb" else shell.recess)
+    """The rectangle (mm) the handles hold: the recess's (on the CGB its internal ridges' were tried, 2026-11-01)."""
+    return corners_of(shell.recess)
 
 
 def model(shell):
     """A shell's model as the page draws it, in mm: the handles' rectangle's corners (anchor), the label's corners,
-    and the lines [points, color, dashed, closed, depths] (as review-fits draws them; depths: each point's depth behind
-    the face in mm, or null: in it; the page sees them from the camera it estimates from the placement, as
-    cartridge.camera_of does)."""
+    and the lines [points, color, dashed, closed, depths, wall] (as review-fits draws them; depths: each point's depth
+    behind the face in mm, or null: in it; the page sees them from the camera it estimates from the placement, as
+    cartridge.camera_of does, through the front wall (wall mm thick, or null: none; refractive index n), as
+    cartridge.seen_at does)."""
     lines = [[dense(rounded_outline(shell.recess, RECESS_RADIUS)), "#3d3", False, True]]
     if shell.name == "cgb":
         half = CGB_ARROW_WIDTH / 2
         arrow = arrow_outline(CGB_ARROW_TOP_RADIUS, CGB_ARROW_TIP_RADIUS, top=CGB_ARROW_TOP, half_width=half, half_angle=np.arctan2(half, CGB_ARROW_HEIGHT))
         outline, depths = cgb_outline_points()
-        lines += [[outline, "#f33", False, True, depths], [arrow, "#f90", False, True], *[[dense(l, False), "#0cf", False, False] for l in cgb_ridge_lines()]]
+        lines += [[outline, "#f33", False, True, depths], [arrow, "#f90", False, True], *[[dense(l, False), "#0cf", False, False, np.full(len(dense(l, False)), CGB_RIDGE_DEPTH), CGB_WALL] for l in cgb_ridge_lines()]]
     else:
         lines += [[dense(face_outline()), "#f33", False, True], *[[dense(l, False), "#f33", True, False] for l in bevel_lines()],
                   [arrow_outline(), "#f90", False, True], [pill_outline(), "#f90", False, True], *[[np.array(e), "#f90", False, False] for e in groove_edges()]]
-    return {"anchor": anchor(shell).tolist(), "recess": corners_of(shell.recess).tolist(), "label": corners_of(shell.label).tolist(),
-            "lines": [[np.round(l[0], 3).tolist(), *l[1:4], None if len(l) < 5 else np.round(l[4], 3).tolist()] for l in lines]}
+    return {"anchor": anchor(shell).tolist(), "label": corners_of(shell.label).tolist(), "n": CGB_REFRACTIVE_INDEX,
+            "lines": [[np.round(l[0], 3).tolist(), *l[1:4], None if len(l) < 5 else np.round(l[4], 3).tolist(), l[5] if len(l) > 5 else None]
+                      for l in lines]}
 
 
 class Hand:
@@ -143,11 +144,11 @@ class Hand:
         return {"name": name, "path": self.paths[name], "shell": shell.name, "anchor": None if H is None else project(H, anchor(shell)).tolist(),
                 "label": label_mm, "notes": notes}
 
-    def save(self, name, corners, label_mm, on_recess=False):
+    def save(self, name, corners, label_mm):
         """Makes a placement the photo's current fit, placed by hand: the handles' corners (anchor) in the photo's pixels, and the
         label's in mm (or None: the current label stays if the plastic is where it was)."""
         shell = self.shell(name)
-        H = homography(corners_of(shell.recess) if on_recess else anchor(shell), corners)
+        H = homography(anchor(shell), corners)
         with fits.editing() as known:
             e = fits.entry(known, name, self.sha1s[name])
             old = e["fit"]
@@ -200,10 +201,10 @@ button#save{background:#070;color:#fff}
 <div id="side"><select id="group"></select><canvas id="loupe" width="240" height="240"></canvas><div id="list"></div></div>
 <div id="main"><header>
 <button id="prev">← prev</button><span id="position"></span><button id="next">next →</button>
-<h2 id="title"></h2><button id="reset">Reset (R)</button><label><input type="checkbox" id="labelplaced"> Label placed (L)</label><label title="Game Boy Color only cartridges: the handles on the recess's corners instead of the internal ridges'"><input type="checkbox" id="onrecess"> CGB handles on the recess</label>
+<h2 id="title"></h2><button id="reset">Reset (R)</button><label><input type="checkbox" id="labelplaced"> Label placed (L)</label>
 <button id="save">Save as great (S)</button><span id="status"></span>
 <p id="notes"></p>
-<p id="help">Drag the green corners (squares) onto the recess's (on the clear Game Boy Color only cartridge: onto the internal ridges' outer corners, unless CGB handles on the recess is ticked); the dots slide a side. Tick Label placed to show the label (cyan): its corners turn it, the dots move a side, the cross moves it. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next photo.</p>
+<p id="help">Drag the green corners (squares) onto the recess's; the dots slide a side. Tick Label placed to show the label (cyan): its corners turn it, the dots move a side, the cross moves it. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next photo.</p>
 </header><div id="stage"><canvas id="c"></canvas></div></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -230,9 +231,7 @@ function homography(src, dst) {
   return [[h[0], h[1], h[2]], [h[3], h[4], h[5]], [h[6], h[7], 1]];
 }
 const model = () => models[item.shell];
-// The handles' rectangle in mm: the model's anchor, or on the CGB the recess if "CGB handles on the recess" is ticked.
-const onRecess = () => item.shell === "cgb" && $("onrecess").checked;
-const anchorMm = () => onRecess() ? model().recess : model().anchor;
+const anchorMm = () => model().anchor;  // the handles' rectangle in mm: the recess
 const toPhoto = () => homography(anchorMm(), corners), toMm = () => homography(corners, anchorMm());
 // The label: a rectangle in the recess's mm, {c: center, a: turn (radians), w, h}.
 const LOCAL = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]], NORMALS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
@@ -257,7 +256,7 @@ function rectFrom(q) {
   return {c: q.reduce((s, p) => [s[0] + p[0] / 4, s[1] + p[1] / 4], [0, 0]), a: Math.atan2(t[1], t[0]), w: Math.hypot(...t) / 2, h: Math.hypot(...l) / 2};
 }
 const placed = () => $("labelplaced").checked;
-// Handles, in the photo's pixels: 0-3 the anchor's corners (the recess's; the CGB's ridges'), 4-7 the middle of its sides (top, right, bottom, left),
+// Handles, in the photo's pixels: 0-3 the anchor's corners (the recess's), 4-7 the middle of its sides (top, right, bottom, left),
 // and with the label placed, 8-11 the label's corners, 12-15 the middle of its sides, 16 its center.
 function handles() {
   const H = toPhoto(), R = anchorMm(), L = rectCorners(rect);
@@ -337,7 +336,6 @@ async function show() {
 function reset() {
   const W = img.width, H = img.height, R = model().anchor;
   corners = item.anchor ? item.anchor.map(q => q.slice()) : R.map(([x, y]) => [W / 2 + (x - 28.5) * W / 120, H / 2 + (y - 37.5) * W / 120]);
-  if (onRecess()) { const P = homography(R, corners); corners = model().recess.map(q => apply(P, q)); }  // the server gives the anchor's
   rect = rectFrom(item.label || model().label);
   $("labelplaced").checked = !!item.label;
   sel = 0;
@@ -373,11 +371,24 @@ function cameraOf(H) {
   const d = det(M), C = [0, 1, 2].map(j => -det(M.map((row, i) => row.map((v, l) => l === j ? t[i] : v))) / d);
   return [C[0], C[1], Math.abs(C[2])];
 }
-// A point depth mm behind the face, as seen in the face from the camera (straight lines of sight: no refraction).
-const seen = (cam, [x, y], depth) => { if (!isFinite(cam[2])) return [x, y]; const k = cam[2] / (cam[2] + depth); return [cam[0] + (x - cam[0]) * k, cam[1] + (y - cam[1]) * k]; };
+// A point depth mm behind the face, as seen in the face from the camera: the line of sight bent through the front wall
+// (wall mm thick, refractive index n) and straight behind it; as cartridge.seen_at.
+function seen(cam, [x, y], depth, wall, n) {
+  if (!(depth > 0) || !isFinite(cam[2])) return [x, y];
+  const h = cam[2], ax = x - cam[0], ay = y - cam[1], target = Math.hypot(ax, ay);
+  const glass = Math.min(depth, wall), air = Math.max(0, depth - wall);
+  let r = target * h / (h + depth);
+  for (let k = 0; k < 8; k++) {
+    const tan = r / h, sin = tan / Math.sqrt(1 + tan * tan), sinR = sin / n, cosR = Math.sqrt(1 - sinR * sinR), tanR = sinR / cosR;
+    const cos = 1 / Math.sqrt(1 + tan * tan), slope = (glass * cos ** 3 / n / cosR ** 3 + air) / h;
+    r -= (r + glass * tanR + air * tan - target) / (1 + slope);
+  }
+  const k = target > 1e-9 ? r / target : 1;
+  return [cam[0] + ax * k, cam[1] + ay * k];
+}
 function shapes() {
   const H = toPhoto(), cam = model().lines.some(l => l[4]) ? cameraOf(H) : null;
-  const lines = model().lines.map(([pts, col, dash, closed, depths]) => [pts.map((q, k) => apply(H, depths && depths[k] ? seen(cam, q, depths[k]) : q)), col, dash, closed]);
+  const lines = model().lines.map(([pts, col, dash, closed, depths, wall]) => [pts.map((q, k) => apply(H, depths && depths[k] ? seen(cam, q, depths[k], wall || 0, model().n) : q)), col, dash, closed]);
   return placed() ? lines.concat([[roundedOutline(rect).map(q => apply(H, q)), "#3cf", false, true]]) : lines;
 }
 function stroke(g, pts, closed, at) {
@@ -439,7 +450,7 @@ c.onwheel = e => {
 };
 async function save() {
   if (!corners) return;
-  const body = {name: item.name, anchor: corners, on_recess: onRecess(), label: placed() ? rectCorners(rect) : null};
+  const body = {name: item.name, anchor: corners, label: placed() ? rectCorners(rect) : null};
   const response = await fetch("/save", {method: "POST", body: JSON.stringify(body)});
   if (!response.ok) return alert("Not saved: " + response.status);
   groups = await response.json();
@@ -453,13 +464,6 @@ $("next").onclick = () => go(i + 1);
 $("reset").onclick = () => reset();
 $("save").onclick = save;
 $("labelplaced").onchange = e => setPlaced(e.target.checked);
-// The handles move to the other rectangle, the placement staying where it is.
-$("onrecess").onchange = e => {
-  if (!corners || item.shell !== "cgb") return;
-  const was = e.target.checked ? model().anchor : model().recess, P = homography(was, corners);
-  corners = anchorMm().map(q => apply(P, q));
-  draw();
-};
 document.onkeydown = e => {
   if (e.target.tagName === "SELECT" || !corners) return;
   const step = e.shiftKey ? 10 : 1, d = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
@@ -514,7 +518,7 @@ class Handler(BaseHTTPRequestHandler):
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if data["name"] not in hand.entries or np.shape(data["anchor"]) != (4, 2) or data["label"] is not None and np.shape(data["label"]) != (4, 2):
             return self.send_error(400)
-        hand.save(data["name"], data["anchor"], data["label"], bool(data.get("on_recess")))
+        hand.save(data["name"], data["anchor"], data["label"])
         self.send(hand.summary())
 
     def log_message(self, *args):
