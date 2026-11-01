@@ -356,12 +356,12 @@ const toScreen = q => [ox + q[0] * scale, oy + q[1] * scale], toImage = (x, y) =
 // the photo's center: as cartridge.camera_of.
 function cameraOf(H) {
   H = H.map(r => r.map(v => v / H[2][2]));
-  const cx = img.width / 2, cy = img.height / 2, c0 = apply(H, [28.5, 32.5]), ex = apply(H, [28.6, 32.5]), ey = apply(H, [28.5, 32.6]);
-  const s = Math.sqrt(Math.abs((ex[0] - c0[0]) * (ey[1] - c0[1]) - (ex[1] - c0[1]) * (ey[0] - c0[0]))) / 0.1;
-  const A = [H[0][0] - cx * H[2][0], H[1][0] - cy * H[2][0]], B = [H[0][1] - cx * H[2][1], H[1][1] - cy * H[2][1]];
+  const cx = img.width / 2, cy = img.height / 2;
+    const A = [H[0][0] - cx * H[2][0], H[1][0] - cy * H[2][0]], B = [H[0][1] - cx * H[2][1], H[1][1] - cy * H[2][1]];
   const rows = [[A[0] * B[0] + A[1] * B[1], -H[2][0] * H[2][1]], [A[0] ** 2 + A[1] ** 2 - B[0] ** 2 - B[1] ** 2, H[2][1] ** 2 - H[2][0] ** 2]];
   const num = rows.reduce((t, [a, b]) => t + a * b, 0), den = rows.reduce((t, [a]) => t + a * a, 0), g = den > 0 ? num / den : 0;
-  const f = g > 0 ? Math.min(Math.max(1 / Math.sqrt(g), 200 * s), 1000 * s) : 400 * s;
+  if (!(g > 0)) return [28.5, 32.5, Infinity];  // no perspective: infinitely far, straight in front
+  const f = 1 / Math.sqrt(g);
   const col = k => [(H[0][k] - cx * H[2][k]) / f, (H[1][k] - cy * H[2][k]) / f, H[2][k]], norm = v => Math.hypot(...v);
   let [r1, r2, t] = [col(0), col(1), col(2)];
   const k = 2 / (norm(r1) + norm(r2));
@@ -374,7 +374,7 @@ function cameraOf(H) {
   return [C[0], C[1], Math.abs(C[2])];
 }
 // A point depth mm behind the face, as seen in the face from the camera (straight lines of sight: no refraction).
-const seen = (cam, [x, y], depth) => { const k = cam[2] / (cam[2] + depth); return [cam[0] + (x - cam[0]) * k, cam[1] + (y - cam[1]) * k]; };
+const seen = (cam, [x, y], depth) => { if (!isFinite(cam[2])) return [x, y]; const k = cam[2] / (cam[2] + depth); return [cam[0] + (x - cam[0]) * k, cam[1] + (y - cam[1]) * k]; };
 function shapes() {
   const H = toPhoto(), cam = model().lines.some(l => l[4]) ? cameraOf(H) : null;
   const lines = model().lines.map(([pts, col, dash, closed, depths]) => [pts.map((q, k) => apply(H, depths && depths[k] ? seen(cam, q, depths[k]) : q)), col, dash, closed]);
