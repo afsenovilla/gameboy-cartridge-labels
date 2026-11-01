@@ -306,6 +306,9 @@ CGB_TOP_CORNER_RADIUS = 2.7
 # The top and the sides are bevelled, 2 mm deep (measured, 2026-11-01): the body's outline (CGB_BODY, the widest
 # extent) lies 2 mm behind the front face, and the face itself ends inside it, where the bevel starts: on the sides
 # about 2 mm in (the bevel looks about 45 degrees), on the top about 3 mm down (judged by eye; hard to make out).
+# Drawn only: the bevels' inner edge as fitting samples (steps 2 mm in on the sides, 3 mm down on the top) made fits
+# worse (2026-11-01, against 58 hand-placed and 108 accepted fits: within 1 mm 25 -> 21 and 79 -> 63), and in place of
+# the outline's top and sides much worse.
 CGB_BEVEL_DEPTH = 2.0
 CGB_BEVEL_SIDE = 2.0
 CGB_BEVEL_TOP = 3.0
