@@ -292,8 +292,9 @@ def build_samples(recess=RECESS, label=LABEL, arrow_edges=ARROW_EDGES, pill=True
 
 
 # The clear Game Boy Color only (CGB) cartridge, as measured with calipers on one on 2026-10-16: the body 57 wide and
-# 65 high in the middle, but its top bowed, 64.2 high at the corners (taken as an arc); the recess 44.5 x 38.5, inset
-# 6.25 from the sides, 21.5 from the top (in the middle) and 5 from the bottom. The label, as placed by hand on 11
+# 65 high in the middle, but its top bowed, 64.2 high at the corners (taken as an arc); the recess 38.5 high, 21.5 from
+# the top (in the middle) and 5 from the bottom, and 44 wide, centered (measured 44.5 then; 43.7 on 2026-11-01, hard to
+# measure: taken as the round 44, as the shell is designed in mm; the DMG's is 44 too). The label, as placed by hand on 11
 # photos (2026-10-23): 42.9 x 37.0 (widths 42.84 to 43.15; wider than DMG labels), centered in the recess within 0.4 mm
 # and 0.5 degrees. Its "GAME BOY COLOR" down the left edge lies within about 0.8 mm of CGB_COLOR_TEXT on all of them.
 # The shell's other features aren't measured (see the arrow below).
@@ -312,7 +313,7 @@ CGB_TOP_CORNER_RADIUS = 2.7
 CGB_BEVEL_DEPTH = 2.0
 CGB_BEVEL_SIDE = 2.0
 CGB_BEVEL_TOP = 3.0  # not drawn either: the inner edge didn't help to judge fits by eye
-CGB_RECESS = (6.25, 21.5, 50.75, 60.0)
+CGB_RECESS = (6.5, 21.5, 50.5, 60.0)
 CGB_LABEL = (7.05, 22.25, 49.95, 59.25)
 # "GAME BOY COLOR" on the label: its box (top left, top right, bottom right, bottom left as it reads), median.
 CGB_COLOR_TEXT = np.array([[8.18, 56.69], [8.32, 24.5], [12.85, 25.05], [12.33, 56.99]])
