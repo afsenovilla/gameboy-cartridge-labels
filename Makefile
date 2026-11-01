@@ -11,7 +11,7 @@
 #   Reads the text on every photo in photos/ into generated/read-text/<photo>.json: every line of text found, and where it is (src/read_text.py).
 #
 #   make fit-cartridge
-#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text, into fits.json: the pose of its plastic (the label is left for a later step), not yet reviewed; what it found on the way, with flags for review, into generated/fit-cartridge/<photo>.json; a plastic fit accepted or placed by hand is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py, src/fits.py).
+#   Fits the cartridge's model to every photo but Game Boy Advance ones and those listed in special-shells.tsv, started from its text (where that gives no fit, from the outlines in the photo), into fits.json: the pose of its plastic (the label is left for a later step), not yet reviewed; what it found on the way, with flags for review, into generated/fit-cartridge/<photo>.json; a plastic fit accepted or placed by hand is kept, not fitted again (src/fit_cartridge.py, src/cartridge.py, src/fits.py).
 #
 #   make fit-label
 #   Fits the label in the recess of every photo whose plastic is accepted or placed by hand, into fits.json: its pose, as a homography from the label's model to the photo's pixels, not yet reviewed; its shift, turn and width into generated/fit-label/<photo>.json; a fit sticking out of the recess is rejected; a label accepted or placed by hand is kept (src/fit_label.py).

@@ -2,12 +2,13 @@ import concurrent.futures, glob, json, os, subprocess, sys, tempfile, cv2, numpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import color, fits, photos
-from cartridge import BODY, DISTANCE_TOLERANCE, SPECIAL_SHELLS, Fitter, camera_distance, color_lines, color_start, corners_of, emboss_lines, emboss_start, project, shell_of, special_shell, text_starts
+from cartridge import DISTANCE_TOLERANCE, MAX_TILT, SPECIAL_SHELLS, Fitter, camera_distance, color_lines, color_start, corners_of, emboss_lines, emboss_start, outline_quads, outline_starts, project, shell_of, special_shell, text_starts, tilt
 
 # fit-cartridge: fits the model of the cartridge's shell (src/cartridge.py: the Game Boy's, or the Game Boy Color
 # only cartridge's for CGB- serials) to every photo in photos/ but Game Boy Advance ones (no model) and those of
 # cartridges with another shell (special-shells.tsv: rumble, tilt sensor...), started from its text in
-# generated/read-text/ (make read-text). The fit, the plastic's pose as a homography from mm on the cartridge's front to
+# generated/read-text/ (make read-text), or, where that gives no fit, from the outlines in the photo (the label, the
+# recess or the body). The fit, the plastic's pose as a homography from mm on the cartridge's front to
 # the photo's pixels, goes into fits.json (src/fits.py) as the photo's current plastic, not yet reviewed; what this step
 # found on the way goes into generated/fit-cartridge/<photo>.json: the shell, the fit, the camera's distance from the
 # cartridge that explains it (a range, mm; fits no camera 20 to 100 cm away could have seen are left out), how far to
@@ -40,12 +41,12 @@ def load(path, even_colors=True):
 
 def crop(photo, lines, shell):
     """The box (x0, y0, x1, y1) of one cartridge in the photo, found by its embossed "Nintendo GAME BOY": the body the
-    line implies (cartridge.emboss_start), with a margin of 12 % of its size for the line's error in scale and place. Of
-    the lines like it, the one with the best score less its distance from the photo's center (in shares of the photo's
-    size): photos of my collection show the neighbouring cartridges at the edges. Without any, a "GAME BOY COLOR" on the
-    label (cartridge.color_start), likewise nearest the center. Without the crop, the fitter (which works at about 900 px
-    across) saw a cartridge filling 60 % of a phone photo at about 10 px/mm, and nearly every fit had a broken recess
-    line. The CGB's shell has no such embossing: by its "GAME BOY COLOR" alone. Returns the box and the line, or None."""
+    line implies (cartridge.emboss_start), with a margin (box_of). Of the lines like it, the one with the best score less
+    its distance from the photo's center (in shares of the photo's size): photos of my collection show the neighbouring
+    cartridges at the edges. Without any, a "GAME BOY COLOR" on the label (cartridge.color_start), likewise nearest the
+    center. Without the crop, the fitter (which works at about 900 px across) saw a cartridge filling 60 % of a phone
+    photo at about 10 px/mm, and nearly every fit had a broken recess line. The CGB's shell has no such embossing: by its
+    "GAME BOY COLOR" alone. Returns the box and the line, or None."""
     h, w = photo.shape[:2]
     candidates, start = (emboss_lines(lines, count=10), emboss_start) if shell.name == "dmg" else ([], None)
     if not candidates:
@@ -54,11 +55,17 @@ def crop(photo, lines, shell):
         return None
     off_center = lambda l: float(np.linalg.norm(np.array(l["quad"]).mean(axis=0) / [w, h] - 0.5))
     line = min(candidates, key=lambda l: candidates.index(l) / len(candidates) + off_center(l))
-    body = project(start(line), corners_of((0, 0) + BODY))
+    return box_of(start(line), shell, (w, h)), line
+
+
+def box_of(H, shell, size):
+    """The box (x0, y0, x1, y1) of the body H (mm -> the photo's pixels) puts in the photo, with a margin of 12 % of its
+    size for the start's error in scale and place, within the photo."""
+    body = project(H, corners_of((0, 0) + tuple(shell.body)))
     margin = 0.12 * (body.max(axis=0) - body.min(axis=0))
     x0, y0 = np.maximum(np.floor(body.min(axis=0) - margin).astype(int), 0)
-    x1, y1 = np.minimum(np.ceil(body.max(axis=0) + margin).astype(int), [w, h])
-    return (int(x0), int(y0), int(x1), int(y1)), line
+    x1, y1 = np.minimum(np.ceil(body.max(axis=0) + margin).astype(int), list(size))
+    return int(x0), int(y0), int(x1), int(y1)
 
 
 def recess_plausible(H, recess):
@@ -79,27 +86,52 @@ def fit(photo_path, text_path):
         return {"error": "the photo can't be read"}
     lines = json.load(open(text_path))
     shell = shell_of(photos.serial_of(os.path.basename(photo_path)))
-    found = crop(photo, lines, shell)
-    if found is None:
-        return {"error": "no embossed text or GAME BOY COLOR found"}
-    (x0, y0, x1, y1), line = found
-    # Fitted in the crop; the results go back to the photo's pixels through the crop's offset.
-    lines = [dict(l, quad=(np.array(l["quad"]) - [x0, y0]).tolist()) for l in lines]
-    fitter = Fitter(photo[y0:y1, x0:x1], shell)
-    to_photo = lambda H: (lambda P: (P / P[2, 2]).tolist())(np.array([[1, 0, x0], [0, 1, y0], [0, 0, 1]]) @ H)
-    starts = text_starts(lines, shell)
-    recess = shell.recess
     size = (photo.shape[1], photo.shape[0])
+    # Started from the text, in the box of the cartridge it shows; where that gives no fit, from the outlines in the
+    # photo, each taken for the label, recess or body in the box it implies. Starts from both, chosen among together,
+    # did worse: on 100 DMG photos with a good fit within 0.5 mm the text's fit 86, the outlines' alone 77, both 81, the
+    # outlines' only where the text's failed 88; on 100 CGB ones 44, 32, 27, 44.
+    found = crop(photo, lines, shell)
+    result = None
+    if found is not None:
+        box, line = found
+        shift = np.array([[1, 0, box[0]], [0, 1, box[1]], [0, 0, 1]], np.float64)
+        in_crop = [dict(l, quad=(np.array(l["quad"]) - box[:2]).tolist()) for l in lines]
+        result = fit_from(photo, shell, [(box, [shift @ H0 for H0 in text_starts(in_crop, shell)])], line["text"])
+        if "error" not in result:
+            return result
+    starts = outline_starts(outline_quads(photo), shell, size)
+    if not starts:
+        return result or {"error": "no text or outline to start from"}
+    by_outline = {}
+    for H0, i, what in starts:
+        by_outline.setdefault((i, what), []).append(H0)
+    from_outline = fit_from(photo, shell, [(box_of(group[0], shell, size), group) for group in by_outline.values()], "outline")
+    return from_outline if "error" not in from_outline or result is None else result
+
+
+def fit_from(photo, shell, groups, found_by):
+    """The fit from starts (in the photo's pixels) in groups, each fitted in its crop: [(box, starts)]. Fits from
+    outlines are kept upright (cartridge.tilt), as their starts don't tell up from down."""
+    size = (photo.shape[1], photo.shape[0])
+    recess = shell.recess
     # Possible: a camera 20 to 100 cm away could have seen it so (cartridge.camera_distance).
-    possible = lambda H: camera_distance(to_photo(H), size)[0] <= DISTANCE_TOLERANCE
+    possible = lambda H: camera_distance(H, size)[0] <= DISTANCE_TOLERANCE
     # Of the plausible fits, the one where the recess's line is strongest; more starts only add wrong fits that score well.
-    candidates = []  # every plausible fit, for judging ambiguity
-    for H0 in starts:
-        H, _ = fitter.fit(H0)
-        if recess_plausible(H, recess):
-            candidates.append({"H": H / H[2, 2], "recess_strength": fitter.recess_strength(H), "band_line": fitter.band_line(H), "possible": possible(H)})
+    candidates = []  # every plausible fit, for judging ambiguity; poses in the photo's pixels
+    fitters = []
+    for (x0, y0, x1, y1), starts in groups:
+        fitter = Fitter(photo[y0:y1, x0:x1], shell)
+        shift = np.array([[1, 0, x0], [0, 1, y0], [0, 0, 1]], np.float64)
+        fitters.append((fitter, shift, (x0, y0, x1, y1), [np.linalg.inv(shift) @ H0 for H0 in starts]))
+        for H0 in fitters[-1][3]:
+            H, _ = fitter.fit(H0)
+            if recess_plausible(H, recess) and (found_by != "outline" or abs(tilt(H)) <= MAX_TILT):
+                Hp = shift @ H
+                Hp /= Hp[2, 2]
+                candidates.append({"H": Hp, "group": len(fitters) - 1, "recess_strength": fitter.recess_strength(H), "band_line": fitter.band_line(H), "possible": possible(Hp)})
     if not candidates:
-        return {"error": "no plausible fit", "crop": [x0, y0, x1, y1]}
+        return {"error": "no plausible fit", "found_by": found_by} | ({"crop": list(fitters[0][2])} if len(fitters) == 1 else {})
     # The band below the recess is plain apart from the arrow: candidates with a line there at least 0.8 as strong as the
     # recess's bottom line are left out, if any others remain (on the photos placed by hand: within 0.3 mm 37 -> 40,
     # within 1 mm 44 -> 46).
@@ -107,12 +139,14 @@ def fit(photo_path, text_path):
     # Possible ones first; an impossible one may still come right in the refit below (it did on UNKNOWN_245), and only
     # possible ones are rivals.
     best = max([c for c in clear if c["possible"]] or clear, key=lambda c: c["recess_strength"])
-    H, strength = best["H"], best["recess_strength"]
+    fitter, shift, (x0, y0, x1, y1), starts = fitters[best["group"]]
+    Hp, strength = best["H"], best["recess_strength"]
+    H = np.linalg.inv(shift) @ Hp
     quality = fitter.quality(H)
     # Ambiguity: the strongest rival that lands clearly elsewhere (mean recess corner distance over 0.5 mm, in the chosen
     # fit's mm frame). One at 85% of the winner's strength or more flags the fit for review: on the photos placed by
     # hand that caught 8 of the 13 fits off by 1 mm or more, and flagged 7 others.
-    to_mm = np.linalg.inv(H)
+    to_mm = np.linalg.inv(Hp)
     rivals = [(c["recess_strength"] / max(strength, 1e-9), float(np.linalg.norm(project(to_mm, project(c["H"], corners_of(recess))) - corners_of(recess), axis=1).mean()))
               for c in candidates if c["possible"]]
     rival = max((r for r in rivals if r[1] > 0.5), default=(0.0, 0.0))
@@ -128,7 +162,7 @@ def fit(photo_path, text_path):
         retry = (-1.0, None)
         for H0 in starts + [H]:
             Hr, _ = reduced.fit(H0)
-            if recess_plausible(Hr, recess) and possible(Hr):
+            if recess_plausible(Hr, recess) and possible(shift @ Hr):
                 s = reduced.recess_strength(Hr)
                 if s > retry[0]:
                     retry = (s, Hr)
@@ -137,13 +171,15 @@ def fit(photo_path, text_path):
             if min(retry_continuity) > min(continuity):
                 H, continuity, refit_without = retry[1], retry_continuity, SIDES[side]
                 quality = fitter.quality(H)
-    if not possible(H):
-        return {"error": "no fit a camera 20 to 100 cm away could have seen", "crop": [x0, y0, x1, y1]}
-    return {"shell": shell.name, "mm_to_photo": to_photo(H), "photo_size": list(size), "distance_mm": camera_distance(to_photo(H), size)[1],
-            "crop": [x0, y0, x1, y1], "found_by": line["text"], "quality": quality, "recess_strength": strength,
+    Hp = shift @ H
+    Hp = Hp / Hp[2, 2]
+    if not possible(Hp):
+        return {"error": "no fit a camera 20 to 100 cm away could have seen", "crop": [x0, y0, x1, y1], "found_by": found_by}
+    return {"shell": shell.name, "mm_to_photo": Hp.tolist(), "photo_size": list(size), "distance_mm": camera_distance(Hp, size)[1],
+            "crop": [x0, y0, x1, y1], "found_by": found_by, "quality": quality, "recess_strength": strength,
             "rival_strength": rival[0], "rival_distance_mm": rival[1], "ambiguous": rival[0] >= 0.85,
             "line_continuity": continuity, "broken_line": min(continuity) < 0.4, "refit_without": refit_without,
-            "candidates": [{"mm_to_photo": to_photo(c["H"]), "recess_strength": c["recess_strength"], "band_line": c["band_line"], "possible": c["possible"]} for c in candidates]}
+            "candidates": [{"mm_to_photo": c["H"].tolist(), "recess_strength": c["recess_strength"], "band_line": c["band_line"], "possible": c["possible"]} for c in candidates]}
 
 
 def fit_into(stem, photo_path, text_path, sha1):
