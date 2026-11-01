@@ -21,6 +21,8 @@ from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_ou
 # rejected ones. Saved again in the same run, a photo's placement replaces the one saved before.
 # Usage: fit_by_hand.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8769
+RIDGE_FITTED = ["CGB-A6PJ-JPN_2", "CGB-A9BJ-JPN", "CGB-B3PJ-JPN", "CGB-B5MJ-JPN", "CGB-BBJJ-JPN", "CGB-BBPJ-JPN", "CGB-BCNJ-JPN_2",
+                "CGB-BCRJ-JPN", "CGB-BDBJ-JPN", "CGB-BHGJ-JPN", "CGB-BKRJ-JPN"]  # temporary, see the groups
 
 
 def homography(src, dst):
@@ -82,6 +84,9 @@ class Hand:
                        "label rejected": [n for n in names if fits.good(plastic(n)) and not label(n) and label_rejected(n)],
                        "not fitted": [n for n in names if not plastic(n) and not self.entries[n]["rejected"]],
                        "not judged": [n for n in names if plastic(n) and "accepted" not in plastic(n)],
+                       # Temporary (2026-11-01): the CGB photos placed on the internal ridges, to place again on the recess
+                       # for comparison (the ridge placements are in commit f2fde37's fits.json).
+                       "ridge-fitted (temporary)": [n for n in RIDGE_FITTED if n in names],
                        "placed by hand": [n for n in names if plastic(n) and plastic(n)["source"] == "hand-placed"],
                        "all": names}
         self.cache, self.lock = {}, threading.Lock()
