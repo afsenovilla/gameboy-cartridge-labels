@@ -307,12 +307,12 @@ CGB_RECESS = (6.25, 21.5, 50.75, 60.0)
 CGB_LABEL = (7.05, 22.25, 49.95, 59.25)
 # "GAME BOY COLOR" on the label: its box (top left, top right, bottom right, bottom left as it reads), median.
 CGB_COLOR_TEXT = np.array([[8.18, 56.69], [8.32, 24.5], [12.85, 25.05], [12.33, 56.99]])
-# The arrow below the recess, smaller and flatter than the DMG's: a 7 x 3 mm triangle (sharp corners; its tip 98.8
-# degrees, the DMG's 87), its top edge 1.2 mm below the recess. Judged by eye on photos (2026-10-23): the top edge
-# 1.2 mm below the recess, the visible tip 0.8 mm above the bottom edge, the tip about 97 to 100 degrees; 7 x 3 is the
-# round size nearest to that (6.96 x 3.08). The top corners are barely rounded, the tip a little more.
-CGB_ARROW_TOP = 61.2
-CGB_ARROW_WIDTH = 7.0
+# The arrow below the recess, smaller and flatter than the DMG's: a 6 x 3 mm triangle (sharp corners, the rounding
+# taken into account; its tip 90 degrees, the DMG's 87), its top edge 1 mm below the recess. Measured with calipers
+# (2026-11-01). Before, judged by eye on photos (2026-10-23): 7 x 3, 1.2 mm below the recess. The top corners are
+# barely rounded, the tip a little more.
+CGB_ARROW_TOP = CGB_RECESS[3] + 1.0
+CGB_ARROW_WIDTH = 6.0
 CGB_ARROW_HEIGHT = 3.0
 
 
@@ -395,7 +395,14 @@ CGB_RIDGE_GAPS = [(28.5 - 19.0, 28.5 - 7.0), (28.5 + 7.0, 28.5 + 19.0)]  # x ran
 # Depths behind the front face (mm). The shell is 8.5 thick, front face to back, its walls 1.4 thick; the board
 # (0.8 thick) lies on the back wall, so its front (the contacts' plane) is 2.2 from the back: 6.3 behind the face. The
 # ridges show where they meet the front wall's inside: 1.4 behind the face. The recess is 0.2 deep (the DMG's too).
-# These are true depths; seen through the front wall they look shallower (refraction).
+# These are true depths; seen through the front wall they look shallower (refraction, worked out 2026-11-01): straight
+# on, a feature behind the 1.4 mm wall looks 1.4 / n deep instead (n about 1.5 to 1.6 for clear plastic), so both the
+# ridges (about 0.9) and the board (about 5.8) look about 0.5 mm shallower than they are. At an angle that moves them in
+# the photo by about 0.5 x tan(angle): 0.1 mm at 10 degrees, 0.2 at 20, 0.3 at 30 (as much as a good fit's error), so
+# it is worth modelling; which plastic barely matters (acrylic 1.49 or polycarbonate 1.585: under 0.05 mm apart at 30
+# degrees). Plan: give each feature its depth, fit a real camera pose (rotation, translation, focal length) instead of a
+# homography, and bend each line of sight through the 1.4 mm front wall by Snell's law, n = 1.5.
+CGB_REFRACTIVE_INDEX = 1.5
 CGB_THICKNESS = 8.5
 CGB_WALL = 1.4
 CGB_BOARD_DEPTH = CGB_THICKNESS - CGB_WALL - 0.8

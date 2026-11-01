@@ -28,7 +28,9 @@ search-photos, name-photos.
 ## Open work
 
 - **Check fit-label and review-labels** (built, awaiting my check).
-- **Depth layers for the CGB shell** (board and walls behind the front face): waits for my measurements.
+- **Depth layers for the CGB shell** (board and walls behind the front face): measured (2026-11-01), written down in
+  src/cartridge.py (CGB_RIDGE*, CGB_BOARD_DEPTH, refraction). Next: fit a real camera pose instead of a homography,
+  each feature at its depth, lines of sight bent through the 1.4 mm front wall (Snell, n = 1.5).
 - Then: rectify (straighten the label), group the artwork, pick the best photo of each release.
 - **A tool comparing labels by their look against their serials**: similar labels with different serials (likely
   misreads: about 2 % of photos named by their text are wrong), and identical serials that look different (misnamed
