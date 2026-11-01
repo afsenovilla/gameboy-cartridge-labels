@@ -1,20 +1,4 @@
 {
- "UNKNOWN_11.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-132325.jpg?v=1701172758",
-  "page_url": "https://www.retros.ae/products/koukou-nyuushidero-jun",
-  "title_on_page": "Koukou Nyuushidero Jun (Japanese Edition)",
-  "original_name": "koukou-nyuushidero-jun__20231126-132325.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "b902c33e944b3ab2bc7337df1dc2a967152c1369"
- },
- "UNKNOWN_12.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20240806-162250.jpg?v=1722950861",
-  "page_url": "https://www.retros.ae/products/koushien-pocket",
-  "title_on_page": "Koushien Pocket (Japanese Edition)",
-  "original_name": "koushien-pocket__20240806-162250.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "33f1d07df67242798af37181d466f64d1f41b182"
- },
  "UNKNOWN_13.jpg": {
   "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-132920.jpg?v=1700996318",
   "page_url": "https://www.retros.ae/products/medarot-3-kuwagata-version",
@@ -49,14 +33,6 @@
   "note": "named by nothing: no serial read",
   "sha1": "cb002fb490ad1d7f0425b425509fe731ba032a2b"
  },
- "UNKNOWN_18.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/products/20230404_190151.jpg?v=1680624355",
-  "page_url": "https://www.retros.ae/products/nakayoshi-cooking-series-1-oishii-cake-okusan",
-  "title_on_page": "Nakayoshi Cooking Series 1: Oishii Cake Okusan (Japanese Edition)",
-  "original_name": "nakayoshi-cooking-series-1-oishii-cake-okusan__20230404_190151.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "aee576e5e5c07c1dead552ae6fa93620c5738045"
- },
  "UNKNOWN_19.jpg": {
   "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-131904.jpg?v=1701251331",
   "page_url": "https://www.retros.ae/products/nobinagas-ambition",
@@ -73,14 +49,6 @@
   "original_name": "busy-ii-pal-region__20260902-203423.jpg",
   "note": "named by nothing: no serial read",
   "sha1": "c19e3443cc872a8b24116cf2ef0362cf596326de"
- },
- "UNKNOWN_20.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-131910.jpg?v=1701251331",
-  "page_url": "https://www.retros.ae/products/nobinagas-ambition",
-  "title_on_page": "Nobunaga's Ambition (Japanese Edition)",
-  "original_name": "nobinagas-ambition__20231126-131910.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "a7c7665efb3fac81b9b6f8c6de30de20bee83a94"
  },
  "UNKNOWN_21.jpg": {
   "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/products/20220123_131224.jpg?v=1643275221",
@@ -107,14 +75,6 @@
   "note": "named by nothing: no serial read",
   "sha1": "b4c9a677840eac855ffbb8ad163fc901828bc36a"
  },
- "UNKNOWN_24.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231125-131735.jpg?v=1700907529",
-  "page_url": "https://www.retros.ae/products/warau-inu-no-bouken",
-  "title_on_page": "Silly Go Lucky - Warau Inu no Bouken (Japanese Edition)",
-  "original_name": "warau-inu-no-bouken__20231125-131735.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "cd648012d3b103dd6da912764da03fee30f2daef"
- },
  "UNKNOWN_3.jpg": {
   "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20260902-203428.jpg?v=1788367042",
   "page_url": "https://www.retros.ae/products/busy-ii-pal-region",
@@ -122,37 +82,5 @@
   "original_name": "busy-ii-pal-region__20260902-203428.jpg",
   "note": "named by nothing: no serial read",
   "sha1": "c1677502c1ef8d5036c0bff5a89af621bc837c6a"
- },
- "UNKNOWN_4.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-132221.jpg?v=1701250016",
-  "page_url": "https://www.retros.ae/products/dino-breeder-2",
-  "title_on_page": "Dino Breeder 2 (Japanese Edition)",
-  "original_name": "dino-breeder-2__20231126-132221.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "e904b35d477db37e01b7e3a2d6ae28e33f66a9cc"
- },
- "UNKNOWN_5.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-132424.jpg?v=1701167520",
-  "page_url": "https://www.retros.ae/products/eitango-target-1900",
-  "title_on_page": "Eitango Target 1900 (Japanese Edition)",
-  "original_name": "eitango-target-1900__20231126-132424.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "f1d4f196c99fc70e60f513414eb7b9cce74c44e2"
- },
- "UNKNOWN_7.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231208-181727.jpg?v=1702050594",
-  "page_url": "https://www.retros.ae/products/gensou-maden-saiyuki",
-  "title_on_page": "Gensou Maden Saiyuki (Japanese Edition)",
-  "original_name": "gensou-maden-saiyuki__20231208-181727.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "29f612011602e178ea1bf8d913ffa79a8bf1dab7"
- },
- "UNKNOWN_8.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231208-181737.jpg?v=1702050593",
-  "page_url": "https://www.retros.ae/products/gensou-maden-saiyuki",
-  "title_on_page": "Gensou Maden Saiyuki (Japanese Edition)",
-  "original_name": "gensou-maden-saiyuki__20231208-181737.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "136801e68b7acb364e685adc12ba259217379b85"
  }
 }

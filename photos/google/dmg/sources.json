@@ -765,12 +765,6 @@
   "sha1": "416755202c76fdf8c12d24ce01b9b6933f305887",
   "original_name": "images (29).jpeg"
  },
- "DMG-B2A_7.jpg": {
-  "serial_on_label": "DMG-B2A",
-  "original_sha1": "2cfcad226258a582d9dea49c6d2796621448457b",
-  "sha1": "0d18a63594bdd91659c8e87017c73b3d10e03a01",
-  "original_name": "images (23).jpeg"
- },
  "DMG-B6J.jpg": {
   "serial_on_label": "DMG-B6J",
   "original_sha1": "f823f1dd4899824adad68e584988264b9fe775f5",
@@ -1446,12 +1440,6 @@
   "original_sha1": "2d8900729aa81d72cec25f10c6dca60b4424fd07",
   "sha1": "07d71556c8be6fab6945e74e44ae12b29ef6c221",
   "original_name": "s-l1200 (1).webp"
- },
- "DMG-T4A.jpg": {
-  "serial_on_label": "DMG-T4A",
-  "original_sha1": "7f1cb6efb6a0ba80e63a6aa3a80175b7e64ff3b9",
-  "sha1": "1168403317a0b8701a31401c902feaab23932e2c",
-  "original_name": "IMG_3755_copy.webp"
  },
  "DMG-T6-USA-1.jpg": {
   "serial_on_label": "DMG-T6-USA-1",

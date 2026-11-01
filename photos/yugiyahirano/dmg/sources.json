@@ -1151,12 +1151,6 @@
   "note": "named by nothing: no serial read",
   "sha1": "34a70558df471dabf115978b4dc4f065daa312c8"
  },
- "DMG-MIJ_2.jpg": {
-  "original_name": "yugiyahirano-41460.jpg",
-  "serial_on_label": "DMG-MIJ",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "8333d806fb1b56e3ce97059ea2578228eb8f0fa1"
- },
  "DMG-MJJ.jpg": {
   "original_name": "yugiyahirano-39312.jpg",
   "serial_on_label": "DMG-MJJ",
