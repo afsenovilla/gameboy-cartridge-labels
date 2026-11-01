@@ -52,7 +52,7 @@ def model(shell):
     else:
         lines += [[dense(face_outline()), "#f33", False, True], *[[dense(l, False), "#f33", True, False] for l in bevel_lines()],
                   [arrow_outline(), "#f90", False, True], [pill_outline(), "#f90", False, True], *[[np.array(e), "#f90", False, False] for e in groove_edges()]]
-    return {"anchor": anchor(shell).tolist(), "label": corners_of(shell.label).tolist(),
+    return {"anchor": anchor(shell).tolist(), "recess": corners_of(shell.recess).tolist(), "label": corners_of(shell.label).tolist(),
             "lines": [[np.round(l[0], 3).tolist(), *l[1:4], None if len(l) < 5 else np.round(l[4], 3).tolist()] for l in lines]}
 
 
@@ -82,6 +82,7 @@ class Hand:
                        "label rejected": [n for n in names if fits.good(plastic(n)) and not label(n) and label_rejected(n)],
                        "not fitted": [n for n in names if not plastic(n) and not self.entries[n]["rejected"]],
                        "not judged": [n for n in names if plastic(n) and "accepted" not in plastic(n)],
+                       "placed by hand": [n for n in names if plastic(n) and plastic(n)["source"] == "hand-placed"],
                        "all": names}
         self.cache, self.lock = {}, threading.Lock()
 
@@ -137,11 +138,11 @@ class Hand:
         return {"name": name, "path": self.paths[name], "shell": shell.name, "anchor": None if H is None else project(H, anchor(shell)).tolist(),
                 "label": label_mm, "notes": notes}
 
-    def save(self, name, corners, label_mm):
+    def save(self, name, corners, label_mm, on_recess=False):
         """Makes a placement the photo's current fit, placed by hand: the handles' corners (anchor) in the photo's pixels, and the
         label's in mm (or None: the current label stays if the plastic is where it was)."""
         shell = self.shell(name)
-        H = homography(anchor(shell), corners)
+        H = homography(corners_of(shell.recess) if on_recess else anchor(shell), corners)
         with fits.editing() as known:
             e = fits.entry(known, name, self.sha1s[name])
             old = e["fit"]
@@ -194,10 +195,10 @@ button#save{background:#070;color:#fff}
 <div id="side"><select id="group"></select><canvas id="loupe" width="240" height="240"></canvas><div id="list"></div></div>
 <div id="main"><header>
 <button id="prev">← prev</button><span id="position"></span><button id="next">next →</button>
-<h2 id="title"></h2><button id="reset">Reset (R)</button><label><input type="checkbox" id="labelplaced"> Label placed (L)</label>
+<h2 id="title"></h2><button id="reset">Reset (R)</button><label><input type="checkbox" id="labelplaced"> Label placed (L)</label><label title="Game Boy Color only cartridges: the handles on the recess's corners instead of the internal ridges'"><input type="checkbox" id="onrecess"> CGB handles on the recess</label>
 <button id="save">Save as great (S)</button><span id="status"></span>
 <p id="notes"></p>
-<p id="help">Drag the green corners (squares) onto the recess's (on the clear Game Boy Color only cartridge: onto the internal ridges' outer corners); the dots slide a side. Tick Label placed to show the label (cyan): its corners turn it, the dots move a side, the cross moves it. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next photo.</p>
+<p id="help">Drag the green corners (squares) onto the recess's (on the clear Game Boy Color only cartridge: onto the internal ridges' outer corners, unless CGB handles on the recess is ticked); the dots slide a side. Tick Label placed to show the label (cyan): its corners turn it, the dots move a side, the cross moves it. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next photo.</p>
 </header><div id="stage"><canvas id="c"></canvas></div></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -224,7 +225,10 @@ function homography(src, dst) {
   return [[h[0], h[1], h[2]], [h[3], h[4], h[5]], [h[6], h[7], 1]];
 }
 const model = () => models[item.shell];
-const toPhoto = () => homography(model().anchor, corners), toMm = () => homography(corners, model().anchor);
+// The handles' rectangle in mm: the model's anchor, or on the CGB the recess if "CGB handles on the recess" is ticked.
+const onRecess = () => item.shell === "cgb" && $("onrecess").checked;
+const anchorMm = () => onRecess() ? model().recess : model().anchor;
+const toPhoto = () => homography(anchorMm(), corners), toMm = () => homography(corners, anchorMm());
 // The label: a rectangle in the recess's mm, {c: center, a: turn (radians), w, h}.
 const LOCAL = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]], NORMALS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const rot = (a, [x, y]) => [Math.cos(a) * x - Math.sin(a) * y, Math.sin(a) * x + Math.cos(a) * y];
@@ -251,7 +255,7 @@ const placed = () => $("labelplaced").checked;
 // Handles, in the photo's pixels: 0-3 the anchor's corners (the recess's; the CGB's ridges'), 4-7 the middle of its sides (top, right, bottom, left),
 // and with the label placed, 8-11 the label's corners, 12-15 the middle of its sides, 16 its center.
 function handles() {
-  const H = toPhoto(), R = model().anchor, L = rectCorners(rect);
+  const H = toPhoto(), R = anchorMm(), L = rectCorners(rect);
   const recess = corners.concat([0, 1, 2, 3].map(k => apply(H, mid(R[k], R[(k + 1) % 4]))));
   return placed() ? recess.concat(L.map(q => apply(H, q)), [0, 1, 2, 3].map(k => apply(H, mid(L[k], L[(k + 1) % 4]))), [apply(H, rect.c)]) : recess;
 }
@@ -263,7 +267,7 @@ function setPlaced(on) {
 }
 // Slides the anchor's side k, from where it was at the start of the drag, to pass through the photo's point q.
 function slide(k, q, start) {
-  const R = model().anchor, Hs = homography(R, start), m = apply(homography(start, R), q), n = NORMALS[k], s = mid(R[k], R[(k + 1) % 4]);
+  const R = anchorMm(), Hs = homography(R, start), m = apply(homography(start, R), q), n = NORMALS[k], s = mid(R[k], R[(k + 1) % 4]);
   const d = (m[0] - s[0]) * n[0] + (m[1] - s[1]) * n[1];
   corners = start.map(p => p.slice());
   for (const j of [k, (k + 1) % 4]) corners[j] = apply(Hs, [R[j][0] + d * n[0], R[j][1] + d * n[1]]);
@@ -328,6 +332,7 @@ async function show() {
 function reset() {
   const W = img.width, H = img.height, R = model().anchor;
   corners = item.anchor ? item.anchor.map(q => q.slice()) : R.map(([x, y]) => [W / 2 + (x - 28.5) * W / 120, H / 2 + (y - 37.5) * W / 120]);
+  if (onRecess()) { const P = homography(R, corners); corners = model().recess.map(q => apply(P, q)); }  // the server gives the anchor's
   rect = rectFrom(item.label || model().label);
   $("labelplaced").checked = !!item.label;
   sel = 0;
@@ -393,7 +398,7 @@ function draw() {
 }
 // The magnifier: 6 x 6 mm around the handle, at the photo's scale along the anchor's top side.
 function loupe(q) {
-  const R = model().anchor, pxPerMm = Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) / (R[1][0] - R[0][0]);
+  const R = anchorMm(), pxPerMm = Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) / (R[1][0] - R[0][0]);
   const r = 3 * pxPerMm, z = 120 / r, at = p => [120 + (p[0] - q[0]) * z, 120 + (p[1] - q[1]) * z];
   lctx.imageSmoothingEnabled = false;
   lctx.fillStyle = "#000"; lctx.fillRect(0, 0, 240, 240);
@@ -429,7 +434,7 @@ c.onwheel = e => {
 };
 async function save() {
   if (!corners) return;
-  const body = {name: item.name, anchor: corners, label: placed() ? rectCorners(rect) : null};
+  const body = {name: item.name, anchor: corners, on_recess: onRecess(), label: placed() ? rectCorners(rect) : null};
   const response = await fetch("/save", {method: "POST", body: JSON.stringify(body)});
   if (!response.ok) return alert("Not saved: " + response.status);
   groups = await response.json();
@@ -443,6 +448,13 @@ $("next").onclick = () => go(i + 1);
 $("reset").onclick = () => reset();
 $("save").onclick = save;
 $("labelplaced").onchange = e => setPlaced(e.target.checked);
+// The handles move to the other rectangle, the placement staying where it is.
+$("onrecess").onchange = e => {
+  if (!corners || item.shell !== "cgb") return;
+  const was = e.target.checked ? model().anchor : model().recess, P = homography(was, corners);
+  corners = anchorMm().map(q => apply(P, q));
+  draw();
+};
 document.onkeydown = e => {
   if (e.target.tagName === "SELECT" || !corners) return;
   const step = e.shiftKey ? 10 : 1, d = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
@@ -497,7 +509,7 @@ class Handler(BaseHTTPRequestHandler):
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if data["name"] not in hand.entries or np.shape(data["anchor"]) != (4, 2) or data["label"] is not None and np.shape(data["label"]) != (4, 2):
             return self.send_error(400)
-        hand.save(data["name"], data["anchor"], data["label"])
+        hand.save(data["name"], data["anchor"], data["label"], bool(data.get("on_recess")))
         self.send(hand.summary())
 
     def log_message(self, *args):
