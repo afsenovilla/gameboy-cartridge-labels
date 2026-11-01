@@ -381,6 +381,38 @@ def cgb_arrow_edges():
     return [(left, right, (0, -1)), (right, tip, (np.cos(a), np.sin(a))), (tip, left, (-np.cos(a), np.sin(a)))]
 
 
+def cgb_ridge_samples():
+    """The internal ridges' edges as steps (mm, outward normals), seen flat (as if in the front face; seeing them
+    through the wall made no clear difference, see below): the side ridges' outer edges from 6 to 50 mm down, the top
+    ridge's both edges beside and between its gaps (following the bowed top), and the bottom ridge's both edges where
+    they aren't behind the label (only beside the recess; the label hides the rest). The side ridges' inner edges are
+    left out: on the photos placed by hand they were found about 0.5 mm further out than measured."""
+    x1, y1, x2, y2 = CGB_RIDGES_INNER
+    side, top = CGB_RIDGE_SIDE, CGB_RIDGE_TOP
+    points, normals = [], []
+    def add(pts, n):
+        points.extend(np.asarray(pts, np.float64)); normals.extend([n] * len(pts))
+    ys = np.linspace(6.0, 50.0, 12)
+    add(np.c_[np.full(12, x1 - side), ys], (-1.0, 0.0))
+    add(np.c_[np.full(12, x2 + side), ys], (1.0, 0.0))
+    xs = np.r_[np.linspace(x1 + 1.0, CGB_RIDGE_GAPS[0][0] - 1.0, 3), np.linspace(CGB_RIDGE_GAPS[0][1] + 1.0, CGB_RIDGE_GAPS[1][0] - 1.0, 6),
+               np.linspace(CGB_RIDGE_GAPS[1][1] + 1.0, x2 - 1.0, 3)]
+    bow = cgb_top(xs)[:, 1] - cgb_top([28.5])[0, 1]  # the top ridge follows the bowed top; measured in the middle
+    add(np.c_[xs, y1 - top + bow], (0.0, -1.0))
+    add(np.c_[xs, y1 + bow], (0.0, 1.0))
+    clear = 0.3  # from the side ridge and from the recess's wall
+    xb = np.r_[np.linspace(x1 + clear, CGB_RECESS[0] - clear, 3), np.linspace(CGB_RECESS[2] + clear, x2 - clear, 3)]
+    add(np.c_[xb, np.full(6, y2)], (0.0, -1.0))
+    add(np.c_[xb, np.full(6, y2 + top)], (0.0, 1.0))
+    return np.array(points), np.array(normals, np.float64)
+
+
+def cgb_face_points():
+    """The CGB's extra face samples: its top corners' and the ridges'."""
+    corners, ridges = cgb_corner_samples(), cgb_ridge_samples()
+    return np.vstack([corners[0], ridges[0]]), np.vstack([corners[1], ridges[1]])
+
+
 def cgb_face_runs():
     """The CGB body's edges as runs for sampling: the straight sides and bottom, and the bowed top as short chords."""
     w, h = CGB_BODY
@@ -408,7 +440,8 @@ def cgb_face_runs():
 # Seeing them through the wall made no clear difference: the ridges' shift (0.1 to 0.25 mm) is within the hand fits'
 # error, and where the camera is can't be told well from the fit (camera_of, with the photo's center as the view's
 # center, put it on average 74 mm below the cartridge, and lined the features up worse than taking it straight in
-# front). The ridges themselves (flat) help the hard photos, at a cost on the accepted ones; not taken in yet.
+# front). The ridges themselves (flat) help the hard photos, at a cost on the accepted ones: taken in (cgb_ridge_samples; as built: hand 25 / 3,
+# accepted 57 / 48).
 # Scripts: ../gameboy-labels-archive/tools-2026-11-01/.
 
 # The CGB shell's internal ridges, measured with calipers (2026-11-01; to 0.1 mm), in mm on the front as above: a
@@ -458,7 +491,7 @@ DMG = Shell("dmg", BODY, RECESS, LABEL, build_samples(), (56.5, 57.5), (58.2, 63
 # labels relative to the label, which is 3.25 mm lower here.
 CGB = Shell("cgb", CGB_BODY, CGB_RECESS, CGB_LABEL,
             build_samples(CGB_RECESS, CGB_LABEL, cgb_arrow_edges(), pill=False, grooves=False, face_runs=cgb_face_runs(),
-                          face_points=cgb_corner_samples(), recess_radius=None),
+                          face_points=cgb_face_points(), recess_radius=None),
             (59.5, 60.5), (60.6, 64.6), np.r_[np.arange(5.0, 24.0, 0.25), np.arange(33.0, 52.0, 0.25)], CGB_COLOR_TEXT)
 SHELLS = {"dmg": DMG, "cgb": CGB}
 
