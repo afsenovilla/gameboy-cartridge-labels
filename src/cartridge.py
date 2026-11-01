@@ -303,6 +303,12 @@ CGB_BODY_CORNER_DROP = 0.8
 # (2026-10-29; middle half 2.6 to 2.8): a rounded corner fitted to the shell's edge against the background. The fitting
 # samples stay clear of the corners, so it only shapes the outline drawn.
 CGB_TOP_CORNER_RADIUS = 2.7
+# The top and the sides are bevelled, 2 mm deep (measured, 2026-11-01): the body's outline (CGB_BODY, the widest
+# extent) lies 2 mm behind the front face, and the face itself ends inside it, where the bevel starts: on the sides
+# about 2 mm in (the bevel looks about 45 degrees), on the top about 3 mm down (judged by eye; hard to make out).
+CGB_BEVEL_DEPTH = 2.0
+CGB_BEVEL_SIDE = 2.0
+CGB_BEVEL_TOP = 3.0
 CGB_RECESS = (6.25, 21.5, 50.75, 60.0)
 CGB_LABEL = (7.05, 22.25, 49.95, 59.25)
 # "GAME BOY COLOR" on the label: its box (top left, top right, bottom right, bottom left as it reads), median.
@@ -358,6 +364,27 @@ def cgb_body_outline(per_top=24, per_corner=8):
     left = [center + r * np.array([np.cos(t), np.sin(t)]) for t in np.linspace(a0, a1, per_corner)]
     right = [(w - x, y) for x, y in left[::-1]]
     return np.vstack([left, cgb_top(np.linspace(left[-1][0], w - left[-1][0], per_top)), right, [[w, h], [0, h]]])
+
+
+def cgb_bevel_line(per_top=24):
+    """Where the CGB's front face ends and the bevel starts, in mm in the face: an open line up the left side, along
+    the bowed top and down the right side (to the bottom, which isn't bevelled)."""
+    w, h = CGB_BODY
+    xs = np.linspace(CGB_BEVEL_SIDE, w - CGB_BEVEL_SIDE, per_top)
+    top = cgb_top(xs) + [0, CGB_BEVEL_TOP]
+    return np.vstack([[[CGB_BEVEL_SIDE, h]], top, [[w - CGB_BEVEL_SIDE, h]]])
+
+
+def cgb_outline_seen(camera=None):
+    """The CGB body's outline (cgb_body_outline) as seen in the face: its top and sides CGB_BEVEL_DEPTH behind it, seen
+    from the camera (default: straight in front of the middle, FOCAL_FALLBACK_DISTANCE away; where the camera was can't
+    be told well from a fit, see camera_of), its bottom corners in the face."""
+    outline = cgb_body_outline()
+    camera = np.array([28.5, 32.5, FOCAL_FALLBACK_DISTANCE]) if camera is None else camera
+    seen = seen_at(outline, CGB_BEVEL_DEPTH, camera, wall=0.0, n=1.0)
+    bottom = outline[:, 1] >= CGB_BODY[1] - 1e-9
+    seen[bottom] = outline[bottom]
+    return seen
 
 
 def cgb_corner_samples(count=5, clear=np.radians(15)):
