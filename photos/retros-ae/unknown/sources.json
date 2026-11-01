@@ -1,12 +1,4 @@
 {
- "UNKNOWN.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-131120.jpg?v=1701878417",
-  "page_url": "https://www.retros.ae/products/bokujou-monogatari-3",
-  "title_on_page": "Harvest moon 3 - Bokujo Monogatari (Japanese Edition)",
-  "original_name": "bokujou-monogatari-3__20231126-131120.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "6ead8ca04d42d41a74107f831793ea715f46321c"
- },
  "UNKNOWN_11.jpg": {
   "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231126-132325.jpg?v=1701172758",
   "page_url": "https://www.retros.ae/products/koukou-nyuushidero-jun",
@@ -147,14 +139,6 @@
   "note": "named by nothing: no serial read",
   "sha1": "f1d4f196c99fc70e60f513414eb7b9cce74c44e2"
  },
- "UNKNOWN_6.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20260924-163029.jpg?v=1790265138",
-  "page_url": "https://www.retros.ae/products/game-boy-wars-turbo-japanese-edition-copy",
-  "title_on_page": "Chibi Maruko-chan: Go Chounai Minna de Game Da Yo! (Japanese Edition)",
-  "original_name": "game-boy-wars-turbo-japanese-edition-copy__20260924-163029.jpg",
-  "note": "named by nothing: no serial read",
-  "sha1": "c06eced728313ffc104bef2d22cdf391bacac1b9"
- },
  "UNKNOWN_7.jpg": {
   "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/20231208-181727.jpg?v=1702050594",
   "page_url": "https://www.retros.ae/products/gensou-maden-saiyuki",
@@ -170,14 +154,5 @@
   "original_name": "gensou-maden-saiyuki__20231208-181737.jpg",
   "note": "named by nothing: no serial read",
   "sha1": "136801e68b7acb364e685adc12ba259217379b85"
- },
- "UNKNOWN_9.jpg": {
-  "image_url": "https://cdn.shopify.com/s/files/1/0589/9983/2785/files/rn-image_picker_lib_temp_3b26734a-e10e-4e9b-af03-e7bebff4e268.jpg?v=1745679229",
-  "page_url": "https://www.retros.ae/products/gex-deep-cover-gecko",
-  "title_on_page": "Gex Deep Cover Gecko (PAL Edition)",
-  "original_name": "gex-deep-cover-gecko__rn-image_picker_lib_temp_3b26734a-e10e-4e9b-af03-e7bebff4e268.jpg",
-  "serial_on_label": "CGB-UO",
-  "note": "named by nothing: no serial read",
-  "sha1": "721655d93c1bf644b03b0bcd01e75efeb1c7333d"
  }
 }
