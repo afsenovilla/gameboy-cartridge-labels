@@ -270,6 +270,12 @@
   "sha1": "0626fdbcfb1d5166304a528a93812451b840751a",
   "original_name": "s-l1600 - 2026-10-24T150810.962.webp"
  },
+ "DMG-AEFJ-JPN_3.webp": {
+  "original_name": "s-l1600.webp",
+  "serial_on_label": "DMG-AEFJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "cbb493f965bd5d75ff7c4840d5596dd6b0fad35a"
+ },
  "DMG-AEIJ-JPN_2.jpg": {
   "serial_on_label": "DMG-AEIJ-JPN",
   "original_sha1": "5124e3aa222960e99feaa31817f31799ca348e2c",
@@ -329,6 +335,18 @@
   "original_sha1": "2d9647e536e970a14acb85141b4557ed3cdbd96f",
   "sha1": "644da188f331e2ac02e3bd9352e295b470ffe36d",
   "original_name": "s-l1600 (56).webp"
+ },
+ "DMG-AGUJ-JPN_3.webp": {
+  "original_name": "s-l1600 (1).webp",
+  "serial_on_label": "DMG-AGUJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "ce74a6d6ec00edeb1eac2bb8c785bf2b76303bc0"
+ },
+ "DMG-AGUJ-JPN_4.webp": {
+  "original_name": "s-l1600 (3).webp",
+  "serial_on_label": "DMG-AGUJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "867a4cc408bd3235ee5c769b67206dad6a618117"
  },
  "DMG-AGVJ-JPN_2.webp": {
   "original_name": "s-l1600 (25).webp",
@@ -1938,6 +1956,11 @@
   "original_sha1": "779a4c62b5947ef5c705f6ed5ded355c7791ae81",
   "sha1": "a2f953745ef2b9749e1d6733fdebf0bba5ce863f",
   "original_name": "s-l1600 (80).webp"
+ },
+ "DMG-WIJ_3.webp": {
+  "original_name": "s-l1600 (21).webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "db59e33c8701998c59a842d57e2aa7234aaedb41"
  },
  "DMG-WPA.webp": {
   "original_name": "s-l1600 (20).webp",

@@ -1,10 +1,93 @@
 {
+ "CGB-AEWJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-17884092859807ht5hzr34.jpg",
+  "serial_on_label": "CGB-AEWJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "66beafe18e5e217f49b16a6e2f9bd05439a9b82a"
+ },
+ "CGB-AIFJ-JPN.jpg": {
+  "original_name": "i-img1200x900-17892145220707w9fof47774.jpg",
+  "serial_on_label": "CGB-AIFJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "877537d4543a3b9d32a29112e3a1c9eb9e17d56c"
+ },
+ "CGB-ALJJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-17910822492130kxqpxa61800.jpg",
+  "serial_on_label": "CGB-ALJJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "67805add77f146f04cf0e2f0eefe44377697077d"
+ },
+ "CGB-AQIJ-JPN.jpg": {
+  "original_name": "i-img1200x900-1778104625199662zwtbjj8.jpg",
+  "serial_on_label": "CGB-AQUJ-JPN",
+  "note": "named by nothing: no serial read",
+  "sha1": "141be43a8490f5bbeabdfa6dbb496d17f1ea21ae"
+ },
  "CGB-B7BJ-JPN.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0209/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17899017554889wnbuck225.jpg",
   "page_url": "https://www.jauce.com/auction/e1245309879",
   "title_on_page": "GB ゲームボーイ なかよしクッキングシリーズ3 たのしいお弁当 ソフトのみ 起動確認済",
   "note": "automatic: query 'なかよしクッキングシリーズ③\\u3000たのしいお弁当 ゲームボーイ', first photo of the listing",
   "sha1": "5df211768b4f1e6136d5ffeada1f9e4f3b98d53e"
+ },
+ "CGB-B7NJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-17912467282610u5sn5g33575.jpg",
+  "serial_on_label": "CGB-B7NJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "41c6180465227da0d27e490c0a5fe73dc2cdcf78"
+ },
+ "CGB-B7PJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-177423679993595990wmzy8.jpg",
+  "serial_on_label": "CGB-B7PJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "990874d3e8ede039992482def625be25d63d345a"
+ },
+ "CGB-B8MJ-JPN.jpg": {
+  "original_name": "i-img1200x901-1774056342062918wewtge8.jpg",
+  "serial_on_label": "CGB-B8MJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "641feaef60c3245fdea443765340b4c376ac912a"
+ },
+ "CGB-BBIJ-JPN.jpg": {
+  "original_name": "i-img900x1200-1675581946bcfea2489184.jpg",
+  "serial_on_label": "CGB-BBIJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8592572b75c2ad50c206f215ac99c642fff5bbad"
+ },
+ "CGB-BBOJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-17915148647157ziemlz29498.jpg",
+  "serial_on_label": "CGB-BBOJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8fd67a18de2a99e30090755b52b1b61ae6f3f715"
+ },
+ "CGB-BBOJ-JPN_2.jpg": {
+  "original_name": "i-img1200x900-17592991716773isr0kd35.jpg",
+  "serial_on_label": "CGB-BBOJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "6232d68229dd1870acf7ae47fe463fb2fbe399e7"
+ },
+ "CGB-BD2J-JPN.jpg": {
+  "original_name": "i-img1200x1200-1701048769mzvoii2795137.jpg",
+  "serial_on_label": "CGB-802J-JPN",
+  "note": "named by nothing: no serial read",
+  "sha1": "5ea9a25270dfe682d234f547406ac28ef1950ee5"
+ },
+ "CGB-BDPJ-JPN.jpg": {
+  "original_name": "i-img600x653-1661164367gcl2hb6278.jpg",
+  "serial_on_label": "CGB-BDPJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "e9105ee3ec1ce1606725e1deffeaa38c716ecba6"
+ },
+ "CGB-BGIJ-JPN.jpg": {
+  "original_name": "i-img1021x1200-17244245765091i5pm45215049.jpg",
+  "note": "named by nothing: no serial read",
+  "sha1": "37a7aea4a119aba5526b35c0c223260729bf2b78"
+ },
+ "CGB-BHAJ-JPN.jpg": {
+  "original_name": "i-img900x1200-1687411230xmmn9g846466.jpg",
+  "serial_on_label": "CGB-BHAJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f5b612a1f75c91f0db3e8b00aa0d8d84ae347740"
  },
  "CGB-BHMJ-JPN.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0209/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17899561633229j98kxu10892.jpg",
@@ -34,6 +117,18 @@
   "note": "automatic: query '真・女神転生\\u3000デビルチルドレン\\u3000白の書 ゲームボーイ', first photo of the listing",
   "sha1": "fcf49417891495d08b59f4895459f7650ddb8970"
  },
+ "CGB-BJTJ-JPN.jpg": {
+  "original_name": "i-img1113x1197-17230007286532k568gq33.jpg",
+  "serial_on_label": "CGB-BJTJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "6d90690058d792ef8ad7928d57bdc42b6f5afef9"
+ },
+ "CGB-BKRJ-JPN.jpg": {
+  "original_name": "i-img1200x1200-1791769928315489phax1x8.jpg",
+  "serial_on_label": "CGB-BKRJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "341d66c60a6c9029605f9829e7ea19ab962b28e6"
+ },
  "CGB-BNMJ_2.jpg": {
   "image_url": "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17926373536413f0cdtc36.jpg",
   "page_url": "https://www.jauce.com/auction/o1249289289",
@@ -54,5 +149,23 @@
   "title_on_page": "ソフトのみ 【※箱説なし※】ポケモンカードGB2 GR団参上!",
   "note": "automatic: query 'ポケモンカードＧＢ２\\u3000ＧＲ団参上！ ゲームボーイ', first photo of the listing",
   "sha1": "52760f67272d87c4acc533c6284fc59adf5d77bb"
+ },
+ "CGB-BQRJ-JPN.jpg": {
+  "original_name": "i-img1200x904-17721077503377xnfmys52064.jpg",
+  "serial_on_label": "CGB-BORJ-JPN",
+  "note": "named by nothing: no serial read",
+  "sha1": "a68d13125239efd4d1f1011ac464675f4e91e0e0"
+ },
+ "CGB-BQSJ-JPN.jpg": {
+  "original_name": "i-img1200x900-1777509718451048vnjozt8.jpg",
+  "serial_on_label": "CGB-BQSJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "edd375c3a77be945829f82bfd7e788ddb44ac808"
+ },
+ "CGB-BXAE-USA.jpg": {
+  "original_name": "i-img1200x1200-17716600826023jycasw36665.jpg",
+  "serial_on_label": "CGB-BXAE-USA",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "4b008ab0f82ec96242508b4653e6d8b91e668217"
  }
 }

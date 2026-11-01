@@ -193,6 +193,12 @@
   "sha1": "089a118de98b27568f7a2e7d0b758b89afd76feb",
   "original_name": "images (24).jpeg"
  },
+ "DMG-ABPJ-JPN_3.webp": {
+  "original_name": "s-l1600.webp",
+  "serial_on_label": "DMG-ABPJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "3ebf3b752a2aa5a6bce02eacddda47af534e3c24"
+ },
  "DMG-ABSP-EUR.jpg": {
   "original_name": "fac2d707-8cc9-48da-a29f-1409fd866646.jpg",
   "note": "named by nothing: no serial read",
@@ -630,6 +636,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "6b23ade1f03d7e2f1506845193716904ded6de2f"
  },
+ "DMG-ASAJ-JPN_3.jpg": {
+  "original_name": "d477acad0694a5ede509e4ffa9091bca.jpg",
+  "serial_on_label": "DMG-ASAJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "2582fae922b6da27fa15c988593606d40c234592"
+ },
  "DMG-ASHJ-JPN.jpg": {
   "serial_on_label": "DMG-ASHJ-JPN",
   "original_sha1": "7d74f4bc0ce5fedb3a2e7826299e6fa985d776dd",
@@ -869,6 +881,12 @@
   "serial_on_label": "DMG-BOJJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "8d3d9047b43a619846579a6e294b2529cadafec2"
+ },
+ "DMG-BRAJ-JPN_2.jpg": {
+  "original_name": "s-l1200 (1).jpg",
+  "serial_on_label": "DMG-BRAJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "00e23216308b833d8249bd1d7b0857b0c80b2bcb"
  },
  "DMG-BRDJ-JPN.jpg": {
   "original_sha1": "51ae1ea83def91bcd6d5e521c40400b4e2affc7b",

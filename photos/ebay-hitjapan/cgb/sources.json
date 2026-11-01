@@ -1,4 +1,10 @@
 {
+ "CGB-A3AJ-JPN_2.webp": {
+  "original_name": "s-l1600 (13).webp",
+  "serial_on_label": "CGB-A3AJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "08ffe8988e5b46d1a5995b8b176588d63702b78d"
+ },
  "CGB-A3HJ-JPN_2.webp": {
   "original_name": "s-l1600 (36).webp",
   "serial_on_label": "CGB-A3HJ-JPN",
@@ -59,6 +65,12 @@
   "sha1": "a7744c4a7134cd9a562b1da238589929e9a18758",
   "original_name": "s-l1600 - 2026-10-24T151011.693.webp"
  },
+ "CGB-AH3J-JPN.webp": {
+  "original_name": "s-l1600 (5).webp",
+  "serial_on_label": "CGB-AH3J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "96260b374d6db8bf92487ef759d5dd0b36e3b746"
+ },
  "CGB-AO4J-JPN.webp": {
   "original_name": "s-l1600 (9).webp",
   "serial_on_label": "CGB-AO4J-JPN",
@@ -69,6 +81,17 @@
   "original_sha1": "9c629b069cc0bc1aa78f6fa99458bb16e837a7c7",
   "sha1": "f4c943e2e292c07daa3773884ba9bd6dd53061e2",
   "original_name": "s-l1600 (51).webp"
+ },
+ "CGB-AS6J-JPN.webp": {
+  "original_name": "s-l1600 (17).webp",
+  "serial_on_label": "CGB-AS6J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8299b7c417ac2c869449866a9919ac64193ae359"
+ },
+ "CGB-AVJJ-JPN.webp": {
+  "original_name": "s-l1600 (19).webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "9398cb4a4cf43ecaf079f7ff814d3f26276d8272"
  },
  "CGB-AZDJ-JPN.webp": {
   "original_name": "s-l1600 - 2026-11-01T122710.010.webp",
@@ -111,6 +134,12 @@
   "serial_on_label": "CGB-B4NJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "ba5e0cb74f447c1eccd0ef80e494a9d36a14b287"
+ },
+ "CGB-B54J-JPN.webp": {
+  "original_name": "s-l1600 (4).webp",
+  "serial_on_label": "CGB-B54J-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "b9b217c4219cb83b4b2ad02ca2ee5eb385e3a2b2"
  },
  "CGB-B5CJ-JPN_2.jpg": {
   "serial_on_label": "CGB-B5CJ-JPN",
@@ -187,6 +216,17 @@
   "note": "named by nothing: no serial read",
   "sha1": "cfcee0971aeb6b707b30530c8481095c36bf0a54"
  },
+ "CGB-BC9J-JPN_2.webp": {
+  "original_name": "s-l1600 (7).webp",
+  "note": "named by nothing: no serial read",
+  "sha1": "5bb94bb2470fbcb5a3464625fdfa8700c0b2736d"
+ },
+ "CGB-BCRJ-JPN.webp": {
+  "original_name": "s-l1600 (8).webp",
+  "serial_on_label": "CGB-BCRJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c3b23c0cf61da1f87d3d7c92d620ffa7ead58bf4"
+ },
  "CGB-BD3J-JPN_2.jpg": {
   "serial_on_label": "CGB-BD3J-JPN",
   "original_sha1": "298715cac1e8ad6f23765f73ad63b3dbfe6d3305",
@@ -227,6 +267,12 @@
   "note": "named by nothing: no serial read",
   "sha1": "a18c780ee502f0fa3bfb4717e32c6a43376fa5c4"
  },
+ "CGB-BFZJ-JPN.webp": {
+  "original_name": "s-l1600 (18).webp",
+  "serial_on_label": "CGB-BFZJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "199777c2b81d49db5c563409d09c96b76f9e32cd"
+ },
  "CGB-BGEJ-JPN_2.webp": {
   "original_name": "s-l1600 (23).webp",
   "serial_on_label": "CGB-BGEJ-JPN",
@@ -250,6 +296,18 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "b9ee5a686fce676e9ef7a424d7fd15ce847e9a7f"
  },
+ "CGB-BHGJ-JPN.webp": {
+  "original_name": "s-l1600 (9).webp",
+  "serial_on_label": "CGB-BHGJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "f9c22cd54e9d615500b26fe6540c75a8cfe8e622"
+ },
+ "CGB-BHHJ-JPN_3.webp": {
+  "original_name": "s-l1600 (6).webp",
+  "serial_on_label": "CGB-BHHJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "3d65a33f833ab625cba9ed8ac26b7581a971c73e"
+ },
  "CGB-BHPJ-JPN.jpg": {
   "serial_on_label": "CGB-BHPJ-JPN",
   "original_sha1": "861c5eeb8fd635aed4cb2082c6c6d1d687b6c863",
@@ -268,6 +326,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "1b980a2c42bee1d0953f67ead06e0f1568e9fd3f"
  },
+ "CGB-BJEJ-JPN.webp": {
+  "original_name": "s-l1600 (10).webp",
+  "serial_on_label": "CGB-BJEJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "50ed92999e6f5cea09be6c8baa7bdf6ac72163c7"
+ },
  "CGB-BJHJ-JPN_2.webp": {
   "original_name": "s-l1600 (27).webp",
   "serial_on_label": "CGB-BJHJ-JPN",
@@ -279,6 +343,12 @@
   "original_sha1": "a5fd2adcfb8a3757347dcd4844434563a530027c",
   "sha1": "0ab4ad04db624d48dfd2ff4b96e795c4e4232a0f",
   "original_name": "s-l1600 - 2026-10-24T150844.092.webp"
+ },
+ "CGB-BKDJ-JPN.webp": {
+  "original_name": "s-l1600 (15).webp",
+  "serial_on_label": "CGB-BKDJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "1c691f8235fe40a931fd2975a61f11068f0bbbf4"
  },
  "CGB-BKOJ-JPN.webp": {
   "original_name": "s-l1600 (39).webp",
@@ -304,6 +374,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "63475ade3fcfbf6e3e91d45c8ae2581aabb8e4c2"
  },
+ "CGB-BMDJ-JPN.webp": {
+  "original_name": "s-l1600 (11).webp",
+  "serial_on_label": "CGB-BMDJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "c6b3abc71246e29c5967938b28fa090e33956edb"
+ },
  "CGB-BNBJ-JPN_2.webp": {
   "original_name": "s-l1600 (100).webp",
   "serial_on_label": "CGB-BNBJ-JPN",
@@ -315,6 +391,12 @@
   "serial_on_label": "CGB-BOAJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "12509ee11ae51a9e795b634c83857999b9a665dd"
+ },
+ "CGB-BP5J.webp": {
+  "original_name": "s-l1600 (14).webp",
+  "serial_on_label": "CGB-BP5J",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "485e9df3a0e05c476ec39791be62818c551bb9df"
  },
  "CGB-BPAJ-JPN_2.webp": {
   "original_name": "s-l1600 (81).webp",
