@@ -79,7 +79,7 @@ function render() {
   $("count").textContent = `${shown.length} releases, ${shown.reduce((n, r) => n + r.photos.length, 0)} photos`;
   $("rows").innerHTML = shown.map(r => `<div class="row"><div class="release"><b>${esc(r.release)}</b><span>${esc(r.title)}</span></div><div class="photos">` +
     r.photos.map(p => `<figure>${p.fitted ? `<span class="check ${p.fitted}" title="${p.fitted} fitted">✓</span>` : ""}` +
-      `<a href="/image?size=1600&path=${encodeURIComponent(p.path)}" target="_blank"><img loading="lazy" src="/image?size=360&path=${encodeURIComponent(p.path)}" alt=""></a>` +
+      `<a href="/image?size=1600&path=${encodeURIComponent(p.path)}" target="_blank"><img loading="lazy" src="/image?size=1000&path=${encodeURIComponent(p.path)}" alt=""></a>` +
       `<figcaption title="${esc(p.path)}">${esc(p.source)}<br>${esc(p.path.split("/").pop())}</figcaption>` +
       `<button data-action="rename" data-path="${esc(p.path)}">Rename</button> <button class="delete" data-action="delete" data-path="${esc(p.path)}">Delete</button></figure>`).join("") + `</div></div>`).join("");
 }
@@ -131,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/rows":
             self.send(rows())
         elif url.path == "/image" and is_photo(path := query.get("path", [""])[0]):
-            self.send(image(path, min(1600, int(query.get("size", ["360"])[0]))), "image/jpeg")
+            self.send(image(path, min(1600, int(query.get("size", ["1000"])[0]))), "image/jpeg")
         else:
             self.send_error(404)
 
