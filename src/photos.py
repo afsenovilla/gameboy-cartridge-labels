@@ -9,7 +9,7 @@ import glob, hashlib, json, os, re, shutil, sys
 #   a number only when several photos have the same serial: the first has none, the next ones _2, _3...
 # - ext: the format the photo came in (jpg, png, webp, avif, heic), never re-encoded.
 # The file names are the truth: to identify a photo, or correct one, rename it (e.g. UNKNOWN_5.jpg -> DMG-A8-JPN.jpg),
-# in whichever folder of its source; spaces become "-", and lower-case serials upper case. reconcile() (run by
+# in whichever folder of its source; spaces become "-" (parentheses are kept), and lower-case serials upper case. reconcile() (run by
 # add-photos, or as photos.py reconcile) then finds its entry by its SHA-1, moves it to its system's folder, and numbers
 # it if its name is taken.
 # Usage: photos.py reconcile
@@ -30,13 +30,13 @@ def stem(name):
 
 
 def tidy(name):
-    """A photo's name without awkward characters, and serials as written: anything but letters, digits, "-" and "_"
-    becomes "-", a lower-case serial (dmg-a8-ukv) upper case; release ids without a serial (agb-0014, digits after the system) stay as they are."""
+    """A photo's name without awkward characters, and serials as written: anything but letters, digits, "-", "_" and
+    parentheses (AGB-U3IJ-JPN(A): a label's serial may have them) becomes "-", a lower-case serial (dmg-a8-ukv) upper case; release ids without a serial (agb-0014, digits after the system) stay as they are."""
     s, ext = os.path.splitext(name.strip())
-    s = re.sub(r"-{2,}", "-", re.sub(r"[^A-Za-z0-9_-]+", "-", s)).strip("-")
-    s = re.sub(r"-_", "_", s)
+    s = re.sub(r"-{2,}", "-", re.sub(r"[^A-Za-z0-9_()-]+", "-", s)).strip("-")
+    s = re.sub(r"-_", "_", re.sub(r"-\(", "(", s))  # AGB-U3IJ-JPN (A): no space before the parenthesis on a label
     head, sep, tail = s.rpartition("_") if re.search(r"_\d+$", s) else (s, "", "")
-    if re.match(r"(dmg|cgb|agb)-(?!\d+$)[a-z0-9-]+$", head, re.I):
+    if re.match(r"(dmg|cgb|agb)-(?!\d+$)[a-z0-9()-]+$", head, re.I):
         head = head.upper()
     return f"{head}{sep}{tail}{ext.lower()}"
 
