@@ -34,11 +34,14 @@
 #   make name-photos
 #   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its fits in fits.json with it; or delete it (src/name_photos.py).
 #
+#   make find-doubles
+#   A tool, not a step: a local page listing every photo in photos/, one release per row, its photos sorted by their source's quality (Hit-Japan first, otakaraou the last real photos, the box-art fakes below), each marked with an orange check if its plastic is fitted, a green one if its label is too; each can be deleted, its fits with it (src/find_doubles.py).
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 
-.PHONY: help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos
+.PHONY: help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -84,6 +87,9 @@ search-photos:
 
 name-photos:
 	$(PYTHON) src/name_photos.py
+
+find-doubles:
+	$(PYTHON) src/find_doubles.py
 
 # The text recognition tool, built when missing (macOS).
 src/ocr: src/ocr.swift
