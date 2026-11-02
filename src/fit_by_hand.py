@@ -5,11 +5,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fits, photos
 from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, RECESS_RADIUS, CGB_REFRACTIVE_INDEX, CGB_RIDGE_DEPTH, CGB_WALL, SHELLS, cgb_outline_points, cgb_ridge_lines, corners_of, groove_edges, shell_of
 from fit_cartridge import OUT as DETAILS, load
+from find_doubles import load_preferred
 from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_outline, rounded_outline
 
 # fit-by-hand: a local page for placing the plastic and the label by hand, one photo at a time, where the steps' fits
 # (fits.json, src/fits.py) are off: the plastic judged almost first (make review-fits), then the labels judged almost
-# (make review-labels), the rejected ones and the photos fit-cartridge couldn't fit. A photo starts from its current fit
+# (make review-labels), the rejected ones and the photos fit-cartridge couldn't fit; also each release's preferred photo
+# (preferred.json, make find-doubles). A photo starts from its current fit
 # (else its latest rejected one, else the model in the box fit-cartridge cropped to, else in the middle), with its label
 # (else its latest rejected one on that plastic, else the model's). The handles (green squares) sit on the recess's
 # corners and are dragged onto the photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label placed" is
@@ -76,6 +78,7 @@ class Hand:
             self.entries[name] = e
             self.details[name] = details if details is not None and details.get("sha1") == self.sha1s[name] else None
         names = sorted(self.entries)
+        preferred = set(load_preferred().values())
         plastic = lambda n: self.entries[n]["fit"].get("plastic")
         label = lambda n: self.entries[n]["fit"].get("label")
         label_rejected = lambda n: any("label" in r and fits.same(r["plastic"], plastic(n)) for r in self.entries[n]["rejected"])
@@ -89,6 +92,7 @@ class Hand:
                        # for comparison (the ridge placements are in commit f2fde37's fits.json).
                        "ridge-fitted (temporary)": [n for n in RIDGE_FITTED if n in names],
                        "placed by hand": [n for n in names if plastic(n) and plastic(n)["source"] == "hand-placed"],
+                       "preferred": [n for n in names if self.sha1s[n] in preferred],
                        "all": names}
         self.cache, self.lock = {}, threading.Lock()
 
