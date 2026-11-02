@@ -854,11 +854,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "115571b4b80c96d3c2fb8f2c6d637ad5ba1915dd"
  },
- "DMG-BMPJ-JPN.jpg": {
-  "original_sha1": "39166eaff8235105816607ab5db8129a9b49fd33",
-  "sha1": "46a5c82afa8a35d0bddddaca2cb677961663d564",
-  "original_name": "s-l1200 (13).jpg"
- },
  "DMG-BNJ.jpg": {
   "serial_on_label": "DMG-BNS",
   "original_sha1": "2cc22ede0ab4c601f204a6aeb858beb7dd83f9ad",
@@ -922,12 +917,6 @@
   "sha1": "ff4f78e632bd0c9697d530ec734ba83152e0e2ee",
   "original_name": "IMG_1703572834534.jpg"
  },
- "DMG-BZ.jpg": {
-  "serial_on_label": "DMG-BZ",
-  "original_sha1": "c0d23b84da65d6432600a2c741c49030cf68853b",
-  "sha1": "17c2248298cc8d59b0c12b9987e35dc3aeb0a9ea",
-  "original_name": "s-l1200 (3).jpg"
- },
  "DMG-BZJ.jpg": {
   "serial_on_label": "DMG-BZJ",
   "original_sha1": "a46357e63d6ce30b6baf8aaeeb98f2cd8e7267b2",
@@ -939,6 +928,12 @@
   "original_sha1": "8e4b1ef066203f86353bc5c151f592657c607c64",
   "sha1": "be3d237c934a7f422bbbe18a0e5fc6e0d1ac16be",
   "original_name": "86909823.webp"
+ },
+ "DMG-BZJ_5.jpg": {
+  "serial_on_label": "DMG-BZ",
+  "original_sha1": "c0d23b84da65d6432600a2c741c49030cf68853b",
+  "sha1": "17c2248298cc8d59b0c12b9987e35dc3aeb0a9ea",
+  "original_name": "s-l1200 (3).jpg"
  },
  "DMG-C3J.jpg": {
   "serial_on_label": "DMG-C3J",

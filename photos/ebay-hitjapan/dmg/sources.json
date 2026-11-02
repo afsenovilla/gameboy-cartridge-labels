@@ -1063,6 +1063,12 @@
   "note": "named by nothing: no serial read",
   "sha1": "16422758861f31e1fd470b914918e8c02b80c722"
  },
+ "DMG-DIJ_2.webp": {
+  "original_name": "s-l1600 (16).webp",
+  "serial_on_label": "DMG-DUJ",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "8e8a838ecaab14803c07e4e5b16980e18ccc9d14"
+ },
  "DMG-DMJ.webp": {
   "original_name": "s-l1600 (17).webp",
   "serial_on_label": "DMG-DMJ",
@@ -1080,12 +1086,6 @@
   "original_sha1": "66f2246ecd67550c12d00b352c2a7051573739b4",
   "sha1": "62ff99ce880932e79c4617a9a6b45c506508055e",
   "original_name": "s-l1600 - 2026-10-24T144228.133.webp"
- },
- "DMG-DUJ.webp": {
-  "original_name": "s-l1600 (16).webp",
-  "serial_on_label": "DMG-DUJ",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "8e8a838ecaab14803c07e4e5b16980e18ccc9d14"
  },
  "DMG-DUJ_4.jpg": {
   "serial_on_label": "DMG-DUJ",

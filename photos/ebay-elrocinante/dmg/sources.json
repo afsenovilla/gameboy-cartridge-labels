@@ -494,17 +494,17 @@
   "sha1": "092ac55191ef5c13b1ccb57bc00b25b0166c6dae",
   "original_name": "s-l1600 (84).webp"
  },
+ "DMG-FIJ.jpg": {
+  "serial_on_label": "DMG-FU",
+  "original_sha1": "94aec071797cbb349fd310ed2342d0c4b80a974c",
+  "sha1": "69d569103827c32692b92d93d25b0c6273c4dc5a",
+  "original_name": "s-l1600 - 2026-10-24T200236.743.webp"
+ },
  "DMG-FSJ.webp": {
   "original_name": "s-l1600 (1).webp",
   "serial_on_label": "DMG-FSJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "6ff0b047ff4e1cdc76a43e8db719b44237d3970b"
- },
- "DMG-FU.jpg": {
-  "serial_on_label": "DMG-FU",
-  "original_sha1": "94aec071797cbb349fd310ed2342d0c4b80a974c",
-  "sha1": "69d569103827c32692b92d93d25b0c6273c4dc5a",
-  "original_name": "s-l1600 - 2026-10-24T200236.743.webp"
  },
  "DMG-G3J.webp": {
   "original_name": "s-l1600 (8).webp",
