@@ -94,12 +94,12 @@ header{position:sticky;top:0;z-index:1;background:#fff;padding:8px 16px;border-b
 .row{display:flex;gap:12px;padding:8px 16px;border-bottom:1px solid #e4e4e4;align-items:flex-start}
 .release{width:180px;flex:none}.release b{display:block}.release span{color:#555}
 .photos{display:flex;gap:8px;overflow-x:auto}
-figure{margin:0;width:320px;flex:none;background:#fff;border-radius:0.3em;padding:6px;position:relative}
+figure{margin:0;width:338px;flex:none;box-sizing:border-box;border:3px solid transparent;background:#fff;border-radius:0.3em;padding:6px;position:relative}
 figure img{width:320px;height:320px;object-fit:contain;display:block}
 figcaption{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:4px 0}
 .check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;text-align:center;line-height:22px}
 .check.plastic{background:#e8830c}.check.label{background:#2a9d3a}
-figure.preferred{outline:3px solid #2a6fdb}figure img{cursor:pointer}
+figure.preferred{border-color:#2a6fdb}figure img{cursor:pointer}
 figcaption a{color:inherit}
 button{font:inherit;padding:2px 8px;border:none;border-radius:0.3em}button.delete{color:#b00}
 </style>
