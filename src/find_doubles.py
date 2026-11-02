@@ -1,4 +1,4 @@
-import json, os, re, sys, urllib.parse, cv2
+import json, os, re, sys, threading, urllib.parse, cv2
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -10,7 +10,9 @@ from fit_cartridge import load
 # their source's quality (SOURCES, best first), each marked with an orange check if its plastic is fitted (accepted or
 # placed by hand), a green one if its label is too. Each photo can be deleted (photos.delete), its fits with it, or
 # renamed to a corrected serial (photos.rename: tidied, numbered if taken, moved to its system's folder), its fits
-# following it.
+# following it. Clicking a photo makes it its release's preferred one (clicking it again unmakes it), saved in
+# preferred.json: release id -> the photo's SHA-1, so a renamed photo stays preferred; an entry whose photo is no longer
+# in its release (deleted, or renamed to another serial) is dropped on the next save. The preferred photo comes first.
 # Usage: find_doubles.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8770
 # The sources, best first: Hit-Japan highest, otakaraou the lowest real photos, the fakes made from box art below it.
@@ -18,6 +20,21 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8770
 SOURCES = ("ebay-hitjapan", "my-collection", "ebay-elrocinante", "yugiyahirano", "jnlgame", "jauce", "mercari", "rakuma",
            "retros-ae", "gbhwdb", "ebay", "tradera", "kleinanzeigen", "marktplaats", "gamestop", "google", "unrecorded",
            "otakaraou", "emumovies", "launchbox-abeezy1388")
+
+
+PREFERRED = "preferred.json"
+lock = threading.Lock()
+
+
+def load_preferred():
+    return json.load(open(PREFERRED)) if os.path.exists(PREFERRED) else {}
+
+
+def save_preferred(preferred):
+    """One line per release, so that the file's history reads as choices changed."""
+    lines = [f"{json.dumps(k)}: {json.dumps(v)}" for k, v in sorted(preferred.items())]
+    open(PREFERRED + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
+    os.replace(PREFERRED + ".tmp", PREFERRED)
 
 
 def rank(source):
@@ -33,9 +50,10 @@ def image(path, longest):
 
 
 def rows():
-    """[{"release", "title", "photos": [{"path", "source", "fitted": None, "plastic" or "label"}]}], by release."""
+    """[{"release", "title", "photos": [{"path", "sha1", "source", "fitted": None, "plastic" or "label", "preferred"}]}],
+    by release, the preferred photo first, then by source."""
     release_of = serials.releases_by_serial()
-    known = fits.load()
+    known, preferred = fits.load(), load_preferred()
     found = {}
     for source, system, name, entry in photos.all_sources():
         serial = photos.serial_of(name)
@@ -45,10 +63,27 @@ def rows():
         row = found.setdefault(key, {"release": key, "title": release["title"] if release else "(not in gb-game-list)", "photos": []})
         fit = fits.of(known, photos.stem(name), entry.get("sha1"))["fit"]
         fitted = "label" if fits.good(fit.get("label")) else "plastic" if fits.good(fit.get("plastic")) else None
-        row["photos"].append({"path": os.path.join(photos.ROOT, source, system, name), "source": source, "fitted": fitted})
+        row["photos"].append({"path": os.path.join(photos.ROOT, source, system, name), "sha1": entry.get("sha1"), "source": source,
+                              "fitted": fitted, "preferred": preferred.get(key) == entry.get("sha1")})
     for row in found.values():
-        row["photos"].sort(key=lambda p: (rank(p["source"]), p["path"]))
+        row["photos"].sort(key=lambda p: (not p["preferred"], rank(p["source"]), p["path"]))
     return [found[k] for k in sorted(found)]
+
+
+def prefer(path):
+    """Makes the photo its release's preferred one, or unmakes it if it is; drops the entries whose photo is no longer
+    in its release. Returns the release and its preferred photo's path (None if none)."""
+    with lock:
+        all_rows = rows()
+        row = next(r for r in all_rows if any(p["path"] == path for p in r["photos"]))
+        photo = next(p for p in row["photos"] if p["path"] == path)
+        preferred = {r["release"]: p["sha1"] for r in all_rows for p in r["photos"] if p["preferred"]}
+        if photo["preferred"]:
+            del preferred[row["release"]]
+        else:
+            preferred[row["release"]] = photo["sha1"]
+        save_preferred(preferred)
+        return row["release"], None if photo["preferred"] else path
 
 
 PAGE = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Find doubles</title>
@@ -64,11 +99,14 @@ figure img{width:320px;height:320px;object-fit:contain;display:block}
 figcaption{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:4px 0}
 .check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;text-align:center;line-height:22px}
 .check.plastic{background:#e8830c}.check.label{background:#2a9d3a}
+figure.preferred{outline:3px solid #2a6fdb}figure img{cursor:pointer}
+figcaption a{color:inherit}
 button{font:inherit;padding:2px 8px;border:none;border-radius:0.3em}button.delete{color:#b00}
 </style>
 <header><b>Find doubles</b><label><input type="checkbox" id="doubles"> only releases with several photos</label>
 <span><span class="check plastic" style="position:static;display:inline-block">✓</span> plastic fitted
-<span class="check label" style="position:static;display:inline-block">✓</span> label fitted</span><span id="count"></span></header>
+<span class="check label" style="position:static;display:inline-block">✓</span> label fitted</span>
+<span>click a photo to prefer it</span><span id="count"></span></header>
 <main id="rows"></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -77,15 +115,16 @@ let rows = [];
 function render() {
   const shown = $("doubles").checked ? rows.filter(r => r.photos.length > 1) : rows;
   $("count").textContent = `${shown.length} releases, ${shown.reduce((n, r) => n + r.photos.length, 0)} photos`;
-  $("rows").innerHTML = shown.map(r => `<div class="row"><div class="release"><b>${esc(r.release)}</b><span>${esc(r.title)}</span></div><div class="photos">` +
-    r.photos.map(p => `<figure>${p.fitted ? `<span class="check ${p.fitted}" title="${p.fitted} fitted">✓</span>` : ""}` +
-      `<a href="/image?size=1600&path=${encodeURIComponent(p.path)}" target="_blank"><img loading="lazy" src="/image?size=1000&path=${encodeURIComponent(p.path)}" alt=""></a>` +
-      `<figcaption title="${esc(p.path)}">${esc(p.source)}<br>${esc(p.path.split("/").pop())}</figcaption>` +
+  $("rows").innerHTML = shown.map(r => `<div class="row" data-release="${esc(r.release)}"><div class="release"><b>${esc(r.release)}</b><span>${esc(r.title)}</span></div><div class="photos">` +
+    r.photos.map(p => `<figure data-path="${esc(p.path)}"${p.preferred ? ' class="preferred"' : ""}>${p.fitted ? `<span class="check ${p.fitted}" title="${p.fitted} fitted">✓</span>` : ""}` +
+      `<img loading="lazy" data-action="prefer" data-path="${esc(p.path)}" src="/image?size=1000&v=${p.sha1}&path=${encodeURIComponent(p.path)}" alt="">` +
+      `<figcaption title="${esc(p.path)}">${esc(p.source)} · <a href="/image?size=1600&v=${p.sha1}&path=${encodeURIComponent(p.path)}" target="_blank">open</a><br>${esc(p.path.split("/").pop())}</figcaption>` +
       `<button data-action="rename" data-path="${esc(p.path)}">Rename</button> <button class="delete" data-action="delete" data-path="${esc(p.path)}">Delete</button></figure>`).join("") + `</div></div>`).join("");
 }
 $("rows").onclick = async e => {
   const {action, path} = e.target.dataset || {};
   if (action === "rename") return rename(path);
+  if (action === "prefer") return prefer(path);
   if (action !== "delete" || !confirm(`Delete ${path} from photos/?`)) return;
   const response = await fetch("/delete", {method: "POST", body: JSON.stringify({path})});
   if (!response.ok) return alert("Not deleted: " + await response.text());
@@ -93,6 +132,23 @@ $("rows").onclick = async e => {
   rows = rows.filter(r => r.photos.length);
   render();
 };
+async function prefer(path) {
+  const response = await fetch("/prefer", {method: "POST", body: JSON.stringify({path})});
+  if (!response.ok) return alert("Not saved: " + await response.text());
+  const {release, preferred} = await response.json();
+  // In place, so the photos already shown aren't loaded again: the row's preferred photo marked, and moved first.
+  const row = rows.find(r => r.release === release);
+  for (const p of row.photos) p.preferred = p.path === preferred;
+  row.photos.sort((a, b) => b.preferred - a.preferred);
+  const div = [...document.querySelectorAll(".row")].find(d => d.dataset.release === release);
+  if (!div) return;
+  const strip = div.querySelector(".photos"), figures = [...strip.children];
+  for (const p of row.photos) {
+    const figure = figures.find(f => f.dataset.path === p.path);
+    figure.classList.toggle("preferred", p.preferred);
+    strip.appendChild(figure);
+  }
+}
 async function rename(path) {
   const old = path.split("/").pop().replace(/\\.[^.]*$/, "").replace(/_\\d+$/, "");
   const name = (prompt(`The serial on the label of ${path}:`, old) || "").trim();
@@ -115,10 +171,12 @@ def is_photo(path):
 
 
 class Handler(BaseHTTPRequestHandler):
-    def send(self, body, kind="application/json", status=200):
+    def send(self, body, kind="application/json", status=200, cache=False):
         body = json.dumps(body).encode() if kind == "application/json" else body
         self.send_response(status)
         self.send_header("Content-Type", kind)
+        if cache:  # the URL carries the photo's SHA-1, so a photo given another's name isn't shown stale
+            self.send_header("Cache-Control", "max-age=86400")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -131,17 +189,21 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/rows":
             self.send(rows())
         elif url.path == "/image" and is_photo(path := query.get("path", [""])[0]):
-            self.send(image(path, min(1600, int(query.get("size", ["1000"])[0]))), "image/jpeg")
+            self.send(image(path, min(1600, int(query.get("size", ["1000"])[0]))), "image/jpeg", cache=True)
         else:
             self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/delete", "/rename"):
+        if self.path not in ("/delete", "/rename", "/prefer"):
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         path = data["path"]
         if not is_photo(path):
             return self.send(b"not a photo in photos/", "text/plain", 400)
+        if self.path == "/prefer":
+            release, preferred = prefer(path)
+            print(f"{release}: {preferred or 'no photo'} preferred", flush=True)
+            return self.send({"release": release, "preferred": preferred})
         if self.path == "/rename":
             try:
                 new_path = photos.rename(path, data["name"])
