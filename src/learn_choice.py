@@ -17,7 +17,6 @@ from fit_cartridge import CHOICE, DERIVED, FEATURES, candidates_of, choice_rows,
 # Usage: learn_choice.py [number of photos per shell, at random; default all]
 OUT = "generated/learn-choice"
 GOOD = 0.5
-FAKES = ("emumovies", "launchbox-abeezy1388")
 
 
 def found(stem, path, text, sha1, plastic):
@@ -66,7 +65,7 @@ if __name__ == "__main__":
         stem = photos.stem(name)
         plastic = fits.of(known, stem, sha1s[stem])["fit"].get("plastic")
         text = os.path.join("generated/read-text", stem + ".json")
-        if source not in FAKES and system in ("dmg", "cgb") and fits.good(plastic) and os.path.exists(text):
+        if source not in photos.FAKES and system in ("dmg", "cgb") and fits.good(plastic) and os.path.exists(text):
             good.append((stem, os.path.join(photos.ROOT, source, system, name), text, sha1s[stem], plastic["mm_to_photo"]))
     if per_shell:
         random.seed(0)

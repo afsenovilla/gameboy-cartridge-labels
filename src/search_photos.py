@@ -29,8 +29,6 @@ RELEASES = serials.RELEASES
 OUT = "generated/search-photos/index.html"
 SYSTEMS = ("dmg", "cgb")
 LENS = "https://lens.google.com/uploadbyurl?url="
-# The sources of fakes made from box art, which don't count as photos.
-FAKES = ("emumovies", "launchbox-abeezy1388")
 # eBay's sellers, of Japanese releases and of the others: name shown, seller id, store name, eBay's site.
 JAPANESE_EBAY_SELLERS = (("elrocinante", "elrocinante119", "elrocinantesecondhandshop", "www.ebay.com"),
                          ("Hit-Japan", "hit-japan", "hitjapanvideogamesandanime", "www.ebay.com"))
@@ -113,7 +111,7 @@ for source, _, name, entry in photos.all_sources():
     if release:
         if source == "otakaraou":
             otakaraou.setdefault(release, entry["image_url"])
-        elif source in FAKES:
+        elif source in photos.FAKES:
             fake.add(release)
         else:
             covered.add(release)

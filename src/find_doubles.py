@@ -12,16 +12,16 @@ from fit_cartridge import load
 # renamed to a corrected serial (photos.rename: tidied, numbered if taken, moved to its system's folder), its fits
 # following it. Clicking a photo makes it its release's preferred one (clicking it again unmakes it), saved in
 # preferred.json: release id -> the photo's SHA-1, so a renamed photo stays preferred; an entry whose photo is no longer
-# in its release (deleted, or renamed to another serial) is dropped on the next save. The preferred photo comes first.
+# in its release (deleted, or renamed to another serial) is dropped on the next save. The fakes (photos.FAKES) are left
+# out: never worth preferring. The preferred photo comes first.
 # The rows can be narrowed to the releases with several photos, and to those with no preferred photo (a release given
 # one stays shown until the rows are drawn again).
 # Usage: find_doubles.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8770
-# The sources, best first: Hit-Japan highest, otakaraou the lowest real photos, the fakes made from box art below it.
-# A source not listed goes just above otakaraou.
+# The sources, best first: Hit-Japan highest, otakaraou the lowest. A source not listed goes just above otakaraou.
 SOURCES = ("ebay-hitjapan", "my-collection", "ebay-elrocinante", "yugiyahirano", "jnlgame", "jauce", "mercari", "rakuma",
            "retros-ae", "gbhwdb", "ebay", "tradera", "kleinanzeigen", "marktplaats", "gamestop", "google", "unrecorded",
-           "otakaraou", "emumovies", "launchbox-abeezy1388")
+           "otakaraou")
 
 
 PREFERRED = "preferred.json"
@@ -58,6 +58,8 @@ def rows():
     known, preferred = fits.load(), load_preferred()
     found = {}
     for source, system, name, entry in photos.all_sources():
+        if source in photos.FAKES:
+            continue
         serial = photos.serial_of(name)
         match = next((s for s in (serial, re.sub(r"-[A-Z]{3}$", "", serial)) if s in release_of), None)
         release = release_of[match] if match else None

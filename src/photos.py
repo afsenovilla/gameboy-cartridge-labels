@@ -16,6 +16,8 @@ import glob, hashlib, json, os, re, shutil, sys
 ROOT = "photos"
 SYSTEMS = ("dmg", "cgb", "agb", "unknown")
 EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".avif", ".heic", ".heif")
+# The sources of fakes made from box art on a rendered cartridge: not photos.
+FAKES = ("emumovies", "launchbox-abeezy1388")
 
 
 def system_of(serial):
