@@ -131,15 +131,6 @@
   "sha1": "00ce6e996397185e6513e4a1b9d5fb9ca044e7bc",
   "original_name": "otakaraou-8735.jpg"
  },
- "CGB-AO4J.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/945.jpg",
-  "page_url": "https://www.otakaraou.com/product/8568",
-  "title_on_page": "スパイ アンド スパイ ゲームボーイカラーソフト",
-  "serial_on_label": "CGB-AO4J",
-  "original_sha1": "789682256825001d9cc299b2016fbe4410d1803c",
-  "sha1": "a6d8565488ad7b701617af7e3ecdcf9dc965fd38",
-  "original_name": "otakaraou-8568.jpg"
- },
  "CGB-AQNJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/845.jpg",
   "page_url": "https://www.otakaraou.com/product/8468",
@@ -156,6 +147,15 @@
   "original_sha1": "6045ea27312f9a8cebb3098748c3757bc5a6b687",
   "sha1": "608ac73fa9884202fbc62d2972536a93aa5073a7",
   "original_name": "otakaraou-8475.jpg"
+ },
+ "CGB-ASOJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/945.jpg",
+  "page_url": "https://www.otakaraou.com/product/8568",
+  "title_on_page": "スパイ アンド スパイ ゲームボーイカラーソフト",
+  "serial_on_label": "CGB-AO4J",
+  "original_sha1": "789682256825001d9cc299b2016fbe4410d1803c",
+  "sha1": "a6d8565488ad7b701617af7e3ecdcf9dc965fd38",
+  "original_name": "otakaraou-8568.jpg"
  },
  "CGB-AZ7J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_7235.jpg",
@@ -353,15 +353,6 @@
   "original_sha1": "473a1b50afab0aa834b601812c787c91389c9ff0",
   "sha1": "727e74a22f292cf3fd69090b170ae502d7765c2f",
   "original_name": "otakaraou-8681.jpg"
- },
- "CGB-BB3J-JPN.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230918_af548e.jpg",
-  "page_url": "https://www.otakaraou.com/product/8686",
-  "title_on_page": "爆転シュート ベイブレード ゲームボーイカラーソフト",
-  "serial_on_label": "CGB-BB3J-JPN",
-  "original_sha1": "4a5341a7ac83f6211288d18884f553d62f623776",
-  "sha1": "9b847aa87949591f581f1b7b30917f4f8fec3229",
-  "original_name": "otakaraou-8686.jpg"
  },
  "CGB-BBRJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1074.jpg",

@@ -124,14 +124,6 @@
   "sha1": "5513ed76f56eea850be5b20a21d506c6d306f470",
   "original_name": "otakaraou-8979.jpg"
  },
- "AGB-A3JJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20221116_062d49.jpg",
-  "page_url": "https://www.otakaraou.com/product/15251",
-  "title_on_page": "逆転裁判3　-2 ゲームボーイアドバンスソフト",
-  "original_sha1": "c5ccda4a02eb8095eea07475460c1cc8071d34d5",
-  "sha1": "d9b0bb8a92dca0b73dd050dc76a813da5b2df322",
-  "original_name": "otakaraou-15251.jpg"
- },
  "AGB-A3MP.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250530_b03fa0.jpg",
   "page_url": "https://www.otakaraou.com/product/9533",
@@ -341,15 +333,6 @@
   "sha1": "ad662511448ced27a3754a4eca1207c4a348d257",
   "original_name": "otakaraou-9358.jpg"
  },
- "AGB-A7HJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5676.jpg",
-  "page_url": "https://www.otakaraou.com/product/16190",
-  "title_on_page": "ハリー・ポッターと秘密の部屋 ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-P",
-  "original_sha1": "b2042e654d16691d5d8f856a80faa46cfaa6e7b0",
-  "sha1": "0efad2c6f46300ab88fdfcb29c93349068e8ef79",
-  "original_name": "otakaraou-16190.jpg"
- },
  "AGB-A7KJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230908_0dc714.jpg",
   "page_url": "https://www.otakaraou.com/product/9491",
@@ -403,6 +386,15 @@
   "original_sha1": "aa60fd915d07ec4089a8722409f967e4fcc95a93",
   "sha1": "8bf06a0fbcbbc2b02211b6773e46d372edf97771",
   "original_name": "otakaraou-9268.jpg"
+ },
+ "AGB-A8GJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1398.jpg",
+  "page_url": "https://www.otakaraou.com/product/9021",
+  "title_on_page": "Get Backers （ゲットバッカーズ) 奪還屋 メトロポリス奪還作戦! ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-ABGJ-JPN",
+  "original_sha1": "7b5f5e861a7ead7b63544324d39b93993567d4a7",
+  "sha1": "c75a71620438fc03d1a848e1012b989347808ac7",
+  "original_name": "otakaraou-9021.jpg"
  },
  "AGB-A8MJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_9267.jpg",
@@ -484,14 +476,6 @@
   "original_sha1": "dcbd39675ffbde6df1ce0be57c7a050c73e45678",
   "sha1": "5d34ec64020f11640116322052ef6791e715cca5",
   "original_name": "otakaraou-9167.jpg"
- },
- "AGB-A9KJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/apc_3229.jpg",
-  "page_url": "https://www.otakaraou.com/product/15311",
-  "title_on_page": "スライムもりもりドラゴンクエスト 衝撃のしっぽ団 ゲームボーイアドバンスソフト",
-  "original_sha1": "d3ff5462ec957974e8099b550c67f0bd6c9cce18",
-  "sha1": "82f0927bf39f933494f06dc040dd2d042ea0fc49",
-  "original_name": "otakaraou-15311.jpg"
  },
  "AGB-A9LJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_9268.jpg",
@@ -665,15 +649,6 @@
   "original_sha1": "124534340d76dff6d974a1cfc6a9fdd8da01fd3d",
   "sha1": "915f64677acfda4b15a6a44c595cb1bf83986c2b",
   "original_name": "otakaraou-9462.jpg"
- },
- "AGB-ABGJ-JPN.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1398.jpg",
-  "page_url": "https://www.otakaraou.com/product/9021",
-  "title_on_page": "Get Backers （ゲットバッカーズ) 奪還屋 メトロポリス奪還作戦! ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-ABGJ-JPN",
-  "original_sha1": "7b5f5e861a7ead7b63544324d39b93993567d4a7",
-  "sha1": "c75a71620438fc03d1a848e1012b989347808ac7",
-  "original_name": "otakaraou-9021.jpg"
  },
  "AGB-ABGJ-JPN_2.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1512.jpg",
@@ -853,15 +828,6 @@
   "sha1": "5873c65c1278cde6d5a85ffdfa1fd6cb12e81c23",
   "original_name": "otakaraou-14567.jpg"
  },
- "AGB-ADOJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1649.jpg",
-  "page_url": "https://www.otakaraou.com/product/9272",
-  "title_on_page": "ドカポンQ モンスターハンター! ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-ADOJ",
-  "original_sha1": "405769e2ab99143540db805313338ded33c5f507",
-  "sha1": "47e800475ff6f4e122c49de7666fa9ceebe46725",
-  "original_name": "otakaraou-9272.jpg"
- },
  "AGB-ADPJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250530_75a9d3.jpg",
   "page_url": "https://www.otakaraou.com/product/9284",
@@ -870,6 +836,15 @@
   "original_sha1": "100c5f98e0e5f24c84aeb4830adee1136d2bc723",
   "sha1": "e140364c4303b2bda31c5762811e88d7a6ada452",
   "original_name": "otakaraou-9284.jpg"
+ },
+ "AGB-ADQJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1649.jpg",
+  "page_url": "https://www.otakaraou.com/product/9272",
+  "title_on_page": "ドカポンQ モンスターハンター! ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-ADOJ",
+  "original_sha1": "405769e2ab99143540db805313338ded33c5f507",
+  "sha1": "47e800475ff6f4e122c49de7666fa9ceebe46725",
+  "original_name": "otakaraou-9272.jpg"
  },
  "AGB-ADRJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250529_e5b888.jpg",
@@ -959,15 +934,7 @@
   "sha1": "51f8adda77922fa6ecc23f2860563382c8b9dda6",
   "original_name": "otakaraou-9444.jpg"
  },
- "AGB-AFCJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240203_ebe0d4.jpg",
-  "page_url": "https://www.otakaraou.com/product/9629",
-  "title_on_page": "ロックマン&フォルテ ゲームボーイアドバンスソフト",
-  "original_sha1": "ed3d5543002be7c060cf67f0aadc1b034cb7e770",
-  "sha1": "80148783c36adcbfdffa6c23470b811218ce9853",
-  "original_name": "otakaraou-9629.jpg"
- },
- "AGB-AFEJ-JPN.jpg": {
+ "AGB-AFBJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1842.jpg",
   "page_url": "https://www.otakaraou.com/product/9465",
   "title_on_page": "フロッガー 魔法の国の大冒険 ゲームボーイアドバンスソフト",
@@ -975,6 +942,14 @@
   "original_sha1": "425e6be28528314348b5bb8a5c0480f68174911c",
   "sha1": "a5b5b547ec888b48b4ecf8267ad2feb29f03d7b7",
   "original_name": "otakaraou-9465.jpg"
+ },
+ "AGB-AFCJ.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240203_ebe0d4.jpg",
+  "page_url": "https://www.otakaraou.com/product/9629",
+  "title_on_page": "ロックマン&フォルテ ゲームボーイアドバンスソフト",
+  "original_sha1": "ed3d5543002be7c060cf67f0aadc1b034cb7e770",
+  "sha1": "80148783c36adcbfdffa6c23470b811218ce9853",
+  "original_name": "otakaraou-9629.jpg"
  },
  "AGB-AFEJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240304_4cc43d.jpg",
@@ -1188,14 +1163,6 @@
   "original_sha1": "122c3ee0cf40dce628d3361dd81f717ae5e7ff93",
   "sha1": "bd2ed02159c2232d2f6267c77821cd4d00a42150",
   "original_name": "otakaraou-14564.jpg"
- },
- "AGB-AHUJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1476.jpg",
-  "page_url": "https://www.otakaraou.com/product/9099",
-  "title_on_page": "シャイニング・ソウル2 ゲームボーイアドバンスソフト",
-  "original_sha1": "62433a9ad84e76e6ed3611740b6e1cf9225b1872",
-  "sha1": "7af325b86ecce5ae899698ad0bafcce3eade2937",
-  "original_name": "otakaraou-9099.jpg"
  },
  "AGB-AI7J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1672.jpg",
@@ -1527,15 +1494,6 @@
   "sha1": "5c803451b07158166eb3b3fe0f133de7bc6d3054",
   "original_name": "otakaraou-9264.jpg"
  },
- "AGB-AMJJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_0348.jpg",
-  "page_url": "https://www.otakaraou.com/product/8949",
-  "title_on_page": "風のクロノアG2 ドリームチャンプ・トーナメント ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-AMJJ",
-  "original_sha1": "875ab6b9476ff302e5d4488c05266b60f7c9600f",
-  "sha1": "6c4fc9d544f3b349ba009f0aa76a11d8208ab2c8",
-  "original_name": "otakaraou-8949.jpg"
- },
  "AGB-AMKJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230908_c9f2d3.jpg",
   "page_url": "https://www.otakaraou.com/product/9522",
@@ -1553,14 +1511,6 @@
   "original_sha1": "db8bccfa633c9a60356241c457415432538e7634",
   "sha1": "5362c5b2827c4dd96a36ad8004b1c62f5064d3c9",
   "original_name": "otakaraou-9584.jpg"
- },
- "AGB-AMMJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230213_13945e.jpg",
-  "page_url": "https://www.otakaraou.com/product/11522",
-  "title_on_page": "桃太郎まつり ゲームボーイアドバンスソフト",
-  "original_sha1": "ffc4788c2b57de31cbd198b814f3edcb513d937e",
-  "sha1": "a6ca945e79aec9000800a2c9448446cb9d07f2ab",
-  "original_name": "otakaraou-11522.jpg"
  },
  "AGB-AMNJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1963.jpg",
@@ -1624,6 +1574,15 @@
   "original_sha1": "db4e5787b5bef31f9626c56fdf61ae77828b89b9",
   "sha1": "3ff5376756e84e9a900ccd38d3a0ef11404c8777",
   "original_name": "otakaraou-9296.jpg"
+ },
+ "AGB-AN5J.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_0348.jpg",
+  "page_url": "https://www.otakaraou.com/product/8949",
+  "title_on_page": "風のクロノアG2 ドリームチャンプ・トーナメント ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-AMJJ",
+  "original_sha1": "875ab6b9476ff302e5d4488c05266b60f7c9600f",
+  "sha1": "6c4fc9d544f3b349ba009f0aa76a11d8208ab2c8",
+  "original_name": "otakaraou-8949.jpg"
  },
  "AGB-AN7J-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250224_2a90fa.jpg",
@@ -1828,15 +1787,6 @@
   "sha1": "dcdacb9919c653182f485311dea70e8b65aa080d",
   "original_name": "otakaraou-9448.jpg"
  },
- "AGB-APUJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_1929.jpg",
-  "page_url": "https://www.otakaraou.com/product/9450",
-  "title_on_page": "ぷくぷく天然かいらんばん -ようこそイリュージョンランド- ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-B3PJ-JPN",
-  "original_sha1": "5ec4592890b814a2d980a731bf9a61ae6f9c7d5c",
-  "sha1": "082c2c6e5a4caff05c412b918a04ea75596b0ebf",
-  "original_name": "otakaraou-9450.jpg"
- },
  "AGB-APYJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20231115_0c7ac0.jpg",
   "page_url": "https://www.otakaraou.com/product/9540",
@@ -1862,6 +1812,15 @@
   "original_sha1": "127afcd58c9e40832a9bafc0e3e10747093f0953",
   "sha1": "0b27f493dfb0ac01d8ebcc47aa4ea6f59bd215f1",
   "original_name": "otakaraou-9222.jpg"
+ },
+ "AGB-AR7J-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1254.jpg",
+  "page_url": "https://www.otakaraou.com/product/8877",
+  "title_on_page": "アドバンスラリー ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-ARJJ",
+  "original_sha1": "5a331b124b869634ac1d7d34ab9d7e00d2009544",
+  "sha1": "3be4e08a34a47a1f1622fa700b287b0c702c8983",
+  "original_name": "otakaraou-8877.jpg"
  },
  "AGB-ARAJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_5409.jpg",
@@ -1907,24 +1866,6 @@
   "original_sha1": "7ce7f63e489d860e3600aaffdc8a82eebbda82a2",
   "sha1": "62f4fae0065963e8f9b7e8305f97d94d92647818",
   "original_name": "otakaraou-8947.jpg"
- },
- "AGB-ARJJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1254.jpg",
-  "page_url": "https://www.otakaraou.com/product/8877",
-  "title_on_page": "アドバンスラリー ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-ARJJ",
-  "original_sha1": "5a331b124b869634ac1d7d34ab9d7e00d2009544",
-  "sha1": "3be4e08a34a47a1f1622fa700b287b0c702c8983",
-  "original_name": "otakaraou-8877.jpg"
- },
- "AGB-ARJJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240429_5d913f.jpg",
-  "page_url": "https://www.otakaraou.com/product/9484",
-  "title_on_page": "ポケットモンスター サファイア (ポケモン) ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-ARJJ",
-  "original_sha1": "1914df489ea616c64248cc5edaca5ce833387c17",
-  "sha1": "99105778d8f6417077d066694b504fb6f5bd7ef7",
-  "original_name": "otakaraou-9484.jpg"
  },
  "AGB-ARPE.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/2021.jpg",
@@ -2104,6 +2045,14 @@
   "sha1": "85e5058426fd832a25ad96c93d2c4ab94eb25c1b",
   "original_name": "otakaraou-9185.jpg"
  },
+ "AGB-AU2J.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1476.jpg",
+  "page_url": "https://www.otakaraou.com/product/9099",
+  "title_on_page": "シャイニング・ソウル2 ゲームボーイアドバンスソフト",
+  "original_sha1": "62433a9ad84e76e6ed3611740b6e1cf9225b1872",
+  "sha1": "7af325b86ecce5ae899698ad0bafcce3eade2937",
+  "original_name": "otakaraou-9099.jpg"
+ },
  "AGB-AUEJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230815_92a8ce.jpg",
   "page_url": "https://www.otakaraou.com/product/9303",
@@ -2148,22 +2097,6 @@
   "original_sha1": "111dc1b7123f32d27d96326bbfcbfc2671dd6d40",
   "sha1": "26183e648fbac991b35f272642ad7de52fe10db9",
   "original_name": "otakaraou-9134.jpg"
- },
- "AGB-AVSJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230206_973550.jpg",
-  "page_url": "https://www.otakaraou.com/product/12213",
-  "title_on_page": "新約 聖剣伝説 ゲームボーイアドバンスソフト",
-  "original_sha1": "69e4850f273c9273a5d6f29f299f968dfe5a8bf3",
-  "sha1": "a5ac8870b36a516129892da26cd7f25fcd3864fc",
-  "original_name": "otakaraou-12213.jpg"
- },
- "AGB-AVSJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5653.jpg",
-  "page_url": "https://www.otakaraou.com/product/16186",
-  "title_on_page": "新約 聖剣伝説　　-2 ゲームボーイアドバンスソフト",
-  "original_sha1": "a53b2f929ef2ad2a0156958e53ab987cd7abe8e1",
-  "sha1": "b4e4b8642db58be3419293c9f0205b02e9e0f1b3",
-  "original_name": "otakaraou-16186.jpg"
  },
  "AGB-AW7J-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_9128-430003.jpg",
@@ -2254,14 +2187,6 @@
   "sha1": "9f31322842c9912259c2907c1f3bcd5e3bc1a402",
   "original_name": "otakaraou-9457.jpg"
  },
- "AGB-AXPJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20260305_aadba6.jpg",
-  "page_url": "https://www.otakaraou.com/product/16287",
-  "title_on_page": "ポケットモンスター サファイア (ポケモン)　-2 ゲームボーイアドバンスソフト",
-  "original_sha1": "67eeea8b6daa40cfb057b5611268117094fa949e",
-  "sha1": "f69a75a78aee5d9e58ffe8e5dce9540ad34d1e4a",
-  "original_name": "otakaraou-16287.jpg"
- },
  "AGB-AXPJ_2.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5690.jpg",
   "page_url": "https://www.otakaraou.com/product/16193",
@@ -2324,14 +2249,6 @@
   "sha1": "df88fd2a492c19971481649daccedb0449725ff6",
   "original_name": "otakaraou-9277.jpg"
  },
- "AGB-AYAJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_6051.JPEG",
-  "page_url": "https://www.otakaraou.com/product/16212",
-  "title_on_page": "どこでも対局 役満アドバンス ゲームボーイアドバンスソフト",
-  "original_sha1": "455791fce564d4d7f1b7d96411cb49ef85cf0fe5",
-  "sha1": "5784ac0246a6467b504822c81466398adf9db758",
-  "original_name": "otakaraou-16212.jpg"
- },
  "AGB-AYDJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240418_4edb8d.jpg",
   "page_url": "https://www.otakaraou.com/product/9596",
@@ -2385,14 +2302,6 @@
   "original_sha1": "de8b9d60d2aca7b2d81102c98fddd314452f6045",
   "sha1": "a207eb592dc5eaa496833c149535ee0914de82b6",
   "original_name": "otakaraou-9292.jpg"
- },
- "AGB-AZJJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5668.jpg",
-  "page_url": "https://www.otakaraou.com/product/16189",
-  "title_on_page": "ドラゴンボールZ 舞空闘劇 ゲームボーイアドバンスソフト",
-  "original_sha1": "011a43d79a9695ce59093dca569f94168cdb83f0",
-  "sha1": "1c60235e55abe83f65e4f5d0ad73f85140bf3d86",
-  "original_name": "otakaraou-16189.jpg"
  },
  "AGB-AZJP.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240904_6f714b.jpg",
@@ -2455,14 +2364,6 @@
   "original_sha1": "f5cdcf77cf94b490dfd0f8874afa4101ea570930",
   "sha1": "c6d544dde44e7bfff10f3fd7593d2231df1cd028",
   "original_name": "otakaraou-9140.jpg"
- },
- "AGB-B2DJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5644.jpg",
-  "page_url": "https://www.otakaraou.com/product/16184",
-  "title_on_page": "スーパードンキーコング2 ゲームボーイアドバンスソフト",
-  "original_sha1": "023d693bd766fc0e62b353671ce60cd79d5a2d96",
-  "sha1": "dfcc5d46d5b8c8db8e90e85a306f1d2e1fe15766",
-  "original_name": "otakaraou-16184.jpg"
  },
  "AGB-B2KJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230529_750cac.jpg",
@@ -2535,6 +2436,15 @@
   "sha1": "9e13ad04efa857c7b9b9c76055155bba3c659c48",
   "original_name": "otakaraou-9047.jpg"
  },
+ "AGB-B3PJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_1929.jpg",
+  "page_url": "https://www.otakaraou.com/product/9450",
+  "title_on_page": "ぷくぷく天然かいらんばん -ようこそイリュージョンランド- ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-B3PJ-JPN",
+  "original_sha1": "5ec4592890b814a2d980a731bf9a61ae6f9c7d5c",
+  "sha1": "082c2c6e5a4caff05c412b918a04ea75596b0ebf",
+  "original_name": "otakaraou-9450.jpg"
+ },
  "AGB-B3SJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1569.jpg",
   "page_url": "https://www.otakaraou.com/product/9192",
@@ -2587,22 +2497,6 @@
   "sha1": "1467476c03b13425fc86a1719d83b1c981c16e2d",
   "original_name": "otakaraou-9632.jpg"
  },
- "AGB-B4BJ_3.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20140512_93ee86.jpg",
-  "page_url": "https://www.otakaraou.com/product/12514",
-  "title_on_page": "ロックマンエグゼ4 トーナメント ブルームーン ゲームボーイアドバンスソフト",
-  "original_sha1": "8e1279393fbcf860b1807a83a77b49a9645726f0",
-  "sha1": "3ac947ebbc5f4048741479f5045c06939db682f2",
-  "original_name": "otakaraou-12514.jpg"
- },
- "AGB-B4BJ_4.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5708.jpg",
-  "page_url": "https://www.otakaraou.com/product/16197",
-  "title_on_page": "ロックマンエグゼ4 トーナメント ブルームーン　　-2 ゲームボーイアドバンスソフト",
-  "original_sha1": "b792312614e4c0afc2b38ee659ef7568ce6efe22",
-  "sha1": "18119b83c300628d118cfab4ca661cb824ad3b5d",
-  "original_name": "otakaraou-16197.jpg"
- },
  "AGB-B4GJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250224_e8f819.jpg",
   "page_url": "https://www.otakaraou.com/product/9252",
@@ -2647,14 +2541,6 @@
   "original_sha1": "b1f0b669964df2ec57b10da7f2169bd940fd8e64",
   "sha1": "79a56b9135f1375ac8b2640574f5ca6935d3b9f1",
   "original_name": "otakaraou-9633.jpg"
- },
- "AGB-B4WJ_3.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5704.jpg",
-  "page_url": "https://www.otakaraou.com/product/16196",
-  "title_on_page": "ロックマンエグゼ4 トーナメント レッドサン(初回版 レッドカートリッジ) ゲームボーイアドバンスソフト",
-  "original_sha1": "ef0dad7c434ba8ded583b2e1d91e2f6310f0bc76",
-  "sha1": "0c937862667347637ca271528eaa0db0086a0477",
-  "original_name": "otakaraou-16196.jpg"
  },
  "AGB-B4ZE.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/2018.jpg",
@@ -2718,14 +2604,6 @@
   "original_sha1": "d8fd7b83cd799990560f2a5495275f8f216d6518",
   "sha1": "e2a282683e5579dedd50d9f0d409d69417711d9c",
   "original_name": "otakaraou-8986.jpg"
- },
- "AGB-B8KJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230213_593163.jpg",
-  "page_url": "https://www.otakaraou.com/product/12985",
-  "title_on_page": "星のカービィ 鏡の大迷宮 ゲームボーイアドバンスソフト",
-  "original_sha1": "ab406d0e56cfbc97a59f37157de16443b5e74ae4",
-  "sha1": "a7348e5c092593e923d3562f501b09d22c870756",
-  "original_name": "otakaraou-12985.jpg"
  },
  "AGB-B8KJ_2.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230908_059c34.jpg",
@@ -2888,14 +2766,6 @@
   "sha1": "dfe76711763f39d82c4bc21eb3ecbb6fc07fedc6",
   "original_name": "otakaraou-9257.jpg"
  },
- "AGB-BD5J_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5662.jpg",
-  "page_url": "https://www.otakaraou.com/product/16188",
-  "title_on_page": "デュエル・マスターズ2 切札勝舞Ver. ゲームボーイアドバンスソフト",
-  "original_sha1": "7f772e13117942eac69d0f8ffccd270241f40adc",
-  "sha1": "f80406c113f4d92d4e63aedc0d672f25151fa4e8",
-  "original_name": "otakaraou-16188.jpg"
- },
  "AGB-BDCJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/APC_3047.jpeg",
   "page_url": "https://www.otakaraou.com/product/9269",
@@ -2991,14 +2861,6 @@
   "original_sha1": "2223a7ce056c3923e5be54a34124250b11a1264e",
   "sha1": "4fd272413bbf27e5522395b94a1bf5f8a5a508da",
   "original_name": "otakaraou-8864.jpg"
- },
- "AGB-BE4J.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5631.jpg",
-  "page_url": "https://www.otakaraou.com/product/16181",
-  "title_on_page": "アイシールド21 DEVILBATS DEVILDAYS ゲームボーイアドバンスソフト",
-  "original_sha1": "348e83f33e8385940439c033aff7e130c385a12e",
-  "sha1": "5ce9e459a13bd4e26f3e20900c0e5ce19e767489",
-  "original_name": "otakaraou-16181.jpg"
  },
  "AGB-BE8J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20260603_af54d2.jpg",
@@ -3292,14 +3154,6 @@
   "original_sha1": "6474d03f92e21e7c96b3f87a41d9535428a6a460",
   "sha1": "7891728afbb8a726819aa21d6615f0bb518407c6",
   "original_name": "otakaraou-9658.jpg"
- },
- "AGB-BIPJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5717.jpg",
-  "page_url": "https://www.otakaraou.com/product/16199",
-  "title_on_page": "ONE PIECE (ワンピース) ドラゴンドリーム! ゲームボーイアドバンスソフト",
-  "original_sha1": "ef3a1ab142a3e8a0fdd0e80bae768679e713cdd5",
-  "sha1": "2faa19f636c1e82fa915194cebee55de6274fefa",
-  "original_name": "otakaraou-16199.jpg"
  },
  "AGB-BIRK.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230527_b170df.jpg",
@@ -3613,14 +3467,6 @@
   "sha1": "c23cf70ca0cd4cafb16c6982e1a47121a91b515e",
   "original_name": "otakaraou-9148.jpg"
  },
- "AGB-BMVJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5649.jpg",
-  "page_url": "https://www.otakaraou.com/product/16185",
-  "title_on_page": "スーパーマリオボール ゲームボーイアドバンスソフト",
-  "original_sha1": "5c72321d2d1d8ce04886838192252c96303593e3",
-  "sha1": "b0bc9f227ac6e37e9c36075cdd2c306efe62b495",
-  "original_name": "otakaraou-16185.jpg"
- },
  "AGB-BMXJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20260907_d13dff.jpg",
   "page_url": "https://www.otakaraou.com/product/9576",
@@ -3797,14 +3643,6 @@
   "sha1": "9bb58ed2136ad57b4b9d81611552f95396516f80",
   "original_name": "otakaraou-9483.jpg"
  },
- "AGB-BPEJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230406_6525cd.jpg",
-  "page_url": "https://www.otakaraou.com/product/15503",
-  "title_on_page": "ポケットモンスター エメラルド (ポケモン　ラベル剥がれ) ゲームボーイアドバンスソフト",
-  "original_sha1": "fde6eb91e7de388eedcc73d95c1523d5426dcae0",
-  "sha1": "6b67647cea4555bc4133a301ae6c2279d042d4b5",
-  "original_name": "otakaraou-15503.jpg"
- },
  "AGB-BPFJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_8261.jpg",
   "page_url": "https://www.otakaraou.com/product/9455",
@@ -3938,14 +3776,6 @@
   "original_sha1": "66282cea7a2279654f322e46f77a56cae2965c2a",
   "sha1": "2b4a64c099586c1182f9a47f306a83de44f45ad9",
   "original_name": "otakaraou-9635.jpg"
- },
- "AGB-BRBJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5712.jpg",
-  "page_url": "https://www.otakaraou.com/product/16198",
-  "title_on_page": "ロックマンエグゼ5 チームオブブルース ゲームボーイアドバンスソフト",
-  "original_sha1": "a4331bd242458a365afef1e042804070665d1cc0",
-  "sha1": "fda18381ebd6157fb146b2bc689a672f9c781405",
-  "original_name": "otakaraou-16198.jpg"
  },
  "AGB-BRIJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240514_6c3f58.jpg",
@@ -4238,14 +4068,6 @@
   "sha1": "593dc6f0aa2cc3130dc84114830056720b2f9fe9",
   "original_name": "otakaraou-9174.jpg"
  },
- "AGB-BZ3J.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5700.jpg",
-  "page_url": "https://www.otakaraou.com/product/16195",
-  "title_on_page": "ロックマンゼロ3 ゲームボーイアドバンスソフト",
-  "original_sha1": "81929cee045ccd1dd73c9674ef780bdffe73a6ce",
-  "sha1": "e3343e2778ecef6bfce88c8b9406430d46dffa44",
-  "original_name": "otakaraou-16195.jpg"
- },
  "AGB-BZ3J_2.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250115_1ed206.jpg",
   "page_url": "https://www.otakaraou.com/product/9640",
@@ -4272,7 +4094,7 @@
   "sha1": "94fde2dbc95be272ae47340e499ac3555a71de5c",
   "original_name": "otakaraou-9402.jpg"
  },
- "AGB-BZ4J_2.jpg": {
+ "AGB-BZ5J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1780.jpg",
   "page_url": "https://www.otakaraou.com/product/9403",
   "title_on_page": "ファイナルファンタジーVアドバンス ゲームボーイアドバンスソフト",
@@ -4386,14 +4208,6 @@
   "sha1": "0f772b1000ee4fed3a8b8507372a3101837dffd8",
   "original_name": "otakaraou-9422.jpg"
  },
- "AGB-FDMJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20130408_42cb45.jpg",
-  "page_url": "https://www.otakaraou.com/product/12214",
-  "title_on_page": "ドクターマリオ&パネルでポン ゲームボーイアドバンスソフト",
-  "original_sha1": "067c46db065cbcbb957da2937162283cb1ccc646",
-  "sha1": "8da154757144a63f1207a92b24b65922431df9fe",
-  "original_name": "otakaraou-12214.jpg"
- },
  "AGB-FFMJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1810.jpg",
   "page_url": "https://www.otakaraou.com/product/9433",
@@ -4420,14 +4234,6 @@
   "original_sha1": "b27f8a5e9b2a260ca62434f2372e5da1c9071f62",
   "sha1": "88c2c60fbcb7d8094c550b05304eec2072c4b025",
   "original_name": "otakaraou-9410.jpg"
- },
- "AGB-FICJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250313_ec8c58.jpg",
-  "page_url": "https://www.otakaraou.com/product/11557",
-  "title_on_page": "ファミコンミニ03 アイスクライマー ゲームボーイアドバンスソフト",
-  "original_sha1": "8e6f45265974a5c46612ce0df80b755604e6a1f8",
-  "sha1": "6dcaf5247719463c646b5ffbcc256275b3c96ab0",
-  "original_name": "otakaraou-11557.jpg"
  },
  "AGB-FMKJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1802.jpg",
@@ -4578,14 +4384,6 @@
   "sha1": "e443c9d426be22245ddcaef9d4ecd9b619eb9484",
   "original_name": "otakaraou-9044.jpg"
  },
- "AGB-KHPJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_5640.jpg",
-  "page_url": "https://www.otakaraou.com/product/16183",
-  "title_on_page": "コロコロパズル ハッピィパネッチュ! ゲームボーイアドバンスソフト",
-  "original_sha1": "cd6a2b32882354dc4d4fe92ff45ef6d1625e3d19",
-  "sha1": "d6a88c05ad75123df9f14718a1b2ad6266b9e732",
-  "original_name": "otakaraou-16183.jpg"
- },
  "AGB-KYGJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230918_22fcbb.jpg",
   "page_url": "https://www.otakaraou.com/product/9610",
@@ -4621,16 +4419,7 @@
   "sha1": "4b35b90725a89206823fc420b2c26598347a4250",
   "original_name": "otakaraou-9125.jpg"
  },
- "AGB-U3IJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230913_055464.jpg",
-  "page_url": "https://www.otakaraou.com/product/12927",
-  "title_on_page": "ボクらの太陽 ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-U3IJ-JPN",
-  "original_sha1": "a5f5c7cca09e9faa0471a57402a35c50c006df0f",
-  "sha1": "bdfb04f57c3b6d685aa8e7ce48a211c69a6e5371",
-  "original_name": "otakaraou-12927.jpg"
- },
- "AGB-U3IJ_2.jpg": {
+ "AGB-U3IJ-JPN(A).jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1858.jpg",
   "page_url": "https://www.otakaraou.com/product/9481",
   "title_on_page": "ボクらの太陽(株主ご優待版) ゲームボーイアドバンスソフト",
@@ -4638,6 +4427,15 @@
   "original_sha1": "9787a8ba1ab87acec3ea07941d23bba3c80187b3",
   "sha1": "bdf028c4e1db5201246063c6bf734668c00d312a",
   "original_name": "otakaraou-9481.jpg"
+ },
+ "AGB-U3IJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230913_055464.jpg",
+  "page_url": "https://www.otakaraou.com/product/12927",
+  "title_on_page": "ボクらの太陽 ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-U3IJ-JPN",
+  "original_sha1": "a5f5c7cca09e9faa0471a57402a35c50c006df0f",
+  "sha1": "bdfb04f57c3b6d685aa8e7ce48a211c69a6e5371",
+  "original_name": "otakaraou-12927.jpg"
  },
  "AGB-V49J-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1534.jpg",
