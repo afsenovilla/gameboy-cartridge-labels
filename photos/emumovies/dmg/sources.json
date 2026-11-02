@@ -5,41 +5,17 @@
   "note": "named by the serial read on it (near)",
   "sha1": "869e183c10a0d4ab7ebfa83eddb2316127e2c16d"
  },
- "DMG-A2BE-USA.png": {
-  "original_name": "Super Black Bass (USA).png",
-  "serial_on_label": "DMG-A2BE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "6cf95d58f61489b2446f3fec764eb88eba790300"
- },
  "DMG-A2DJ-JPN_2.png": {
   "original_name": "Dino Breeder 2 (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-A2DJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "5ae7503caf52c2166b0c1ae4f3184e893501cffe"
  },
- "DMG-A2JE-USA.png": {
-  "original_name": "Jurassic Park Part 2 - The Chaos Continues (USA, Europe) (En,Fr,De,It).png",
-  "serial_on_label": "DMG-A2JE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "beb84a2187d701445c3797cda15df1ee6757b57c"
- },
- "DMG-A2RE-USA_2.png": {
-  "original_name": "Mighty Morphin Power Rangers - The Movie (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-A2RE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "2a3bcae80f30539fd1dbe8c8db600cfbfdf0d5ac"
- },
  "DMG-A2XP-NOE.png": {
   "original_name": "Micro Machines 2 - Turbo Tournament (Europe).png",
   "serial_on_label": "DMG-A2XP-NOE",
   "note": "named by the serial read on it (exact)",
   "sha1": "92ee7109d7c34d348afce6b6217aaac4cafd9edf"
- },
- "DMG-A3BE-USA.png": {
-  "original_name": "Batman Forever (USA, Europe).png",
-  "serial_on_label": "DMG-A3BE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0507db86a60646a9dd10bb363dd8b62acd581a2f"
  },
  "DMG-A3VP-EUR.png": {
   "original_name": "Bust-A-Move 3 DX (Europe).png",
@@ -64,51 +40,11 @@
   "note": "named by nothing: no serial read",
   "sha1": "631eebb69b4db539ac643c52e6fb4642a994287a"
  },
- "DMG-A6BE-USA.png": {
-  "original_name": "NBA Live 96 (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-A6BE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ce8159571a0bb050f9e4c00ad7b4d12cea9e60c9"
- },
- "DMG-A6HE-USA_2.png": {
-  "original_name": "NHL 96 (USA, Europe) (SGB Enhanced).png",
-  "note": "named by nothing: no serial read",
-  "sha1": "770e5d7446d5fc0f930e51c839dfbdef982ece13"
- },
- "DMG-A6ME-USA.png": {
-  "original_name": "Madden 96 (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-A6ME-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "200fe5f1e19c2cf14e65008935a0f03668afb2c4"
- },
- "DMG-A7ME-USA.png": {
-  "original_name": "Madden 97 (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-A7ME-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "78f508b46e2be4e110e6be629ebdfe0f38f5b581"
- },
- "DMG-A7SE-USA.png": {
-  "original_name": "FIFA Soccer 97 (USA, Europe) (SGB Enhanced).png",
-  "note": "named by nothing: no serial read",
-  "sha1": "9153b46146ef3bf5d87022b523304909b2abe8f5"
- },
  "DMG-A8GJ-JPN_2.png": {
   "original_name": "Keitai Keiba Eight Special (Japan).png",
   "serial_on_label": "DMG-A8GJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "9320a82849e40e5c60f26bc9013fb912d28953d6"
- },
- "DMG-A8NE-USA_2.png": {
-  "original_name": "NBA Jam (USA, Europe).png",
-  "serial_on_label": "DMG-A8NE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "72a65de1fec561fddd27a382faa0656d35d50a49"
- },
- "DMG-A8WE-USA.png": {
-  "original_name": "World Cup 98 (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-A8WE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "26aff9d39d59494f0f7bff6884f0aae16868b5a7"
  },
  "DMG-A98J-JPN_2.png": {
   "original_name": "Navyblue 98 (Japan).png",
@@ -121,12 +57,6 @@
   "serial_on_label": "DMG-A9YJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "ccd6a7944ca1f43314bb85629f9e6afaa2677feb"
- },
- "DMG-AB2E-USA_2.png": {
-  "original_name": "Bomberman GB (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AB2E-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "eb65d4186b9fda4c9b1dd0d00df54c3893f7936d"
  },
  "DMG-AB8P-EUR.png": {
   "original_name": "Sea Battle (Europe) (En,Fr,De,Es).png",
@@ -146,64 +76,16 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "22fda803b13f518f316542cac814db92ede93ee2"
  },
- "DMG-ABOE-USA.png": {
-  "original_name": "Super Breakout (USA).png",
-  "serial_on_label": "DMG-ABOE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d4ddebe661839b197eb38d0e50e505c1d23d1e5c"
- },
- "DMG-ABSE-USA.png": {
-  "original_name": "Arcade Classics - Super Breakout & Battlezone (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ABSE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "3b61ba2a42791354722e5ffb92f94551fe9e8a64"
- },
  "DMG-ABVP-EUR.png": {
   "original_name": "Beethoven (Europe) (SGB Enhanced).png",
   "note": "named by nothing: no serial read",
   "sha1": "38f8bbda5254f0767e0b5d6431e0f3cd66b8a3ae"
- },
- "DMG-ABXE-USA.png": {
-  "original_name": "BreakThru! (USA).png",
-  "serial_on_label": "DMG-ABXE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "6f19e8bdd112dc5a5128b4fe90a822fe5d724ffe"
- },
- "DMG-AC4E-USA.png": {
-  "original_name": "Centipede (USA) (Majesco).png",
-  "serial_on_label": "DMG-AC4E-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9041cf4f1e4691369e3c5728aabdfc39fa693b3b"
- },
- "DMG-AC8E-USA.png": {
-  "original_name": "CutThroat Island (USA, Europe).png",
-  "serial_on_label": "DMG-AC8E-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5605c50c812a6386b64edc8d998d106c68e46fa5"
- },
- "DMG-ACEE-USA_2.png": {
-  "original_name": "Casper (USA).png",
-  "serial_on_label": "DMG-ACEE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "6b983e009cbe93f3eb8607cc0e4b07b441554cab"
- },
- "DMG-ACFE-USA.png": {
-  "original_name": "Casino FunPak (USA, Europe).png",
-  "serial_on_label": "DMG-ACFE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "defa342ca024f1a6f46047916572c2ea5e3d7129"
  },
  "DMG-ACKJ-JPN_2.png": {
   "original_name": "Go Go Ackman (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-ACKU-JPN",
   "note": "named by nothing: no serial read",
   "sha1": "cbb0cc5ed44d22a708f370c4b0e55eee58f498e5"
- },
- "DMG-ACPE-USA_2.png": {
-  "original_name": "Arcade Classic No. 2 - Centipede & Millipede (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ACPE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9adee583f51f7d8940adbf0d8f7ebda154adfe5c"
  },
  "DMG-ACWP_4.png": {
   "original_name": "Cool Hand (Europe).png",
@@ -217,28 +99,10 @@
   "note": "named by nothing: no serial read",
   "sha1": "dc1a121adc01af7e895182ea851ba039ab9335ee"
  },
- "DMG-ADHE-USA.png": {
-  "original_name": "DragonHeart (USA, Europe).png",
-  "serial_on_label": "DMG-ADHE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "233f0eb08da319c16a9eaee3d2b66000b10527a3"
- },
- "DMG-ADJE-USA.png": {
-  "original_name": "Arcade Classic No. 4 - Defender & Joust (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ADJE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4208b09e1417f77dc913105bbed294beb8e80d66"
- },
  "DMG-ADMP-NOE_3.png": {
   "original_name": "Maus, Die (Europe) (En,Fr,De,Es).png",
   "note": "named by nothing: no serial read",
   "sha1": "ea00179b9004c59642f785ffd058c4e2d01ec99a"
- },
- "DMG-ADNE-USA.png": {
-  "original_name": "Castlevania Legends (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ADNE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "3c8b77f8bb3fba112a1cf0b2fe13dc97315e5fc6"
  },
  "DMG-ADPJ-JPN_2.png": {
   "original_name": "Doraemon no Game Boy de Asobouyo Deluxe 10 (Japan) (SGB Enhanced).png",
@@ -258,87 +122,16 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "75e0617ba473bc040b7ac2fc6124d5389cef18a6"
  },
- "DMG-AFEE-USA_2.png": {
-  "original_name": "Foreman for Real (USA, Europe).png",
-  "note": "named by nothing: no serial read",
-  "sha1": "06842c06db46a0a602b10aa10fd90c5e2820480a"
- },
- "DMG-AFGE-USA_2.png": {
-  "original_name": "Frogger (USA).png",
-  "serial_on_label": "DMG-AFGE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ab93d92b32349f161e6531a2ede6888ae909cb91"
- },
- "DMG-AFKE-USA.png": {
-  "original_name": "Frank Thomas Big Hurt Baseball (USA, Europe).png",
-  "serial_on_label": "DMG-AFKE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "8da8289b3670fb25b289e5bc2e617603becd0f31"
- },
- "DMG-AFNE-USA.png": {
-  "original_name": "Flintstones, The (USA, Europe).png",
-  "serial_on_label": "DMG-AFNE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e3c9816c17ab6dfafe2f1ce7df56211759a05085"
- },
- "DMG-AFSE-USA.png": {
-  "original_name": "FIFA International Soccer (USA, Europe) (En,Fr,De,Es) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AFSE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "bca2b865c5a136f3fa716e026eac59ae9cc4505b"
- },
  "DMG-AG7J-JPN_2.png": {
   "original_name": "Sanrio Uranai Party (Japan) (Rev 1).png",
   "serial_on_label": "DMG-AG7J-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "1d6bb52d333d7482102f0c7c8f99f2290b3529fc"
  },
- "DMG-AGDE-USA.png": {
-  "original_name": "Mystical Ninja Starring Goemon (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AGDE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "8db7171cb68036fd5dcb3157a4bf1e009872fb57"
- },
- "DMG-AGEE-USA.png": {
-  "original_name": "Getaway, The - High Speed II (USA).png",
-  "serial_on_label": "DMG-AGEE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ed54d344a7ea80b2e771a7d78a34ad875cfbf8f4"
- },
- "DMG-AGFE-USA.png": {
-  "original_name": "Sports Illustrated - Golf Classic (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AGFE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "65f29c37499fa0e13e88de83598be5bdc78e11cf"
- },
  "DMG-AGMJ-JPN.png": {
   "original_name": "Gamera - Daikaijuu Kuuchuu Kessen (Japan) (SGB Enhanced).png",
   "note": "named by nothing: no serial read",
   "sha1": "6d2011cdac01b98edd9cad961af26e3c0dff8ea2"
- },
- "DMG-AGTE-USA.png": {
-  "original_name": "Stargate (USA, Europe).png",
-  "serial_on_label": "DMG-AGTE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "108f51c8a24259f4145b1b406a16b84bbdb55657"
- },
- "DMG-AH-USA.png": {
-  "original_name": "Home Alone 2 - Lost in New York (USA, Europe).png",
-  "serial_on_label": "DMG-AH-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "00f95fcc65ea06817dfba8139c94d4c57078a273"
- },
- "DMG-AHCE-USA.png": {
-  "original_name": "Hercules (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AHCE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b67f5d492c7b176e9c8535103e420381bd78128d"
- },
- "DMG-AHQE-USA_2.png": {
-  "original_name": "Pocahontas (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AHQE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b8c4ae5fff22ed42e7384bbf67aca49c9a84fbab"
  },
  "DMG-AHSJ-JPN_2.png": {
   "original_name": "Hon Shougi (Japan) (SGB Enhanced).png",
@@ -358,12 +151,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "0b82e21aedaf89dba17b8a2b556dfc6572a76f2a"
  },
- "DMG-AIGE-USA.png": {
-  "original_name": "International Superstar Soccer (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AIGE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e4a80c01911d859d5e0d57f45fddd5191cf6ae6f"
- },
  "DMG-AJ6J-JPN_2.png": {
   "original_name": "Goukaku Boy Series - Shikakui Atama o Maruku Suru - Kokugo Battle Hen (Japan) (IE Institute).png",
   "serial_on_label": "DMG-AJ6J-JPN",
@@ -381,12 +168,6 @@
   "serial_on_label": "DMG-AJBP",
   "note": "named by the serial read on it (exact)",
   "sha1": "ed120dd8aa36d7e6396ff7e047b596ab60584781"
- },
- "DMG-AJDE-USA.png": {
-  "original_name": "Judge Dredd (USA, Europe).png",
-  "serial_on_label": "DMG-AJDE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "1a4657d69be1b6c8bd0d04e7794c6e1d8b81746f"
  },
  "DMG-AJIJ-JPN.png": {
   "original_name": "Konami GB Collection Vol.1 (Japan) (SGB Enhanced).png",
@@ -406,30 +187,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "ab949c6a23efaed2309af0d972ef16b0cd1ae221"
  },
- "DMG-AJPE-USA.png": {
-  "original_name": "Jeopardy! - Platinum Edition (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AJPE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "28f74308663494c64cfeb40ed98bea32cbf019db"
- },
- "DMG-AJQE-USA.png": {
-  "original_name": "Jeopardy! - Teen Tournament (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AJQE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "11991b75f22e8c57652100cbef3b7deaa5a84326"
- },
- "DMG-AJTE-USA_2.png": {
-  "original_name": "NBA Jam - Tournament Edition (USA, Europe).png",
-  "serial_on_label": "DMG-AJTE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0483b1719f4d52fb608addfc517945b3e5e15461"
- },
- "DMG-AK-USA.png": {
-  "original_name": "Attack of the Killer Tomatoes (USA, Europe).png",
-  "serial_on_label": "DMG-AK-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e15c1f4376f1443791fe686b2f7e9d0a7c9a782c"
- },
  "DMG-AK3J-JPN.png": {
   "original_name": "Pachi-Slot Kids 3 (Japan).png",
   "serial_on_label": "DMG-AK3J-JPN",
@@ -442,23 +199,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "2a53b2d176892896f4b2af11d26c8f423911957c"
  },
- "DMG-AKCE-USA_2.png": {
-  "original_name": "Kirby's Star Stacker (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AKCE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e2ec9e7df2cc0091c370cc1dd096d1010084b08e"
- },
  "DMG-AKDJ-JPN_2.png": {
   "original_name": "Karamuchou no Daijiken (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-AKDJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "190e13f960f2b03b535ee59e37c116d88d718422"
- },
- "DMG-AKGE-USA_2.png": {
-  "original_name": "Ken Griffey Jr. Presents Major League Baseball (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AKGE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "26a9ef5a8243a7d634adba7e9163d433b81f2081"
  },
  "DMG-AKPJ-JPN_2.png": {
   "original_name": "Kuma no Puutarou - Takara Sagashi da Ooiri Game Battle! (Japan) (SGB Enhanced).png",
@@ -483,18 +228,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "ccd86966435861fd17469ce21dc043640ccba474"
  },
- "DMG-AL-USA.png": {
-  "original_name": "Altered Space - A 3-D Alien Adventure (USA).png",
-  "serial_on_label": "DMG-AL-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e784ca4fa04135acc5149e99bb018043a5c77931"
- },
- "DMG-ALAE-USA.png": {
-  "original_name": "Aladdin (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ALAE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9ed250f41658fcd9e7501f1ca0280d099c4ce63e"
- },
  "DMG-ALDJ-JPN_2.png": {
   "original_name": "Super Chinese Land 1-2-3' (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-ALDJ-JPN",
@@ -512,24 +245,6 @@
   "serial_on_label": "DMG-ALKJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "72840de855d205b790c45e94cb54955b88841ce1"
- },
- "DMG-ALNE-USA.png": {
-  "original_name": "Lion King, The (USA).png",
-  "serial_on_label": "DMG-ALNE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "bf3c55554dbbd5edf6f7a001b448d42ca169950e"
- },
- "DMG-ALWE-USA.png": {
-  "original_name": "Lost World, The - Jurassic Park (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ALWE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "937938179120d576d77be8addd3e1c8dc33c8b7e"
- },
- "DMG-AMCE-USA_2.png": {
-  "original_name": "Arcade Classic No. 1 - Asteroids & Missile Command (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AMCE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "52856f2231be9b324234be1a271ee499bcc7f32d"
  },
  "DMG-AMFJ-JPN_2.png": {
   "original_name": "Monster Race Okawari (Japan) (SGB Enhanced).png",
@@ -555,12 +270,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "1b31df8c85c46d8f95ed99bd053d25c3b65a669d"
  },
- "DMG-AN-USA.png": {
-  "original_name": "Asteroids (USA, Europe).png",
-  "serial_on_label": "DMG-AN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "41e74a4dff71879c36e7ca5bca2581d967b49e51"
- },
  "DMG-AN8P-UKV.png": {
   "original_name": "Mr. Nutz (Europe).png",
   "serial_on_label": "DMG-AN8P-UKV",
@@ -573,24 +282,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "2fbfaaca07b3ba6fc205c55750c720791529bd0f"
  },
- "DMG-ANCE-USA.png": {
-  "original_name": "Animaniacs (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ANCE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9e07a2936f52a2093acd76800e326cf1f3f616f2"
- },
- "DMG-ANDE-USA.png": {
-  "original_name": "Hunchback of Notre Dame, The - 5 Foolishly Fun Topsy Turvy Games (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ANDE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "55463a2aabec72dd10a4c4b0a06e772de3869671"
- },
- "DMG-ANLE-USA.png": {
-  "original_name": "Madden 95 (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ANLE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4757796ec8e5882ccf203467caf44e6efa7ea2d8"
- },
  "DMG-ANSJ-JPN_2.png": {
   "original_name": "Nectaris GB (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-ANSJ-JPN",
@@ -602,12 +293,6 @@
   "serial_on_label": "DMG-ANSJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "fdc1d68935f9e2aa2f9fa07005ea9fb1348dc867"
- },
- "DMG-ANYE-USA.png": {
-  "original_name": "College Slam (USA).png",
-  "serial_on_label": "DMG-ANYE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ad7d423f87dd84b14e538932d5bd635087d02db1"
  },
  "DMG-AOBP-NOE.png": {
   "original_name": "Otto's Ottifanten - Baby Bruno's Alptraum (Europe) (En,Fr,De,Es).png",
@@ -630,12 +315,6 @@
   "serial_on_label": "DMG-AP6J-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "3090d120685ba8b8f2fe6e6a59acb58871198ad4"
- },
- "DMG-APFE-USA.png": {
-  "original_name": "Pinball Fantasies (USA, Europe).png",
-  "serial_on_label": "DMG-APFE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "14f15402020405497df5bfe0f8f5d1324e771ed3"
  },
  "DMG-APIP-EUR.png": {
   "original_name": "Pinball Mania (Europe).png",
@@ -661,18 +340,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "a864460ab2630704bed97a640471ceffdce6660f"
  },
- "DMG-APRE-USA.png": {
-  "original_name": "PGA European Tour (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-APRE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ae5d83344212afa2e2d68dc4a01c94ca2684f642"
- },
- "DMG-APTE-USA.png": {
-  "original_name": "Pac-In-Time (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-APTE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "59b3d0d3b9518e6aebb5b52c00a7cd04db4be90d"
- },
  "DMG-APWJ-JPN_2.png": {
   "original_name": "Power Pro GB (Japan) (Rev 1) (SGB Enhanced).png",
   "serial_on_label": "DMG-APWJ-JPN",
@@ -685,24 +352,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "9fcf984f78dd55ca374678a8376b783fe59c0aea"
  },
- "DMG-AQ9E-USA.png": {
-  "original_name": "NFL Quarterback Club II (USA, Europe).png",
-  "serial_on_label": "DMG-AQ9E-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4c36a8a6f32f9356dd849c72431a6544ee444e50"
- },
- "DMG-AQBE-USA.png": {
-  "original_name": "NFL Quarterback Club 96 (USA, Europe).png",
-  "serial_on_label": "DMG-AQBE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5a8520d4fe5720f2e3433122ea4b63bc5cab2ed9"
- },
- "DMG-AQFE-USA.png": {
-  "original_name": "Shaq Fu (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AQFE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5fba1e804fd26f675aa6c83f575533ef3dc411ad"
- },
  "DMG-AQGJ-JPN_2.png": {
   "original_name": "Shin Keiba Kizoku Pocket Jockey (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-AQGJ-JPN",
@@ -714,23 +363,6 @@
   "serial_on_label": "DMG-AQZJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "bcfb9566712c4b9abd7df72fa05c28621e99f1eb"
- },
- "DMG-AR9E-USA.png": {
-  "original_name": "Primal Rage (USA, Europe).png",
-  "note": "named by nothing: no serial read",
-  "sha1": "10fad76f416d826258d5f66f8fbb19de383a0c6e"
- },
- "DMG-ARGE-USA_2.png": {
-  "original_name": "Rugrats Movie, The (USA) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ARGE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "683851c35404916f5e5aa6cf8360bf1156fb2566"
- },
- "DMG-ARJE-USA_2.png": {
-  "original_name": "Super Star Wars - Return of the Jedi (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ARJE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "c391d5ae24e4ae88fa919e170f1789c55d42c06b"
  },
  "DMG-AROJ-JPN_2.png": {
   "original_name": "Rentaiou (Japan).png",
@@ -750,12 +382,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "fb708c41b767766bc60337771df60643d91cc765"
  },
- "DMG-ASBE-USA_2.png": {
-  "original_name": "Tetris Blast (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ASBE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b4625395b46c2dc9ce384a90e965df135278a822"
- },
  "DMG-ASCJ-JPN.png": {
   "original_name": "Sports Collection (Japan).png",
   "serial_on_label": "DMG-ASCJ-JPN",
@@ -774,29 +400,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "dbbd9d42d501639729f124600a0c173e3e3dafe2"
  },
- "DMG-ASME-USA_2.png": {
-  "original_name": "Superman (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ASME-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "2d51220c1fe0266af6be9185419a84b48b258693"
- },
- "DMG-ASQE-USA.png": {
-  "original_name": "seaQuest DSV (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ASQE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "dd0ddcf3b98364812c1dfb292375fdf91351037b"
- },
  "DMG-AT6P-FAH.png": {
   "original_name": "Tintin in Tibet (Europe) (En,Es,It,Sv) (SGB Enhanced).png",
   "serial_on_label": "DMG-AT6P-FAH",
   "note": "named by the serial read on it (exact)",
   "sha1": "e12a1b76f6606e07bd2be53179cb49630a652ec7"
- },
- "DMG-ATAE-USA.png": {
-  "original_name": "Tamagotchi (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ATAE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "64b427ac57c4b401c02dc830087fa309ab0585b1"
  },
  "DMG-ATCJ-JPN_2.png": {
   "original_name": "Trump Collection GB (Japan).png",
@@ -822,29 +430,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "20f47917a0fed990759c03f17440df42b18a54fb"
  },
- "DMG-ATRE-USA_2.png": {
-  "original_name": "Tetris Plus (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-ATRE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "54d298da0ea027d5a1c9d4ca31995c06736f6fea"
- },
  "DMG-ATSP-FAH.png": {
   "original_name": "Tintin - Prisoners of the Sun (Europe) (En,Fr,De).png",
   "serial_on_label": "DMG-ATSP-FAH",
   "note": "named by the serial read on it (exact)",
   "sha1": "d05dc35600bcd34f06cdb22d87d1f3af8949da5e"
- },
- "DMG-ATUE-USA_2.png": {
-  "original_name": "Turok - Battle of the Bionosaurs (USA, Europe) (En,Fr,De,Es).png",
-  "serial_on_label": "DMG-ATUE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "258ed111295db0c5cf0e438afc5ad243958d36c7"
- },
- "DMG-ATWE-USA.png": {
-  "original_name": "Monster Truck Wars (USA, Europe).png",
-  "serial_on_label": "DMG-ATWE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "6d3773d65f5dcd74b7baba656f13030a4d7523ac"
  },
  "DMG-AUCJ-JPN_2.png": {
   "original_name": "Uno 2 - Small World (Japan) (SGB Enhanced).png",
@@ -858,29 +448,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "641b47130de3123294a7ba2253c1a3064ebb9af1"
  },
- "DMG-AUSE-USA_2.png": {
-  "original_name": "Urban Strike (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AUSE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "24b6cd6d8db14890bbaead5b891bc4dac2511e98"
- },
  "DMG-AUUJ_2.png": {
   "original_name": "Yu Yu Hakusho Dai-4-dan - Makai Touitsu Hen (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-AUUJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "6c28241a81792192369c8fe6b23c229edf4aaaec"
- },
- "DMG-AVIE-USA_2.png": {
-  "original_name": "Beavis and Butt-head (USA, Europe).png",
-  "serial_on_label": "DMG-AVIE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "568995103feedee2ffbbc0d906cdaca065aaa95f"
- },
- "DMG-AVSE-USA.png": {
-  "original_name": "Vegas Stakes (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AVSE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "1b15f7365de94bf471993b2ae35d4d0d8d7e980a"
  },
  "DMG-AVTP-EUR.png": {
   "original_name": "Reservoir Rat (Europe) (En,Fr,De,Es,It).png",
@@ -894,35 +466,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "14a6cb38f49b109e65ce1ebd49187f1293e55b16"
  },
- "DMG-AWFE-USA.png": {
-  "original_name": "WWF Raw (USA, Europe).png",
-  "serial_on_label": "DMG-AWFE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "a2dafc7323d7e41795115df18320d921358915eb"
- },
  "DMG-AWGJ-JPN_2.png": {
   "original_name": "J.League Live 95 (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-AWGJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "d06e6d8df6c2a24b0a41be025e7c573d48c01618"
- },
- "DMG-AWJE-USA.png": {
-  "original_name": "World Heroes 2 Jet (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AWJE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "bd7105b6f165d80ef0e8fa28f9d2e8e3f1a20af3"
- },
- "DMG-AWWE-USA.png": {
-  "original_name": "WWF War Zone (USA, Europe).png",
-  "serial_on_label": "DMG-AWWE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "a299cf2fe6e2f75b7a2b800a5518ca1d570a1d44"
- },
- "DMG-AXIE-USA.png": {
-  "original_name": "Iron Man X-O Manowar in Heavy Metal (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-AXIE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5e44bdd263e8afd454088598c39db344fb555a10"
  },
  "DMG-AXLJ-JPN_2.png": {
   "original_name": "Star Sweep (Japan) (SGB Enhanced).png",
@@ -942,53 +490,17 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "30e27836c7a17945c9394f3ab2460a3b44c3b675"
  },
- "DMG-AZPE-USA.png": {
-  "original_name": "Zoop (USA, Europe).png",
-  "serial_on_label": "DMG-AZPE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7c675d3cb45689add4fd9a5998802bd845946dec"
- },
- "DMG-AZTE-USA.png": {
-  "original_name": "Taz-Mania 2 (USA).png",
-  "serial_on_label": "DMG-AZTE-USA",
-  "note": "named by nothing: no serial read",
-  "sha1": "90ca3701017d7d73361a689cdd83765a60ea8b84"
- },
- "DMG-B4-USA.png": {
-  "original_name": "Beetlejuice (USA).png",
-  "serial_on_label": "DMG-B4-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e3847676caf599eefdc998d958de46b77215681b"
- },
  "DMG-B6-USA.png": {
   "original_name": "Great Greed (USA).png",
   "serial_on_label": "DMG-B6-USA",
   "note": "named by the serial read on it (exact)",
   "sha1": "9876b9ae45457334132cbc28d116f8e5fb06d07d"
  },
- "DMG-BI-USA.png": {
-  "original_name": "Blaster Master Boy (USA).png",
-  "serial_on_label": "DMG-BI-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "23fe7c15251c6e71a3770b1ccacf6b4fc68ce887"
- },
  "DMG-BK4J-JPN_2.png": {
   "original_name": "Goukaku Boy GOLD - Shikakui Atama o Maruku Suru - Kanji no Tatsujin (Japan) (IE Institute).png",
   "serial_on_label": "DMG-BK4J-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "9706ca155dd39cb9a800c0d46616a039fc3cd77d"
- },
- "DMG-BQ-USA.png": {
-  "original_name": "Blues Brothers, The (USA, Europe).png",
-  "serial_on_label": "DMG-BQ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9d1a9e4485846df74baa5e1ad1910f3944fad8f1"
- },
- "DMG-BR-USA.png": {
-  "original_name": "Battle Bull (USA).png",
-  "serial_on_label": "DMG-BR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9763bf73025c67d0c1ce025929f40bd68a545ecb"
  },
  "DMG-C2J_2.png": {
   "original_name": "Chibi Maruko-chan 2 - Deluxe Maruko World (Japan).png",
@@ -1008,53 +520,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "76c52d010038e91235e804adfb70b9e6e7c8beb4"
  },
- "DMG-C9-USA.png": {
-  "original_name": "Mortal Kombat (USA, Europe).png",
-  "serial_on_label": "DMG-C9-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "81156789848f8e29b4564154e38d025db77ee240"
- },
- "DMG-CA-USA.png": {
-  "original_name": "Square Deal - The Game of Two-Dimensional Poker (USA).png",
-  "serial_on_label": "DMG-CA-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d7f796ee359e5d08bf5aac352eb56f322dc78f54"
- },
- "DMG-CH-USA.png": {
-  "original_name": "Ninja Boy 2 (USA, Europe).png",
-  "serial_on_label": "DMG-CH-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "c598be12a1bf776bc4ab28a0895ad95db8f65b15"
- },
- "DMG-CP-USA.png": {
-  "original_name": "RoboCop (USA, Europe) (Rev 1).png",
-  "serial_on_label": "DMG-CP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e13d2d29c19981bd98ec476d7de1b637e18468b1"
- },
- "DMG-CQ-USA.png": {
-  "original_name": "Crystal Quest (USA).png",
-  "serial_on_label": "DMG-CQ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "f3a8bfad700cc45f7363ea55c4cd2ad6b9d9ecf6"
- },
- "DMG-CZ-USA.png": {
-  "original_name": "Centipede (USA, Europe) (Accolade).png",
-  "serial_on_label": "DMG-CZ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b01998dc78c450bf52326d7b02057536ce5b1122"
- },
  "DMG-DIJ.png": {
   "original_name": "Hammerin' Harry (Europe).png",
   "serial_on_label": "DMG-DIJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "b3a8359443af42fdefa9034e83f797e63557bbc6"
- },
- "DMG-DN-USA.png": {
-  "original_name": "Darkman (USA, Europe).png",
-  "serial_on_label": "DMG-DN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7a48b3abcc7d6590d0fe1c591988cf365be26ce4"
  },
  "DMG-DP-UKV.png": {
   "original_name": "Dropzone (Europe).png",
@@ -1062,51 +532,10 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "07a2b11a07d35e0c129476c1ab6d61661d273140"
  },
- "DMG-DR-USA.png": {
-  "original_name": "Nail 'n Scale (USA, Europe).png",
-  "serial_on_label": "DMG-DR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d2ab7e9f1d23db2487687e0b3b46d46e22c7de67"
- },
- "DMG-DY-USA.png": {
-  "original_name": "Dig Dug (USA).png",
-  "serial_on_label": "DMG-DY-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7c6928c7e302e9de5fa88925bcaf9adc57d2e013"
- },
  "DMG-E5-NOE.png": {
   "original_name": "Franky, Joe & Dirk - On the Tiles (Europe) (En,Fr,De,Es,It,Nl).png",
   "note": "named by nothing: no serial read",
   "sha1": "317787f3ce19c3305c30a22004478e85f92990f5"
- },
- "DMG-E6-USA_2.png": {
-  "original_name": "Metal Masters (USA).png",
-  "serial_on_label": "DMG-E6-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "930e5902ba13a9b11a5b13f15a242a4a2e24a566"
- },
- "DMG-EF-USA.png": {
-  "original_name": "Flash, The (USA, Europe).png",
-  "serial_on_label": "DMG-EF-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ddf6acf24a490ae4ee4352ce264a5bdcb2c0e7fc"
- },
- "DMG-EG-USA.png": {
-  "original_name": "F-15 Strike Eagle (USA, Europe).png",
-  "note": "named by nothing: no serial read",
-  "sha1": "296855ac3a6cb99d5b2dfcfb758d3dbeb9bb8094"
- },
- "DMG-EK-USA.png": {
-  "original_name": "Simpsons, The - Bart & the Beanstalk (USA, Europe).png",
-  "serial_on_label": "DMG-EK-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "80f77e9289259174470738ee627d93fbee094d1d"
- },
- "DMG-ER-USA.png": {
-  "original_name": "Tesserae (USA).png",
-  "serial_on_label": "DMG-ER-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d37cafc8054871a7b2b9ac9f7fa1a4790e80bbe7"
  },
  "DMG-ETJ.png": {
   "original_name": "Tenchi o Kurau (Japan).png",
@@ -1126,23 +555,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "bdaf6613fd4d7af2b9b5a588c43c104ae2489fb6"
  },
- "DMG-F6-USA.png": {
-  "original_name": "Fidgetts, The (USA, Europe) (En,Fr,De,Es,It,Nl,Sv).png",
-  "serial_on_label": "DMG-F6-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5109e957aecea766843c1c9b2f9e0fb4ed7d1d41"
- },
  "DMG-F8-NOE.png": {
   "original_name": "Fire Fighter (Europe).png",
   "serial_on_label": "DMG-F8-NOE",
   "note": "named by the serial read on it (exact)",
   "sha1": "7f794784d824c00abb14f4ed5f6f38147bd1f3f4"
- },
- "DMG-F9-USA.png": {
-  "original_name": "4-in-1 Funpak - Volume II (USA, Europe).png",
-  "serial_on_label": "DMG-F9-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9c1a8ba98c9aa45eb13b251556e8aa8089bac352"
  },
  "DMG-FBJ.png": {
   "original_name": "Sunsoft Grand Prix (Europe).png",
@@ -1150,65 +567,11 @@
   "note": "named by nothing: no serial read",
   "sha1": "86f8a1438c2f59ee122c1e789c2808ffd475dd37"
  },
- "DMG-FE-USA.png": {
-  "original_name": "Flintstones, The - King Rock Treasure Island (USA, Europe).png",
-  "serial_on_label": "DMG-FE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d81c5cd4bfd0035d8855fd13192fd3a590353b65"
- },
  "DMG-FH-UKV.png": {
   "original_name": "InfoGenius Productivity Pak - Berlitz French Translator (USA, Europe).png",
   "serial_on_label": "DMG-FH-UKV",
   "note": "named by the serial read on it (exact)",
   "sha1": "c3ab588d0ccc615f35a8fc8e685635abde4eb65d"
- },
- "DMG-FS-USA.png": {
-  "original_name": "Extra Bases (USA).png",
-  "serial_on_label": "DMG-FS-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "231910e87b21c96fed59a56fa84dd8bebc1434ac"
- },
- "DMG-FW-USA.png": {
-  "original_name": "Knight Quest (USA).png",
-  "serial_on_label": "DMG-FW-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "8f86a8c572384240b54201835778d1ecdbe2f4fb"
- },
- "DMG-FX-USA.png": {
-  "original_name": "Out of Gas (USA).png",
-  "serial_on_label": "DMG-FX-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "1eb82caa394c4b2d85d5eb14990923a380f82e1b"
- },
- "DMG-G8-USA.png": {
-  "original_name": "Gear Works (USA, Europe).png",
-  "serial_on_label": "DMG-G8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "a03e3143a726b85af5a4e134ddbbc751fd4a9940"
- },
- "DMG-GH-USA.png": {
-  "original_name": "Game of Harmony, The (USA).png",
-  "serial_on_label": "DMG-GH-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "c214f7c4ae47ab999b3495b8813310b49bbf24ce"
- },
- "DMG-GL-USA.png": {
-  "original_name": "Boggle Plus (USA).png",
-  "serial_on_label": "DMG-GL-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "3321372b2817a8507f8f874b18a078d283a0be14"
- },
- "DMG-GN-USA.png": {
-  "original_name": "Top Gun - Guts & Glory (USA, Europe).png",
-  "serial_on_label": "DMG-GN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b8c056963c189c8a6b136514e2031642c0bf3b70"
- },
- "DMG-GP-USA.png": {
-  "original_name": "Mr. Chin's Gourmet Paradise (USA).png",
-  "serial_on_label": "DMG-GP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "07550283a8f782c715a35689ff1e71c2499f1bf1"
  },
  "DMG-GSA_3.png": {
   "original_name": "Football International (Europe).png",
@@ -1219,18 +582,6 @@
   "original_name": "Jikuu Senki Mu (Japan).png",
   "note": "named by nothing: no serial read",
   "sha1": "04165b7191413958d909906e81de434d6fd4dc3e"
- },
- "DMG-H4-USA.png": {
-  "original_name": "Championship Pool (USA).png",
-  "serial_on_label": "DMG-H4-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "30738c9a730192819bdaf799e742c937b046ff1b"
- },
- "DMG-H5-USA_2.png": {
-  "original_name": "Road Rash (USA, Europe).png",
-  "serial_on_label": "DMG-H5-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "425b83b5fb0a81146f5071d4e8ed74ca3aa8dace"
  },
  "DMG-H7J_2.png": {
   "original_name": "Hitori de Dekirumon! - Cooking Densetsu (Japan).png",
@@ -1244,35 +595,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "aa3583b090c6a80bccd2734a5536768871270e73"
  },
- "DMG-HC-USA.png": {
-  "original_name": "Hit the Ice - VHL - The Official Video Hockey League (USA, Europe).png",
-  "serial_on_label": "DMG-HC-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0e42c7395a6e57ec8a757013d988fb78e47a0b80"
- },
  "DMG-HL-USA.png": {
   "original_name": "Hyper Lode Runner (World) (Rev 1).png",
   "serial_on_label": "DMG-HL-USA",
   "note": "named by the serial read on it (exact)",
   "sha1": "64a525dc4ce5f1ebf53efac3d26889b6a3c2775a"
- },
- "DMG-HM-USA.png": {
-  "original_name": "Home Alone (USA, Europe).png",
-  "serial_on_label": "DMG-HM-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "20ee117c6114a8b4fa556786e8ee9d784cc32aac"
- },
- "DMG-HP-USA.png": {
-  "original_name": "Black Bass - Lure Fishing (USA).png",
-  "serial_on_label": "DMG-HP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "f3164b25666569a6fe088a0cb3c4eebbca9e9639"
- },
- "DMG-HZ-USA.png": {
-  "original_name": "Stop That Roach! (USA).png",
-  "serial_on_label": "DMG-HZ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ea0c995379423d7a3090deb3b3625c45bc7f4036"
  },
  "DMG-I2J_2.png": {
   "original_name": "Ikari no Yousai 2 (Japan).png",
@@ -1280,76 +607,22 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "2aeed26a374581027e69d899acd79b43d683d196"
  },
- "DMG-IY-USA.png": {
-  "original_name": "Fortified Zone (USA, Europe).png",
-  "serial_on_label": "DMG-IY-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "845817b5df7885fadfa570f68bb9604ce4a74054"
- },
  "DMG-J3J_2.png": {
   "original_name": "Jungle no Ouja Tar-chan (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-J3J",
   "note": "named by the serial read on it (exact)",
   "sha1": "322ea5c756f86c07416409436f20a0f9433e287a"
  },
- "DMG-J5-USA.png": {
-  "original_name": "Indiana Jones and the Last Crusade (USA, Europe).png",
-  "serial_on_label": "DMG-J5-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "30f078ca9d7263c4fce43ca109f00cf8c1aa194f"
- },
  "DMG-J6-UKV.png": {
   "original_name": "Blues Brothers, The - Jukebox Adventure (Europe).png",
   "note": "named by nothing: no serial read",
   "sha1": "f040f1e354ec8155be4dcd04560dee57d5c4942f"
- },
- "DMG-J8-USA.png": {
-  "original_name": "Tom and Jerry - Frantic Antics! (USA, Europe).png",
-  "serial_on_label": "DMG-J8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ed70ef56d853c1c40692929ebac0f694466db5af"
- },
- "DMG-JC-USA.png": {
-  "original_name": "Jimmy Connors Tennis (USA, Europe).png",
-  "serial_on_label": "DMG-JC-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e75c6792d48864d9f9089a827aba454145b31d6f"
  },
  "DMG-JD-UKV.png": {
   "original_name": "Super James Pond (Europe).png",
   "serial_on_label": "DMG-JD-UKV",
   "note": "named by the serial read on it (exact)",
   "sha1": "f07dbd70dc86d2a53766c45a3161f17f2169f0f8"
- },
- "DMG-JE-USA.png": {
-  "original_name": "Jeopardy! - Sports Edition (USA).png",
-  "serial_on_label": "DMG-JE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "329cb568a413b55016f75ab9caf90d7730dbea05"
- },
- "DMG-JM-USA.png": {
-  "original_name": "Joe & Mac (USA).png",
-  "serial_on_label": "DMG-JM-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ef8a98d229266d93b4f622b915efa7ef6444e468"
- },
- "DMG-JN-USA.png": {
-  "original_name": "Jack Nicklaus Golf (USA, Europe).png",
-  "serial_on_label": "DMG-JN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9f42c6e1848949d356b00f1a019b2af336fb38a7"
- },
- "DMG-JS-USA.png": {
-  "original_name": "Jetsons, The - Robot Panic (USA, Europe) (Rev 1).png",
-  "serial_on_label": "DMG-JS-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4d07a90dd44de3f57e2c110a643526c95f813e9b"
- },
- "DMG-JY-USA.png": {
-  "original_name": "Tom & Jerry (USA, Europe).png",
-  "serial_on_label": "DMG-JY-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b8f6bdcef5b9941e90ef7f772b6342757f1603d0"
  },
  "DMG-K5J_2.png": {
   "original_name": "Kattobi Road (Japan).png",
@@ -1362,30 +635,6 @@
   "serial_on_label": "DMG-K6J",
   "note": "named by the serial read on it (exact)",
   "sha1": "92855465c0393d2a3533af85fa9863e5bcca3964"
- },
- "DMG-KC-USA.png": {
-  "original_name": "Kingdom Crusade (USA).png",
-  "serial_on_label": "DMG-KC-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "6d0f3448be8a170de1fe3b097ba3bf3bc9615f97"
- },
- "DMG-KD-USA.png": {
-  "original_name": "Skate or Die - Tour de Thrash (USA).png",
-  "serial_on_label": "DMG-KD-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "54b764c0e9b0d00533e07cb6f8de72abc2ccb459"
- },
- "DMG-KH-USA.png": {
-  "original_name": "Track & Field (USA, Europe).png",
-  "serial_on_label": "DMG-KH-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4c3d997e90b21a0b009ca275210f25c39ae2413a"
- },
- "DMG-KM-USA.png": {
-  "original_name": "Serpent (USA).png",
-  "serial_on_label": "DMG-KM-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "89fd06ef9288267e762afe84c4264895c46fa135"
  },
  "DMG-KQ-NOE.png": {
   "original_name": "Magnetic Soccer (Europe).png",
@@ -1417,53 +666,17 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "bb8df878369518a68e3e470c6b3be7192627a5a2"
  },
- "DMG-L8-USA.png": {
-  "original_name": "Lemmings (USA).png",
-  "serial_on_label": "DMG-L8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "376f152494d7aad088c2652875ed593cb9bc8c6f"
- },
- "DMG-L8-USA_2.png": {
-  "original_name": "Lethal Weapon (USA, Europe).png",
-  "serial_on_label": "DMG-L8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9ce8a741c3f12702dbae0af3e73f15fc016aaa68"
- },
  "DMG-LAJ_2.png": {
   "original_name": "Little Master - Raikuban no Densetsu (Japan).png",
   "serial_on_label": "DMG-LAJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "c1b57d84332cf9598f119fcea44b33d363f459dc"
  },
- "DMG-LE-USA.png": {
-  "original_name": "Best of the Best - Championship Karate (USA).png",
-  "serial_on_label": "DMG-LE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "05e1782cb7692b3678d3324249a23acf0f2261a0"
- },
- "DMG-LR-USA.png": {
-  "original_name": "Last Action Hero (USA, Europe).png",
-  "serial_on_label": "DMG-LR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "10261414cd17709affae8388955b1db42f219856"
- },
- "DMG-LS-USA.png": {
-  "original_name": "TaleSpin (USA).png",
-  "serial_on_label": "DMG-LS-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ece0663556164cd6f5692864d7e54a9b45a67156"
- },
  "DMG-LUA_2.png": {
   "original_name": "Lucle (Japan, Europe) (En).png",
   "serial_on_label": "DMG-LUA",
   "note": "named by the serial read on it (exact)",
   "sha1": "123ca4f4c6d901f31d336628f7380122d6d2c520"
- },
- "DMG-LY-USA_2.png": {
-  "original_name": "Monopoly (USA).png",
-  "serial_on_label": "DMG-LY-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "23e74271550f75907aa0d30808ac3a677be28fc8"
  },
  "DMG-LZ-NOE.png": {
   "original_name": "Lingo (Europe) (En,Fr,De,Nl).png",
@@ -1482,12 +695,6 @@
   "note": "named by nothing: no serial read",
   "sha1": "8d2a264a196afd3a60ba5eedf70640ccab3806b6"
  },
- "DMG-M8-USA.png": {
-  "original_name": "Milon's Secret Castle (USA, Europe).png",
-  "serial_on_label": "DMG-M8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "b08a37bb008f51473530c17e3374450bfe0e64b6"
- },
  "DMG-M9J_2.png": {
   "original_name": "Megami Tensei Gaiden - Last Bible II (Japan).png",
   "serial_on_label": "DMG-M9J",
@@ -1500,65 +707,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "dc23bd216466f70f93beef12d463aa7850a0627f"
  },
- "DMG-MB-USA.png": {
-  "original_name": "Marble Madness (USA, Europe).png",
-  "serial_on_label": "DMG-MB-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "196370df64a24c1db509e2fdd99a62b94d7cb7f0"
- },
- "DMG-MH-USA.png": {
-  "original_name": "Mouse Trap Hotel (USA).png",
-  "serial_on_label": "DMG-MH-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "6e87b1980a2ae9251b752a448b3ad3d5eab745f7"
- },
- "DMG-MP-USA.png": {
-  "original_name": "Paperboy (USA, Europe).png",
-  "serial_on_label": "DMG-MP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "2527ce99108e88c2ff3ab5c4a293d503332f854b"
- },
- "DMG-MV-USA.png": {
-  "original_name": "Miner 2049er Starring Bounty Bob (USA).png",
-  "serial_on_label": "DMG-MV-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d44a4ef7dd533b2658d3fbba7effd56dfb563fd7"
- },
- "DMG-MW-USA.png": {
-  "original_name": "Missile Command (USA, Europe).png",
-  "serial_on_label": "DMG-MW-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "73fcdeab63f1884d680ed2bc4dcfd71f09d16e8a"
- },
- "DMG-MZ-USA.png": {
-  "original_name": "Megalit (USA, Europe).png",
-  "serial_on_label": "DMG-MZ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4ba32643d98ac8dbe212e6739a4b7cb04a822c31"
- },
- "DMG-N5-USA.png": {
-  "original_name": "New Chessmaster, The (USA, Europe).png",
-  "serial_on_label": "DMG-N5-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "05423fa89fe085332909e2db700f1a95a3a8cd35"
- },
  "DMG-N7J_2.png": {
   "original_name": "Pokonyan! - Yume no Daibouken (Japan) (SGB Enhanced).png",
   "serial_on_label": "DMG-N7J",
   "note": "named by the serial read on it (exact)",
   "sha1": "7d73c01316a2e94a0b89cfa336d39aac0ebfb088"
- },
- "DMG-N8-USA.png": {
-  "original_name": "Total Carnage (USA, Europe).png",
-  "serial_on_label": "DMG-N8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4d3798bd7439ff1c25f19b7de431a351ac502175"
- },
- "DMG-NB-USA_2.png": {
-  "original_name": "Battleship (USA, Europe).png",
-  "serial_on_label": "DMG-NB-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0fb4e7bdadaca8f0a21afcd684d83d920d1e01db"
  },
  "DMG-NIJ.png": {
   "original_name": "Welcome Nakayoshi Park (Japan).png",
@@ -1570,29 +723,6 @@
   "original_name": "InfoGenius Productivity Pak - Berlitz Spanish Translator (USA, Europe).png",
   "note": "named by nothing: no serial read",
   "sha1": "fa72f03ad2193eee81e19603cddf4d5c386fdee0"
- },
- "DMG-NS-USA.png": {
-  "original_name": "Punisher, The - The Ultimate Payback (USA).png",
-  "serial_on_label": "DMG-NS-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "cc79ed04319b1a864e56b55ead351f721216bc29"
- },
- "DMG-NU-USA.png": {
-  "original_name": "Star Trek - The Next Generation (USA, Europe).png",
-  "note": "named by nothing: no serial read",
-  "sha1": "3ad594825f18a9543f75adda3f88b1490d2091e9"
- },
- "DMG-NV-USA.png": {
-  "original_name": "Navy SEALs (USA, Europe).png",
-  "serial_on_label": "DMG-NV-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "396b958b0c250ab084752bfaefd03e141ef72e7d"
- },
- "DMG-NY-USA.png": {
-  "original_name": "Nobunaga's Ambition (USA).png",
-  "serial_on_label": "DMG-NY-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "246a790dcb6785c06455168475372d6f8e9d1493"
  },
  "DMG-NZJ.png": {
   "original_name": "Tekichuu Rush (Japan).png",
@@ -1611,12 +741,6 @@
   "serial_on_label": "DMG-O4J",
   "note": "named by the serial read on it (exact)",
   "sha1": "b0fd89a97877d3e90972bb2b6d17dc3967153870"
- },
- "DMG-OB-USA.png": {
-  "original_name": "Raging Fighter (USA, Europe).png",
-  "serial_on_label": "DMG-OB-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "9fa957bdfc85c448765f5e3b515d5b19725f6b39"
  },
  "DMG-OL.png": {
   "original_name": "Battle of Olympus, The (Europe) (En,Fr,De,Es,It).png",
@@ -1660,47 +784,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "eae00a6ddf81df2885cfc7a5237f0d7efd993727"
  },
- "DMG-PN-USA.png": {
-  "original_name": "Amazing Penguin (USA, Europe).png",
-  "serial_on_label": "DMG-PN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "514d5652971155130665e84570095236dac30352"
- },
- "DMG-PQ-USA.png": {
-  "original_name": "Power Racer (USA).png",
-  "serial_on_label": "DMG-PQ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "edb106688ba122c076ef15bb0aaecb0a5dfdbdf8"
- },
  "DMG-PXA_2.png": {
   "original_name": "Palamedes (Europe).png",
   "serial_on_label": "DMG-PXA",
   "note": "named by the serial read on it (exact)",
   "sha1": "6693b5a6693df3376a2668e535f4b2cdf514b5c2"
- },
- "DMG-Q2-USA.png": {
-  "original_name": "Super Chase H.Q. (USA, Europe).png",
-  "serial_on_label": "DMG-Q2-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e995c92bdd5066a24e0806485453c8e4f1b89959"
- },
- "DMG-QC-USA.png": {
-  "original_name": "Chuck Rock (USA, Europe).png",
-  "serial_on_label": "DMG-QC-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d9c4f4b996d1647746329b9093370a0b713e7103"
- },
- "DMG-QT-USA.png": {
-  "original_name": "Q-bert for Game Boy (USA, Europe).png",
-  "serial_on_label": "DMG-QT-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "833acf276409ab85ce016ae4409ca0b8d6e6e392"
- },
- "DMG-R7-USA.png": {
-  "original_name": "Battletoads in Ragnarok's World (USA).png",
-  "serial_on_label": "DMG-R7-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e757430c9921f433abeb2d8a801284c4cf3adb09"
  },
  "DMG-R9J_2.png": {
   "original_name": "GB Genjin Land - Viva! Chikkun Oukoku (Japan).png",
@@ -1714,77 +802,17 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "ea5752eca22e620bc96ad377701fa3ef88acc5c0"
  },
- "DMG-RK-USA.png": {
-  "original_name": "Star Trek - 25th Anniversary (USA, Europe).png",
-  "serial_on_label": "DMG-RK-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "61d18c0d6c204adb4bd871d992be33db89ba6974"
- },
  "DMG-RL-NOE.png": {
   "original_name": "Rodland (Europe).png",
   "serial_on_label": "DMG-RL-NOE",
   "note": "named by the serial read on it (exact)",
   "sha1": "56a8c747294761324d9afdd58d008ff9631b8578"
  },
- "DMG-RR-USA.png": {
-  "original_name": "Who Framed Roger Rabbit (USA).png",
-  "serial_on_label": "DMG-RR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "c4ab26dbd7cab273f68de9e3b9f27a5eb3667148"
- },
- "DMG-RV-USA.png": {
-  "original_name": "Race Drivin' (USA, Europe).png",
-  "serial_on_label": "DMG-RV-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "c5580e9f2a2f6db6c2b0d659e28468d053c165a6"
- },
  "DMG-S4J_2.png": {
   "original_name": "Tsumeshougi - Hyakuban Shoubu (Japan).png",
   "serial_on_label": "DMG-S4J",
   "note": "named by the serial read on it (exact)",
   "sha1": "3d065b2baf4bb43e58e57891310f896774452a73"
- },
- "DMG-SE-USA.png": {
-  "original_name": "Sword of Hope, The (USA).png",
-  "serial_on_label": "DMG-SE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "3312e5465a9c62eda49f07bef242d42172747818"
- },
- "DMG-SF-USA.png": {
-  "original_name": "Sumo Fighter (USA).png",
-  "serial_on_label": "DMG-SF-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "18131ccaad00ffc4deaa496d3a31217793b94dfe"
- },
- "DMG-SI-USA.png": {
-  "original_name": "Sword of Hope II, The (USA).png",
-  "serial_on_label": "DMG-SI-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "defad070d97bfe2a00ba61b6ed8a029828c3fbbe"
- },
- "DMG-SM-USA.png": {
-  "original_name": "Amazing Spider-Man, The (USA, Europe).png",
-  "serial_on_label": "DMG-SM-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ecca567baa658678dc901e0bd98c634ee17dff4f"
- },
- "DMG-SQ-USA.png": {
-  "original_name": "Boxxle II (USA, Europe).png",
-  "serial_on_label": "DMG-SQ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ecfdfc43e8f204d83eff34e99aa6c4b4df272c20"
- },
- "DMG-SR-USA.png": {
-  "original_name": "Super Scrabble (USA).png",
-  "serial_on_label": "DMG-SR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0d8cec884587700186c25c32061da051ba7d7176"
- },
- "DMG-SX-USA.png": {
-  "original_name": "Kung-Fu Master (USA, Europe).png",
-  "serial_on_label": "DMG-SX-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "40bea1ecc5298e959c3c7c9250ff1e1afb3e29fb"
  },
  "DMG-T2J_2.png": {
   "original_name": "Trump Boy II (Japan).png",
@@ -1810,53 +838,17 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "2627eee3c6287ae03ad2cbf488719c67ab3154fa"
  },
- "DMG-TE-USA.png": {
-  "original_name": "Torpedo Range (USA).png",
-  "serial_on_label": "DMG-TE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7cd1fb7272475fec84d70b3e4be338ea4480d1d8"
- },
  "DMG-TIJ.png": {
   "original_name": "Tokio Senki - Eiyuu Retsuden (Japan).png",
   "serial_on_label": "DMG-TIJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "d530d6d2bccf384f9b3e10e6b0dc7648bbb3d732"
  },
- "DMG-TN-USA_2.png": {
-  "original_name": "Tennis (World).png",
-  "serial_on_label": "DMG-TN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "aa59eb437c41997ea3de326283eef6b6b2e65a7d"
- },
- "DMG-TP-USA.png": {
-  "original_name": "Trax (USA, Europe).png",
-  "serial_on_label": "DMG-TP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5790f0b02ac34ee74b73f93185181cccd9332404"
- },
- "DMG-TQ-USA.png": {
-  "original_name": "Turrican (USA, Europe).png",
-  "serial_on_label": "DMG-TQ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "025e96a3f74873f23f810d3eaa443564e2de1a2a"
- },
- "DMG-TT-USA.png": {
-  "original_name": "Teenage Mutant Ninja Turtles II - Back from the Sewers (USA).png",
-  "serial_on_label": "DMG-TT-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "f3a453842beb928de3653a97ef0c24abab0aec05"
- },
  "DMG-TWJ.png": {
   "original_name": "Twin (Japan).png",
   "serial_on_label": "DMG-TWJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "ff328b73443483ebb575d83a651d4862c4349c76"
- },
- "DMG-U2-USA.png": {
-  "original_name": "Ultima - Runes of Virtue II (USA).png",
-  "serial_on_label": "DMG-U2-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "a9c6e545f299b0ae92f9f136f3662a226ff185da"
  },
  "DMG-ULJ.png": {
   "original_name": "Ultraman Club - Tekikaijuu o Hakken seyo! (Japan).png",
@@ -1876,36 +868,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "7eb1767768352cd051b6100ccc5ec26850255180"
  },
- "DMG-UP-USA.png": {
-  "original_name": "Ninja Taro (USA).png",
-  "serial_on_label": "DMG-UP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e13780e7e2d0f236357a3cefe59f27d78cf07f5b"
- },
- "DMG-UR-USA.png": {
-  "original_name": "Turn and Burn - The F-14 Dogfight Simulator (USA).png",
-  "serial_on_label": "DMG-UR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "fd4063ade515b993b22f01a9bf9f1ccd0907709a"
- },
- "DMG-US-USA.png": {
-  "original_name": "Fish Dude (USA).png",
-  "serial_on_label": "DMG-US-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "540bc6207fbf4c9b22d534e7b57981b069112221"
- },
- "DMG-UT-USA.png": {
-  "original_name": "Ultima - Runes of Virtue (USA).png",
-  "serial_on_label": "DMG-UT-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "3380a7470892cc21d6fe79c136e3fe4618c3ef1f"
- },
- "DMG-UV-USA.png": {
-  "original_name": "Mickey's Ultimate Challenge (USA, Europe).png",
-  "serial_on_label": "DMG-UV-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "12d08570b489b419dbe8fef2bcde1ad1dbb2562b"
- },
  "DMG-UYJ.png": {
   "original_name": "Urusei Yatsura - Miss Tomobiki o Sagase! (Japan).png",
   "serial_on_label": "DMG-UYJ",
@@ -1924,24 +886,6 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "c4b6f6d821cef196794b79a8e261f03c98d898e6"
  },
- "DMG-VC-USA.png": {
-  "original_name": "Prophecy - The Viking Child (USA).png",
-  "serial_on_label": "DMG-VC-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "fbd37ceeffa49f7e78b5be29026a8d72cafea41c"
- },
- "DMG-VD-USA.png": {
-  "original_name": "Ren & Stimpy Show, The - Veediots! (USA, Europe).png",
-  "serial_on_label": "DMG-VD-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "921f236b59723a881ab6bbda31596a38ebc63b99"
- },
- "DMG-VE-USA.png": {
-  "original_name": "Rolan's Curse (USA).png",
-  "serial_on_label": "DMG-VE-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0fb9fd0cb50240c8c24d1dcc50fdf7385dd9accc"
- },
  "DMG-VFJ.png": {
   "original_name": "Volley Fire (Japan).png",
   "note": "named by nothing: no serial read",
@@ -1952,12 +896,6 @@
   "serial_on_label": "DMG-VM-USA",
   "note": "named by the serial read on it (exact)",
   "sha1": "d78b7573f768e1aefce1619a4d2fa1a84efa1880"
- },
- "DMG-VT-USA.png": {
-  "original_name": "Rolan's Curse II (USA).png",
-  "serial_on_label": "DMG-VT-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "36709b03f89eea15be4bbeeaf7338b534be79df2"
  },
  "DMG-VZ-FAH.png": {
   "original_name": "Sensible Soccer - European Champions (Europe).png",
@@ -1971,23 +909,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "fe83b69174da2514307cea1607e0b176f14c152c"
  },
- "DMG-W8-USA.png": {
-  "original_name": "WCW - The Main Event (USA, Europe).png",
-  "serial_on_label": "DMG-W8-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "e0e4e0f1e37ba397ac9596b208756a662dfc68db"
- },
  "DMG-W9-FAH.png": {
   "original_name": "World Cup USA 94 (Europe) (En,Fr,De,Es,It,Nl,Pt,Sv).png",
   "serial_on_label": "DMG-W9-FAH",
   "note": "named by the serial read on it (exact)",
   "sha1": "f596ddef0e9c9f8a3e06ee297276ead361e1e2d9"
- },
- "DMG-WA-USA.png": {
-  "original_name": "Wave Race (USA, Europe).png",
-  "serial_on_label": "DMG-WA-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "d42bc65fdcda325f11eb5921d4804c3ec5008bb9"
  },
  "DMG-WEJ.png": {
   "original_name": "Winner's Horse (Japan).png",
@@ -2001,65 +927,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "6efe0f4142ead5be754c7751e2bcf46a96087e97"
  },
- "DMG-WJ-USA.png": {
-  "original_name": "Wario Land - Super Mario Land 3 (World).png",
-  "serial_on_label": "DMG-WJ-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ddc70fc5b37f36defa7431951813f7c1a1ed7024"
- },
- "DMG-WL-USA.png": {
-  "original_name": "Cool World (USA, Europe).png",
-  "serial_on_label": "DMG-WL-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0484f82198eca0fce6512b515b948422edf4bc23"
- },
- "DMG-WN-USA.png": {
-  "original_name": "Wayne's World (USA).png",
-  "serial_on_label": "DMG-WN-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "ffd41390f88226abd696f624847c316f17d7d2a2"
- },
  "DMG-WVA_2.png": {
   "original_name": "World Beach Volley - 1992 GB Cup (Europe).png",
   "serial_on_label": "DMG-WVA",
   "note": "named by the serial read on it (exact)",
   "sha1": "c5f29f71953c080eb8c2f03fe74a42623be2e2d7"
- },
- "DMG-WX-USA.png": {
-  "original_name": "WWF Superstars 2 (USA, Europe).png",
-  "serial_on_label": "DMG-WX-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "25645e6fc10347e1793560bad26d7936f3079bb8"
- },
- "DMG-X2-USA.png": {
-  "original_name": "Xenon 2 (USA, Europe).png",
-  "serial_on_label": "DMG-X2-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "351b8fa5201103b834cb391b5cbcfd09fe9f61c7"
- },
- "DMG-X4-USA.png": {
-  "original_name": "Samurai Shodown (USA, Europe) (SGB Enhanced).png",
-  "serial_on_label": "DMG-X4-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "8b0f661869388a76793d5b5384745bcc5053ebfd"
- },
- "DMG-XB-USA.png": {
-  "original_name": "Muhammad Ali Heavyweight Boxing (USA, Europe).png",
-  "serial_on_label": "DMG-XB-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "19cd6298faf98c9687123a7e01169f895af9cb54"
- },
- "DMG-XC-USA.png": {
-  "original_name": "Power Mission (USA).png",
-  "serial_on_label": "DMG-XC-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "4824da70e3c25e573337d4a7506e20c15ce2361b"
- },
- "DMG-XP-USA.png": {
-  "original_name": "Ferrari Grand Prix Challenge (USA, Europe).png",
-  "serial_on_label": "DMG-XP-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "2d904a3e600823affe0e8ff9e1a06f19675a4b7f"
  },
  "DMG-Y5-NOE.png": {
   "original_name": "Pierre le Chef is... Out to Lunch (Europe).png",
@@ -2067,35 +939,11 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "bf7561d8ecb9a9c645790f5b2f49528f88f175e8"
  },
- "DMG-YB-USA.png": {
-  "original_name": "Panel Action Bingo (USA).png",
-  "serial_on_label": "DMG-YB-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "0ecd9ea1a636146175bb01b19e57f2dc0d26986a"
- },
- "DMG-YD-USA.png": {
-  "original_name": "Dennis the Menace (USA).png",
-  "serial_on_label": "DMG-YD-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "13654b7b716b2702b34cf18671558b5d20de0a0e"
- },
- "DMG-YH-USA.png": {
-  "original_name": "Simpsons, The - Itchy & Scratchy - Miniature Golf Madness (USA, Europe).png",
-  "serial_on_label": "DMG-YH-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7a07e460eaa99a44718db65604959b1d0abbbe60"
- },
  "DMG-YNJ.png": {
   "original_name": "Tsumeshougi - Mondai Teikyou Shougi Sekai (Japan).png",
   "serial_on_label": "DMG-YNJ",
   "note": "named by the serial read on it (exact)",
   "sha1": "a18479754d5d1be023064d251ef49adacc6569ec"
- },
- "DMG-YR-USA.png": {
-  "original_name": "Pyramids of Ra (USA).png",
-  "serial_on_label": "DMG-YR-USA",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7a7962d0f92bc8df7cb910046ff9de7299fff036"
  },
  "DMG-ZR-USA.png": {
   "original_name": "InfoGenius Productivity Pak - Personal Organizer and Phone Book (USA).png",
