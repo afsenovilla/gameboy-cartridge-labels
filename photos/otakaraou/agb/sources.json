@@ -280,6 +280,15 @@
   "sha1": "83fc6ff1c24398f443c87ec99ba9b565bdc49465",
   "original_name": "otakaraou-8929.jpg"
  },
+ "AGB-A5TJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230107_d0c40a.jpg",
+  "page_url": "https://www.otakaraou.com/product/9127",
+  "title_on_page": "真・女神転生II ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-ASTJ",
+  "original_sha1": "fe4b189eb9d3e51e0426bee443d811f4f32857cf",
+  "sha1": "1b136f004d3e6b50531c672794034117c9a6ff25",
+  "original_name": "otakaraou-9127.jpg"
+ },
  "AGB-A62J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_1928.jpg",
   "page_url": "https://www.otakaraou.com/product/9639",
@@ -1485,6 +1494,15 @@
   "sha1": "b978877c0dcff73bccdd5062ada56458005b80b5",
   "original_name": "otakaraou-9582.jpg"
  },
+ "AGB-AMHJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250224_ddaf79.jpg",
+  "page_url": "https://www.otakaraou.com/product/9498",
+  "title_on_page": "ボンバーマンMAX2 ボンバーマンバージョン ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-AMHJ-JPN",
+  "original_sha1": "7f5ca890cfcae75fbc9747e8e0af9fc49ae0af0d",
+  "sha1": "61800ca0d3d1537f6849791481b0af0fe3db053d",
+  "original_name": "otakaraou-9498.jpg"
+ },
  "AGB-AMJJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250116_944f81.jpg",
   "page_url": "https://www.otakaraou.com/product/9264",
@@ -1565,6 +1583,15 @@
   "original_sha1": "3c1ec85020edbc83e4095f2ec87a3ef5d7a9b17a",
   "sha1": "41d81efbd8e8702cf48597ced3275045593bf581",
   "original_name": "otakaraou-9590.jpg"
+ },
+ "AGB-AMYJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_9126-410001.jpg",
+  "page_url": "https://www.otakaraou.com/product/9499",
+  "title_on_page": "ボンバーマンMAX2  マックスバージョン ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-AMYJ-JPN",
+  "original_sha1": "6552a2199de879bf60bc35f59d3297f0b2fe46d9",
+  "sha1": "d25339accc8d23860d0b94802fe371e23f4e9dae",
+  "original_name": "otakaraou-9499.jpg"
  },
  "AGB-AN3J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_5406.jpg",
@@ -1947,15 +1974,6 @@
   "original_sha1": "455de7aa713bfeae4f961bbdb837f84698412679",
   "sha1": "9a84f3425d67c71db05319c6fb725ff011dcaf3e",
   "original_name": "otakaraou-9260.jpg"
- },
- "AGB-ASTJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20230107_d0c40a.jpg",
-  "page_url": "https://www.otakaraou.com/product/9127",
-  "title_on_page": "真・女神転生II ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-ASTJ",
-  "original_sha1": "fe4b189eb9d3e51e0426bee443d811f4f32857cf",
-  "sha1": "1b136f004d3e6b50531c672794034117c9a6ff25",
-  "original_name": "otakaraou-9127.jpg"
  },
  "AGB-AT2J.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1663.jpg",
@@ -3254,6 +3272,15 @@
   "sha1": "73a975b97fd47380a0ead50e3c3fc9e36148db82",
   "original_name": "otakaraou-9053.jpg"
  },
+ "AGB-BKCJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240904_2f06d3.jpg",
+  "page_url": "https://www.otakaraou.com/product/9005",
+  "title_on_page": "クレヨンしんちゃん 嵐を呼ぶ シネマランドの大冒険! ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-BKOJ",
+  "original_sha1": "f0dac5bcf8980c30f0c9760de79b0fd24d69a55a",
+  "sha1": "a4e5e406cae7740dfa0770cbcf5f2821686575fc",
+  "original_name": "otakaraou-9005.jpg"
+ },
  "AGB-BKDJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1371.jpg",
   "page_url": "https://www.otakaraou.com/product/8994",
@@ -3308,15 +3335,6 @@
   "sha1": "d8112ea612824d783f5c1043b9ebe8febc95d9ef",
   "original_name": "otakaraou-8942.jpg"
  },
- "AGB-BKOJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240904_2f06d3.jpg",
-  "page_url": "https://www.otakaraou.com/product/9005",
-  "title_on_page": "クレヨンしんちゃん 嵐を呼ぶ シネマランドの大冒険! ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-BKOJ",
-  "original_sha1": "f0dac5bcf8980c30f0c9760de79b0fd24d69a55a",
-  "sha1": "a4e5e406cae7740dfa0770cbcf5f2821686575fc",
-  "original_name": "otakaraou-9005.jpg"
- },
  "AGB-BKRJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_9228-570017.jpg",
   "page_url": "https://www.otakaraou.com/product/9311",
@@ -3352,15 +3370,6 @@
   "sha1": "d7aa20ebe036afecde2d918bf80d62b60d50a1f5",
   "original_name": "otakaraou-9597.jpg"
  },
- "AGB-BLJJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1995.jpg",
-  "page_url": "https://www.otakaraou.com/product/9618",
-  "title_on_page": "リロ・アンド・スティッチ ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-BLJJ",
-  "original_sha1": "da917a6061304dc2bf8ee703e0ee1eebf5341ad1",
-  "sha1": "37071251346ab5d228dc4af743447fd53a45ecbf",
-  "original_name": "otakaraou-9618.jpg"
- },
  "AGB-BLRJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_79380004.jpg",
   "page_url": "https://www.otakaraou.com/product/9625",
@@ -3369,6 +3378,15 @@
   "original_sha1": "1f5d6f6d8f8f49b795c2fdfffd7af6284be522b7",
   "sha1": "04b53c30e9323be13947fa00449dfef22175ae25",
   "original_name": "otakaraou-9625.jpg"
+ },
+ "AGB-BLSJ-JPN.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1995.jpg",
+  "page_url": "https://www.otakaraou.com/product/9618",
+  "title_on_page": "リロ・アンド・スティッチ ゲームボーイアドバンスソフト",
+  "serial_on_label": "AGB-BLJJ",
+  "original_sha1": "da917a6061304dc2bf8ee703e0ee1eebf5341ad1",
+  "sha1": "37071251346ab5d228dc4af743447fd53a45ecbf",
+  "original_name": "otakaraou-9618.jpg"
  },
  "AGB-BLWJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250529_db4fb1.jpg",
@@ -4172,24 +4190,6 @@
   "original_sha1": "dcd586402c2c12241db099d72058a835dc15cb12",
   "sha1": "80038110de1b0cb92055b0e7397f1f34ddeba995",
   "original_name": "otakaraou-9416.jpg"
- },
- "AGB-FBMJ_2.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250224_ddaf79.jpg",
-  "page_url": "https://www.otakaraou.com/product/9498",
-  "title_on_page": "ボンバーマンMAX2 ボンバーマンバージョン ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-AMHJ-JPN",
-  "original_sha1": "7f5ca890cfcae75fbc9747e8e0af9fc49ae0af0d",
-  "sha1": "61800ca0d3d1537f6849791481b0af0fe3db053d",
-  "original_name": "otakaraou-9498.jpg"
- },
- "AGB-FBMJ_3.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/img_9126-410001.jpg",
-  "page_url": "https://www.otakaraou.com/product/9499",
-  "title_on_page": "ボンバーマンMAX2  マックスバージョン ゲームボーイアドバンスソフト",
-  "serial_on_label": "AGB-AMYJ-JPN",
-  "original_sha1": "6552a2199de879bf60bc35f59d3297f0b2fe46d9",
-  "sha1": "d25339accc8d23860d0b94802fe371e23f4e9dae",
-  "original_name": "otakaraou-9499.jpg"
  },
  "AGB-FDKJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250116_fc36e9.jpg",

@@ -82,6 +82,13 @@
   "sha1": "9631059aee82c25990a9ad620157f45e16283128",
   "original_name": "m99482708495_3.jpg"
  },
+ "DMG-ADOJ-JPN_2.jpg": {
+  "page_url": "https://jp.mercari.com/item/m37597259569",
+  "serial_on_label": "DMG-APOJ-JPN",
+  "original_sha1": "184e0c376f636a4f3cf5031d1f90009e7a8c93d9",
+  "sha1": "de890f866c0e09473005984cdc6493117ec1421a",
+  "original_name": "m37597259569_1.jpg"
+ },
  "DMG-AFTJ-JPN_2.jpg": {
   "page_url": "https://jp.mercari.com/item/m73170378495",
   "serial_on_label": "DMG-ATT-JPN",
@@ -146,13 +153,6 @@
   "original_sha1": "4eec13c40b798b66818ed4e1230f4f930be47a11",
   "sha1": "7867e909ce9b2d9f4059f82ddbd135b11a5c1621",
   "original_name": "m75003577017_2.jpg"
- },
- "DMG-APOJ-JPN_5.jpg": {
-  "page_url": "https://jp.mercari.com/item/m37597259569",
-  "serial_on_label": "DMG-APOJ-JPN",
-  "original_sha1": "184e0c376f636a4f3cf5031d1f90009e7a8c93d9",
-  "sha1": "de890f866c0e09473005984cdc6493117ec1421a",
-  "original_name": "m37597259569_1.jpg"
  },
  "DMG-ATTJ-JPN.jpg": {
   "page_url": "https://jp.mercari.com/item/m90146335178",

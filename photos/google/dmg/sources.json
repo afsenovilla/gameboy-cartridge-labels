@@ -181,6 +181,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "710d972fabb9344baf1f8f9e75b17e2cb85241e0"
  },
+ "DMG-ABLP-UKV.jpg": {
+  "serial_on_label": "DMG-AKLP-UKV",
+  "original_sha1": "5d395e8c2e935ceec9ac22b5423002bbb39422e6",
+  "sha1": "2034ba28cbd0a19746fc396f25932c1cdc1108f6",
+  "original_name": "661462729_d16bb28f-4b79-41cf-9118-98b7055664b6.jpg"
+ },
  "DMG-ABNJ-JPN.jpg": {
   "serial_on_label": "DMG-ABNJJ",
   "original_sha1": "3ee2bd1680113ad89f5532663151301cb64b9496",
@@ -458,12 +464,6 @@
   "original_sha1": "ed1bd5ddb44e08924a2366c9c2bf3943856ce8aa",
   "sha1": "55ef15b3fe84f6502b7e0f18e94c6f76920679b0",
   "original_name": "71JJYv9RRhL._AC_UF1000,1000_QL80_.jpg"
- },
- "DMG-AKLP.jpg": {
-  "serial_on_label": "DMG-AKLP-UKV",
-  "original_sha1": "5d395e8c2e935ceec9ac22b5423002bbb39422e6",
-  "sha1": "2034ba28cbd0a19746fc396f25932c1cdc1108f6",
-  "original_name": "661462729_d16bb28f-4b79-41cf-9118-98b7055664b6.jpg"
  },
  "DMG-AL-USA_3.png": {
   "original_name": "4003638-altered-space-a-3-d-alien-adventure-game-boy-media.png",

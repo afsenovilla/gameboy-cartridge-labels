@@ -343,6 +343,12 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "12afca9854d4f6cbed14bc3402526c89a65acfc3"
  },
+ "DMG-AM4J-JPN_3.jpg": {
+  "original_name": "yugiyahirano-40551.jpg",
+  "serial_on_label": "DMG-AMGJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "7f8951ac4bf1d6180ace6a1761acb49b81939012"
+ },
  "DMG-AMA_3.jpg": {
   "original_name": "yugiyahirano-44013.jpg",
   "note": "named by nothing: no serial read",
@@ -353,12 +359,6 @@
   "serial_on_label": "DMG-AMEJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "246a0cad45e70b91e9c9142ed19fd96a7e600344"
- },
- "DMG-AMGJ-JPN_3.jpg": {
-  "original_name": "yugiyahirano-40551.jpg",
-  "serial_on_label": "DMG-AMGJ-JPN",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "7f8951ac4bf1d6180ace6a1761acb49b81939012"
  },
  "DMG-AMOJ-JPN_2.jpg": {
   "original_name": "yugiyahirano-41006.jpg",
@@ -543,17 +543,17 @@
   "note": "named by the serial read on it (exact)",
   "sha1": "7ba54c3b0a15e280c411bdc34f79aab10978f204"
  },
+ "DMG-ATAJ-JPN(PINK).jpg": {
+  "original_name": "yugiyahirano-40429.jpg",
+  "serial_on_label": "DMG-ATAJ-JPN",
+  "note": "named by the serial read on it (exact)",
+  "sha1": "5d27471ced652c6ebba0302f243c57eb1ae3dfd2"
+ },
  "DMG-ATAJ-JPN_2.jpg": {
   "original_name": "yugiyahirano-40197.jpg",
   "serial_on_label": "DMG-ATAJ-JPN",
   "note": "named by the serial read on it (exact)",
   "sha1": "bfac407aaadc2dd9dd9907768cbfd301ae606ebf"
- },
- "DMG-ATAJ-JPN_3.jpg": {
-  "original_name": "yugiyahirano-40429.jpg",
-  "serial_on_label": "DMG-ATAJ-JPN",
-  "note": "named by the serial read on it (exact)",
-  "sha1": "5d27471ced652c6ebba0302f243c57eb1ae3dfd2"
  },
  "DMG-ATCJ-JPN_3.jpg": {
   "original_name": "yugiyahirano-43122.jpg",
