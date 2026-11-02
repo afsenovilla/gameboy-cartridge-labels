@@ -5,14 +5,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fits, photos
 from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, RECESS_RADIUS, CGB_REFRACTIVE_INDEX, CGB_RIDGE_DEPTH, CGB_WALL, SHELLS, cgb_outline_points, cgb_ridge_lines, corners_of, groove_edges, shell_of
 from fit_cartridge import OUT as DETAILS, load
-from find_doubles import load_preferred
+from find_doubles import rows
 from review_fits import FILTERS_JS, SHELL_NAMES, STATE_NAMES, arrow_outline, bevel_lines, dense, face_outline, facet, facet_counts, filters_of, matching, pill_outline, rounded_outline
 
 # fit-by-hand: a local page for placing the plastic and the label by hand, one photo at a time, where the steps' fits
 # (fits.json, src/fits.py) are off: the plastic judged almost first (make review-fits), then the labels judged almost
 # (make review-labels), the rejected ones and the photos fit-cartridge couldn't fit; also each release's preferred photo
-# (preferred.json, make find-doubles); filtered by the plastic's state, the label's, whether preferred and the shell,
-# as the tool starts. A photo starts from its current fit
+# (preferred.json, make find-doubles); filtered by the plastic's state, the label's, whether preferred (or its
+# release's only photo) and the shell, as the tool starts. A photo starts from its current fit
 # (else its latest rejected one, else the model in the box fit-cartridge cropped to, else in the middle), with its label
 # (else its latest rejected one on that plastic, else the model's). The handles (green squares) sit on the recess's
 # corners and are dragged onto the photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label placed" is
@@ -77,7 +77,10 @@ class Hand:
             self.entries[name] = e
             self.details[name] = details if details is not None and details.get("sha1") == self.sha1s[name] else None
         self.order = sorted(self.entries)
-        preferred = set(load_preferred().values())
+        # Each release's preferred photo, and the photo of a release with only one (releases as find-doubles groups them).
+        releases = [[(photos.stem(os.path.basename(p["path"])), p["preferred"]) for p in row["photos"]] for row in rows()]
+        preferred = {n for photos_of in releases for n, chosen in photos_of if chosen}
+        only = {photos_of[0][0] for photos_of in releases if len(photos_of) == 1}
         state = lambda part: STATE_NAMES["hand-placed" if part["source"] == "hand-placed" else part.get("accepted")]
 
         def plastic(n):
@@ -93,7 +96,8 @@ class Hand:
 
         self.facets = {"plastic": facet(self.order, plastic, [*STATE_NAMES.values(), "not fitted"]),
                        "label": facet(self.order, label, [*STATE_NAMES.values(), "none"]),
-                       "preferred": facet(self.order, lambda n: "preferred" if self.sha1s[n] in preferred else "not preferred", ["preferred", "not preferred"]),
+                       "preferred": {"preferred": preferred & set(self.order), "preferred or only": (preferred | only) & set(self.order),
+                                     "not preferred": set(self.order) - preferred},
                        "shell": facet(self.order, lambda n: SHELL_NAMES[self.shell(n).name], SHELL_NAMES.values())}
         self.cache, self.lock = {}, threading.Lock()
 
