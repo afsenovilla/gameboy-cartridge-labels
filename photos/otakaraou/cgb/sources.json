@@ -354,6 +354,15 @@
   "sha1": "727e74a22f292cf3fd69090b170ae502d7765c2f",
   "original_name": "otakaraou-8681.jpg"
  },
+ "CGB-BBIJ-JPN_2.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1115.jpg",
+  "page_url": "https://www.otakaraou.com/product/8738",
+  "title_on_page": "フェレット物語 ディア・マイ・フェレット ゲームボーイカラーソフト",
+  "serial_on_label": "CGB-BBUJ-JPN",
+  "original_sha1": "a5645f8d4dd8f06694aeb3565f27353dc415ddc6",
+  "sha1": "d53fe5c0e624d344b9a52c4a974fc2b3ac7e8757",
+  "original_name": "otakaraou-8738.jpg"
+ },
  "CGB-BBRJ.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1074.jpg",
   "page_url": "https://www.otakaraou.com/product/8697",
@@ -362,15 +371,6 @@
   "original_sha1": "cce6173c58353f77d414b6cc35e19948f16a211a",
   "sha1": "977b111ed7ec90c8b5a74a28d66689281c2d22e1",
   "original_name": "otakaraou-8697.jpg"
- },
- "CGB-BBUJ-JPN.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1115.jpg",
-  "page_url": "https://www.otakaraou.com/product/8738",
-  "title_on_page": "フェレット物語 ディア・マイ・フェレット ゲームボーイカラーソフト",
-  "serial_on_label": "CGB-BBUJ-JPN",
-  "original_sha1": "a5645f8d4dd8f06694aeb3565f27353dc415ddc6",
-  "sha1": "d53fe5c0e624d344b9a52c4a974fc2b3ac7e8757",
-  "original_name": "otakaraou-8738.jpg"
  },
  "CGB-BBVJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/IMG_7238.jpg",
@@ -559,6 +559,15 @@
   "sha1": "d4f8ae914597d72ac6af45528eada24cc287f254",
   "original_name": "otakaraou-8717.jpg"
  },
+ "CGB-BKDJ.jpg": {
+  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1226.jpg",
+  "page_url": "https://www.otakaraou.com/product/8849",
+  "title_on_page": "六門天外モンコレナイトGB ゲームボーイカラーソフト",
+  "serial_on_label": "CGB-BKOJ",
+  "original_sha1": "e0efde1f5b51159176f1070f2c81fd603e1749f0",
+  "sha1": "2e91780b5ac9fa316a5eeee1fe4e291c067d3fd4",
+  "original_name": "otakaraou-8849.jpg"
+ },
  "CGB-BKEJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1110.jpg",
   "page_url": "https://www.otakaraou.com/product/8733",
@@ -576,15 +585,6 @@
   "original_sha1": "9c5b39618699febd2668bcb479f43070d97266d7",
   "sha1": "f54198e4c83963b0ca11981dd58d1b11aa8990ca",
   "original_name": "otakaraou-8466.jpg"
- },
- "CGB-BKOJ.jpg": {
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1226.jpg",
-  "page_url": "https://www.otakaraou.com/product/8849",
-  "title_on_page": "六門天外モンコレナイトGB ゲームボーイカラーソフト",
-  "serial_on_label": "CGB-BKOJ",
-  "original_sha1": "e0efde1f5b51159176f1070f2c81fd603e1749f0",
-  "sha1": "2e91780b5ac9fa316a5eeee1fe4e291c067d3fd4",
-  "original_name": "otakaraou-8849.jpg"
  },
  "CGB-BKYJ-JPN.jpg": {
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/1022.jpg",
