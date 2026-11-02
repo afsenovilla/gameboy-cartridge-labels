@@ -6,12 +6,13 @@ import fits, photos
 from cartridge import CGB_ARROW_HEIGHT, CGB_ARROW_TIP_RADIUS, CGB_ARROW_TOP, CGB_ARROW_TOP_RADIUS, CGB_ARROW_WIDTH, RECESS_RADIUS, CGB_REFRACTIVE_INDEX, CGB_RIDGE_DEPTH, CGB_WALL, SHELLS, cgb_outline_points, cgb_ridge_lines, corners_of, groove_edges, shell_of
 from fit_cartridge import OUT as DETAILS, load
 from find_doubles import load_preferred
-from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_outline, rounded_outline
+from review_fits import FILTERS_JS, SHELL_NAMES, STATE_NAMES, arrow_outline, bevel_lines, dense, face_outline, facet, facet_counts, filters_of, matching, pill_outline, rounded_outline
 
 # fit-by-hand: a local page for placing the plastic and the label by hand, one photo at a time, where the steps' fits
 # (fits.json, src/fits.py) are off: the plastic judged almost first (make review-fits), then the labels judged almost
 # (make review-labels), the rejected ones and the photos fit-cartridge couldn't fit; also each release's preferred photo
-# (preferred.json, make find-doubles). A photo starts from its current fit
+# (preferred.json, make find-doubles); filtered by the plastic's state, the label's, whether preferred and the shell,
+# as the tool starts. A photo starts from its current fit
 # (else its latest rejected one, else the model in the box fit-cartridge cropped to, else in the middle), with its label
 # (else its latest rejected one on that plastic, else the model's). The handles (green squares) sit on the recess's
 # corners and are dragged onto the photo's; the dots in the middle of its sides slide one side through the perspective. Once "Label placed" is
@@ -22,8 +23,6 @@ from review_fits import arrow_outline, bevel_lines, dense, face_outline, pill_ou
 # rejected ones. Saved again in the same run, a photo's placement replaces the one saved before.
 # Usage: fit_by_hand.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8769
-RIDGE_FITTED = ["CGB-A6PJ-JPN_2", "CGB-A9BJ-JPN", "CGB-B3PJ-JPN", "CGB-B5MJ-JPN", "CGB-BBJJ-JPN", "CGB-BBPJ-JPN", "CGB-BCNJ-JPN_2",
-                "CGB-BCRJ-JPN", "CGB-BDBJ-JPN", "CGB-BHGJ-JPN", "CGB-BKRJ-JPN"]  # temporary, see the groups
 
 
 def homography(src, dst):
@@ -77,23 +76,25 @@ class Hand:
                 continue  # never fitted (Game Boy Advance, another shell)
             self.entries[name] = e
             self.details[name] = details if details is not None and details.get("sha1") == self.sha1s[name] else None
-        names = sorted(self.entries)
+        self.order = sorted(self.entries)
         preferred = set(load_preferred().values())
-        plastic = lambda n: self.entries[n]["fit"].get("plastic")
-        label = lambda n: self.entries[n]["fit"].get("label")
-        label_rejected = lambda n: any("label" in r and fits.same(r["plastic"], plastic(n)) for r in self.entries[n]["rejected"])
-        self.groups = {"plastic almost": [n for n in names if plastic(n) and plastic(n).get("accepted") == "almost"],
-                       "label almost": [n for n in names if label(n) and label(n).get("accepted") == "almost"],
-                       "plastic rejected": [n for n in names if not plastic(n) and self.entries[n]["rejected"]],
-                       "label rejected": [n for n in names if fits.good(plastic(n)) and not label(n) and label_rejected(n)],
-                       "not fitted": [n for n in names if not plastic(n) and not self.entries[n]["rejected"]],
-                       "not judged": [n for n in names if plastic(n) and "accepted" not in plastic(n)],
-                       # Temporary (2026-11-01): the CGB photos placed on the internal ridges, to place again on the recess
-                       # for comparison (the ridge placements are in commit f2fde37's fits.json).
-                       "ridge-fitted (temporary)": [n for n in RIDGE_FITTED if n in names],
-                       "placed by hand": [n for n in names if plastic(n) and plastic(n)["source"] == "hand-placed"],
-                       "preferred": [n for n in names if self.sha1s[n] in preferred],
-                       "all": names}
+        state = lambda part: STATE_NAMES["hand-placed" if part["source"] == "hand-placed" else part.get("accepted")]
+
+        def plastic(n):
+            part = self.entries[n]["fit"].get("plastic")
+            return state(part) if part else "rejected" if self.entries[n]["rejected"] else "not fitted"
+
+        def label(n):
+            e = self.entries[n]
+            if "label" in e["fit"]:
+                return state(e["fit"]["label"])
+            on = e["fit"].get("plastic")
+            return "rejected" if on and any("label" in r and fits.same(r["plastic"], on) for r in e["rejected"]) else "none"
+
+        self.facets = {"plastic": facet(self.order, plastic, [*STATE_NAMES.values(), "not fitted"]),
+                       "label": facet(self.order, label, [*STATE_NAMES.values(), "none"]),
+                       "preferred": facet(self.order, lambda n: "preferred" if self.sha1s[n] in preferred else "not preferred", ["preferred", "not preferred"]),
+                       "shell": facet(self.order, lambda n: SHELL_NAMES[self.shell(n).name], SHELL_NAMES.values())}
         self.cache, self.lock = {}, threading.Lock()
 
     def shell(self, name):
@@ -175,12 +176,13 @@ class Hand:
         plastic = self.entries[name]["fit"].get("plastic")
         return plastic is not None and plastic["source"] == "hand-placed"
 
-    def summary(self):
-        """Per group, how many photos it has and how many have a fit placed by hand."""
-        return {group: {"photos": len(names), "placed": sum(map(self.placed, names))} for group, names in self.groups.items()}
+    def summary(self, filters):
+        """How many photos the filters choose, and how many of them have a fit placed by hand."""
+        chosen = matching(self.order, self.facets, filters)
+        return {"photos": len(chosen), "placed": sum(map(self.placed, chosen))}
 
-    def group(self, group):
-        return [{"name": n, "placed": self.placed(n)} for n in self.groups[group]]
+    def chosen(self, filters):
+        return {"photos": [{"name": n, "placed": self.placed(n)} for n in matching(self.order, self.facets, filters)], "summary": self.summary(filters)}
 
 
 PAGE = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fit by hand</title>
@@ -188,6 +190,8 @@ PAGE = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="wi
 body{font:14px system-ui;margin:0;background:#f4f4f4;color:#222;display:flex;height:100vh}
 #side{width:260px;flex:none;display:flex;flex-direction:column;gap:8px;background:#fff;padding:8px;box-sizing:border-box;border-right:1px solid #ddd}
 #loupe{display:block;width:240px;height:240px;background:#000}
+#filters{display:flex;flex-direction:column;gap:4px}#filters label{display:flex;justify-content:space-between;gap:6px}
+#summary{color:#555;font-variant-numeric:tabular-nums}
 #list{flex:1;overflow:auto;min-height:0;font-variant-numeric:tabular-nums}
 #list a{display:block;color:#222;text-decoration:none;padding:2px 4px;border-radius:0.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #list a.cur{background:#dde}#list a::before{content:"\\2713  ";color:transparent}#list a.placed::before{color:#070}
@@ -202,7 +206,7 @@ button{font:inherit;padding:4px 10px;border:none;border-radius:0.3em}
 button#save{background:#070;color:#fff}
 #status{display:inline-block;width:10ch;color:#070}
 </style>
-<div id="side"><select id="group"></select><canvas id="loupe" width="240" height="240"></canvas><div id="list"></div></div>
+<div id="side"><div id="filters"></div><span id="summary"></span><canvas id="loupe" width="240" height="240"></canvas><div id="list"></div></div>
 <div id="main"><header>
 <button id="prev">← prev</button><span id="position"></span><button id="next">next →</button>
 <h2 id="title"></h2><button id="reset">Reset (R)</button><label><input type="checkbox" id="labelplaced"> Label placed (L)</label>
@@ -213,7 +217,7 @@ button#save{background:#070;color:#fff}
 <script>
 const $ = id => document.getElementById(id);
 const c = $("c"), ctx = c.getContext("2d"), lctx = $("loupe").getContext("2d");
-let models, groups, group = "plastic almost", list = [], i = 0, item = null, img = new Image();
+let models, list = [], i = 0, item = null, img = new Image();
 let corners = null, rect = null, sel = 0, drag = -1, grab = null, startCorners = null, startRect = null, pan = null;
 let scale = 1, ox = 0, oy = 0;
 const apply = (H, [x, y]) => { const w = H[2][0] * x + H[2][1] * y + H[2][2]; return [(H[0][0] * x + H[0][1] * y + H[0][2]) / w, (H[1][0] * x + H[1][1] * y + H[1][2]) / w]; };
@@ -300,36 +304,36 @@ function move(h, q, startC, startR) {
   else moveLabel(h - 8, q, startR);
   $("status").textContent = "";
 }
+%FILTERS_JS%
 async function start() {
-  [models, groups] = await Promise.all([(await fetch("/models")).json(), (await fetch("/groups")).json()]);
-  const [g, name] = decodeURIComponent(location.hash.slice(1)).split("/");
-  if (g in groups) group = g;
-  showGroups();
-  await showGroup(name);
+  let facets;
+  [models, facets] = await Promise.all([(await fetch("/models")).json(), (await fetch("/facets")).json()]);
+  const hash = fromHash();
+  showFilters(facets, location.hash.length > 1 ? hash : {plastic: "almost"});
+  await showList(hash.photo);
 }
-function showGroups() {
-  $("group").innerHTML = Object.entries(groups).map(([g, n]) => `<option value="${g}">${g}: ${n.placed} of ${n.photos} placed</option>`).join("");
-  $("group").value = group;
-}
-async function showGroup(name) {
-  list = await (await fetch("/group/" + encodeURIComponent(group))).json();
+const showSummary = s => $("summary").textContent = `${s.photos} photos, ${s.placed} placed`;
+async function showList(name) {
+  const data = await (await fetch("/list?" + filterQuery())).json();
+  list = data.photos;
+  showSummary(data.summary);
   i = Math.max(0, list.findIndex(p => p.name === name));
-  showList();
-  if (list.length) show(); else { $("title").textContent = "none"; ctx.clearRect(0, 0, c.width, c.height); }
+  showNames();
+  if (list.length) show(); else { $("title").textContent = "none"; setHash({}); ctx.clearRect(0, 0, c.width, c.height); }
 }
-function showList() {
+function showNames() {
   $("list").innerHTML = list.map((p, k) => `<a href="#" data-k="${k}" class="${k === i ? "cur" : ""} ${p.placed ? "placed" : ""}">${p.name}</a>`).join("");
   $("list").querySelector(".cur")?.scrollIntoView({block: "nearest"});
 }
 $("list").onclick = e => { const a = e.target.closest("a"); if (a) { e.preventDefault(); go(+a.dataset.k); } };
-$("group").onchange = e => { group = e.target.value; showGroup(); };
+$("filters").onchange = () => showList();
 async function show() {
   const name = list[i].name;
-  history.replaceState(null, "", "#" + encodeURIComponent(group) + "/" + encodeURIComponent(name));
+  setHash({photo: name});
   $("position").textContent = `${i + 1} / ${list.length}`;
   $("title").textContent = name;
   $("status").textContent = "";
-  showList();
+  showNames();
   item = await (await fetch("/item/" + encodeURIComponent(name))).json();
   $("title").title = item.path;
   $("notes").textContent = item.notes.join(" · ");
@@ -454,13 +458,12 @@ c.onwheel = e => {
 };
 async function save() {
   if (!corners) return;
-  const body = {name: item.name, anchor: corners, label: placed() ? rectCorners(rect) : null};
+  const body = {name: item.name, anchor: corners, label: placed() ? rectCorners(rect) : null, filters: chosenFilters()};
   const response = await fetch("/save", {method: "POST", body: JSON.stringify(body)});
   if (!response.ok) return alert("Not saved: " + response.status);
-  groups = await response.json();
-  showGroups();
+  showSummary(await response.json());
   list[i].placed = true;
-  if (i + 1 < list.length) go(i + 1); else { showList(); $("status").textContent = "saved"; }
+  if (i + 1 < list.length) go(i + 1); else { showNames(); $("status").textContent = "saved"; }
 }
 const go = k => { if (k >= 0 && k < list.length) { i = k; show(); } };
 $("prev").onclick = () => go(i - 1);
@@ -502,13 +505,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parts = [urllib.parse.unquote(p) for p in self.path.split("?")[0].split("/")[1:]]
         if parts == [""]:
-            self.send(PAGE.encode(), "text/html; charset=utf-8")
+            self.send(PAGE.replace("%FILTERS_JS%", FILTERS_JS).encode(), "text/html; charset=utf-8")
         elif parts == ["models"]:
             self.send({name: model(shell) for name, shell in SHELLS.items()})
-        elif parts == ["groups"]:
-            self.send(hand.summary())
-        elif len(parts) == 2 and parts[0] == "group" and parts[1] in hand.groups:
-            self.send(hand.group(parts[1]))
+        elif parts == ["facets"]:
+            self.send(facet_counts(hand.facets))
+        elif parts == ["list"]:
+            self.send(hand.chosen(filters_of(self.path)))
         elif len(parts) == 2 and parts[0] == "item" and parts[1] in hand.entries:
             self.send(hand.item(parts[1]))
         elif len(parts) == 2 and parts[0] == "image" and parts[1] in hand.entries:
@@ -523,7 +526,7 @@ class Handler(BaseHTTPRequestHandler):
         if data["name"] not in hand.entries or np.shape(data["anchor"]) != (4, 2) or data["label"] is not None and np.shape(data["label"]) != (4, 2):
             return self.send_error(400)
         hand.save(data["name"], data["anchor"], data["label"])
-        self.send(hand.summary())
+        self.send(hand.summary(data["filters"]))
 
     def log_message(self, *args):
         pass
@@ -531,5 +534,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     hand = Hand()
-    print(f"{len(hand.entries)} photos, {len(hand.groups['plastic almost'])} with their plastic judged almost; place them at http://localhost:{PORT}/ (ctrl-C to stop)")
+    print(f"{len(hand.entries)} photos, {len(hand.facets['plastic']['almost'])} with their plastic judged almost; place them at http://localhost:{PORT}/ (ctrl-C to stop)")
     ThreadingHTTPServer(("localhost", PORT), Handler).serve_forever()

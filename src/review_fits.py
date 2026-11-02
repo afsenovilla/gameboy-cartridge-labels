@@ -16,7 +16,7 @@ from fit_cartridge import OUT as DETAILS, load
 # not yet judged at once) changes the fit shown in fits.json (fits.judge_plastic): accepted or almost, it's the current
 # fit with that review; rejected, it goes to the rejected fits, and fit-cartridge fits the photo anew on its next run.
 # Almost is off, but nearly right (a corner off by a bit): worth placing by hand (make fit-by-hand). Fits placed by hand
-# are shown as accepted, and can't be judged here. The groups are as the tool starts. A photo not worth keeping can be
+# are shown as accepted, and can't be judged here. The filters (the plastic's verdict, fit-cartridge's flags, the shell) are as the tool starts. A photo not worth keeping can be
 # deleted from photos/ (photos.delete), its fits with it; the steps drop what they made of it on their next run.
 # Usage: review_fits.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8767
@@ -82,6 +82,45 @@ BUTTONS = {"rejected": "Reject", "almost": "Almost", "accepted": "Accept"}
 SHOWN = {True: "accepted", "hand-placed": "accepted", "almost": "almost", "rejected": "rejected", None: None}
 GIVEN = {"accepted": True, "almost": "almost", "rejected": "rejected", None: None}
 PER_PAGE = 24
+# fits.state -> its name in the filters.
+STATE_NAMES = {None: "not judged", "rejected": "rejected", "almost": "almost", True: "accepted", "hand-placed": "placed by hand"}
+SHELL_NAMES = {"dmg": "Game Boy", "cgb": "Game Boy Color only"}
+
+
+def facet(names, key, values):
+    """A filter's values, each with the photos having it (key(name) is the value)."""
+    return {v: {n for n in names if key(n) == v} for v in values}
+
+
+def matching(order, facets, filters):
+    """The photos, in order, having every filter's value chosen (filters: {facet: value}; one not chosen keeps all)."""
+    chosen = [facets[f].get(v, set()) for f, v in filters.items() if f in facets and v != "any"]
+    return [n for n in order if all(n in names for names in chosen)]
+
+
+def facet_counts(facets):
+    """The filters, as the page shows them: each value with how many photos have it."""
+    return {f: [[v, len(names)] for v, names in values.items()] for f, values in facets.items()}
+
+
+def filters_of(path):
+    """The filters chosen in a request's query."""
+    return {k: v[-1] for k, v in urllib.parse.parse_qs(urllib.parse.urlsplit(path).query).items()}
+
+
+# The page's filters: a select per facet ("any": all photos), chosen together, kept in the address (with the page's
+# own place). Needs $ and an element #filters.
+FILTERS_JS = """
+function showFilters(facets, chosen) {
+  $("filters").innerHTML = Object.entries(facets).map(([f, values]) => `<label>${f} <select data-facet="${f}"><option value="any">any</option>` +
+    values.map(([v, n]) => `<option value="${v}">${v} (${n})</option>`).join("") + "</select></label>").join("");
+  for (const s of $("filters").querySelectorAll("select")) { s.value = chosen[s.dataset.facet] || "any"; if (!s.value) s.value = "any"; }
+}
+const chosenFilters = () => Object.fromEntries([...$("filters").querySelectorAll("select")].filter(s => s.value !== "any").map(s => [s.dataset.facet, s.value]));
+const filterQuery = () => new URLSearchParams(chosenFilters()).toString();
+const fromHash = () => Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+const setHash = more => history.replaceState(null, "", "#" + new URLSearchParams({...chosenFilters(), ...more}).toString());
+"""
 
 
 def dense(pts, closed=True):
@@ -166,17 +205,13 @@ class Review:
             self.details[name] = details if details is not None and details.get("sha1") == sha1s[name] and ("error" in details or "ambiguous" in details) and (
                 "error" in details and plastic is None or "error" not in details and plastic is not None and fits.same(details["mm_to_photo"], plastic)) else None
         unreviewed = lambda n: self.shown[n] is not None and self.state(n) is None
-        flagged = lambda n: unreviewed(n) and self.details[n] is not None and (self.details[n]["ambiguous"] or self.details[n]["broken_line"])
+        flagged = lambda n: self.details[n] is not None and "error" not in self.details[n] and (self.details[n]["ambiguous"] or self.details[n]["broken_line"])
         quality = lambda n: self.details[n]["quality"] if self.details[n] is not None else 1.0
         # Flagged fits first, then the lowest quality first, then fits already judged; photos not fitted last.
         self.order = sorted(self.entries, key=lambda n: (3, 0) if self.shown[n] is None else (2, 0) if not unreviewed(n) else (not flagged(n), quality(n)))
-        self.groups = {"all": self.order,
-                       "flagged": [n for n in self.order if flagged(n)],
-                       "unflagged": [n for n in self.order if unreviewed(n) and not flagged(n)],
-                       "not judged": [n for n in self.order if unreviewed(n)],
-                       **{v: [n for n in self.order if self.shown[n] is not None and SHOWN[self.state(n)] == v] for v in VERDICTS_GIVEN},
-                       "placed by hand": [n for n in self.order if self.shown[n] is not None and self.state(n) == "hand-placed"],
-                       "not fitted": [n for n in self.order if self.shown[n] is None]}
+        self.facets = {"plastic": facet(self.order, lambda n: "not fitted" if self.shown[n] is None else STATE_NAMES[self.state(n)], [*STATE_NAMES.values(), "not fitted"]),
+                       "flags": facet(self.order, lambda n: "flagged" if flagged(n) else "unflagged", ["flagged", "unflagged"]),
+                       "shell": facet(self.order, lambda n: SHELL_NAMES[shell_of(photos.serial_of(n)).name], SHELL_NAMES.values())}
         self.cache, self.lock = {}, threading.Lock()
 
     def state(self, name):
@@ -214,20 +249,22 @@ class Review:
         with fits.editing():
             pass  # the photo's entry is dropped (fits.reconcile)
         self.entries.pop(name)
-        self.groups = {group: [n for n in names if n != name] for group, names in self.groups.items()}
+        self.order.remove(name)
+        for values in self.facets.values():
+            for names in values.values():
+                names.discard(name)
         with self.lock:
             self.cache.pop(name, None)
 
-    def summary(self):
-        """Per group, how many photos there are and the verdicts on the fits shown."""
-        counts = {}
-        for group, names in self.groups.items():
-            judged = [SHOWN[self.state(n)] for n in names if n in self.entries and self.shown[n] is not None]
-            counts[group] = {"fits": len(names), **{v: judged.count(v) for v in VERDICTS_GIVEN}}
-        return counts
+    def summary(self, filters):
+        """How many photos the filters choose, and the verdicts on their fits shown."""
+        chosen = matching(self.order, self.facets, filters)
+        judged = [SHOWN[self.state(n)] for n in chosen if self.shown[n] is not None]
+        return {"photos": len(chosen), **{v: judged.count(v) for v in VERDICTS_GIVEN}}
 
-    def page(self, group, number):
-        names = self.groups[group][number * PER_PAGE:(number + 1) * PER_PAGE]
+    def page(self, filters, number):
+        chosen = matching(self.order, self.facets, filters)
+        names = chosen[number * PER_PAGE:(number + 1) * PER_PAGE]
         items = []
         for name in names:
             e, state = self.entries[name], self.state(name)
@@ -236,7 +273,7 @@ class Review:
                 more.insert(0, "placed by hand")
             items.append({"name": name, "path": self.paths[name], "fitted": self.shown[name] is not None and state != "hand-placed",
                           "notes": notes(self.details[name]) + more, "verdict": SHOWN[state]})
-        return {"items": items, "pages": max(1, -(-len(self.groups[group]) // PER_PAGE))}
+        return {"items": items, "pages": max(1, -(-len(chosen) // PER_PAGE)), "summary": self.summary(filters)}
 
 
 PAGE = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review fits</title>
@@ -244,7 +281,8 @@ PAGE = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="wi
 body{font:14px system-ui;margin:0;background:#f4f4f4;color:#222}
 header{position:sticky;top:0;background:#fff;padding:8px 16px;border-bottom:1px solid #ddd;display:flex;gap:12px;align-items:center;flex-wrap:wrap;z-index:1}
 #position{display:inline-block;width:12ch;text-align:center;font-variant-numeric:tabular-nums}
-#summary{flex-basis:100%;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#filters{display:flex;gap:12px}
+#summary{color:#555;font-variant-numeric:tabular-nums}
 main{padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 section{background:#fff;border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .top{display:flex;gap:6px;align-items:center}
@@ -259,36 +297,33 @@ button.on[data-verdict=rejected]{background:#b00;color:#fff}button.on[data-verdi
 button.delete{flex:none;font-size:12px;padding:2px 8px;color:#b00}
 </style>
 <header>
-<select id="group"></select>
+<span id="filters"></span><span id="summary"></span>
 <button id="prev">← prev</button><span id="position"></span><button id="next">next →</button>
 <span>Not yet judged on this page:</span><span class="verdicts" id="rest"></span>
-<span id="summary"></span>
 </header>
 <main id="entries"></main>
 <script>
 const VERDICTS = %VERDICTS%;
-let groups = {}, group = "all", page = 0, pages = 1;
+let page = 0, pages = 1;
 const $ = id => document.getElementById(id);
 const esc = s => s.replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 const BUTTONS = %BUTTONS%;
+%FILTERS_JS%
 async function load() {
-  const data = await (await fetch("/list")).json();
-  groups = data.groups;
-  $("group").innerHTML = groups.map(g => `<option>${g}</option>`).join("");
-  showSummary(data.summary);
-  const [g, p] = decodeURIComponent(location.hash.slice(1)).split("/");
-  if (groups.includes(g)) { group = g; page = Math.max(0, (parseInt(p) || 1) - 1); }
-  $("group").value = group;
+  const data = await (await fetch("/list")).json(), hash = fromHash();
+  showFilters(data.facets, hash);
+  page = Math.max(0, (parseInt(hash.page) || 1) - 1);
   show();
 }
-function showSummary(s) {
-  $("summary").textContent = Object.entries(s).map(([g, c]) => `${g} ${c.fits}: ` + VERDICTS.map(v => `${c[v]} ${v}`).join(", ")).join(" · ");
+function showSummary(c) {
+  $("summary").textContent = `${c.photos} photos: ` + VERDICTS.map(v => `${c[v]} ${v}`).join(", ");
 }
 async function show() {
-  const data = await (await fetch(`/page/${encodeURIComponent(group)}/${page}`)).json();
+  const data = await (await fetch(`/page/${page}?${filterQuery()}`)).json();
   pages = data.pages;
   if (page >= pages) { page = pages - 1; return show(); }
-  history.replaceState(null, "", "#" + encodeURIComponent(group) + "/" + (page + 1));
+  setHash({page: page + 1});
+  showSummary(data.summary);
   $("position").textContent = `page ${page + 1} / ${pages}`;
   $("entries").innerHTML = data.items.map(item => `<section data-name="${esc(item.name)}" data-judged="${item.verdict ? 1 : ""}">
     <div class="top"><h2 title="${esc(item.path)}">${esc(item.name)}</h2><button class="delete">Delete photo</button></div>
@@ -303,7 +338,7 @@ $("entries").onclick = async e => {
   if (remove) {
     const section = remove.closest("section");
     if (!confirm(`Delete ${section.dataset.name} from photos/?`)) return;
-    const response = await fetch("/delete", {method: "POST", body: JSON.stringify({name: section.dataset.name})});
+    const response = await fetch("/delete", {method: "POST", body: JSON.stringify({name: section.dataset.name, filters: chosenFilters()})});
     if (!response.ok) return alert("Not deleted: " + response.status);
     section.remove();
     showSummary((await response.json()).summary);
@@ -322,7 +357,7 @@ $("rest").onclick = e => {
 async function judge(sections, verdict) {
   if (!sections.length) return;
   const names = sections.map(s => s.dataset.name);
-  const data = await (await fetch("/verdict", {method: "POST", body: JSON.stringify({names, verdict})})).json();
+  const data = await (await fetch("/verdict", {method: "POST", body: JSON.stringify({names, verdict, filters: chosenFilters()})})).json();
   for (const s of sections) {
     s.dataset.judged = verdict ? 1 : "";
     s.querySelectorAll(".verdicts button").forEach(b => b.classList.toggle("on", b.dataset.verdict === verdict));
@@ -330,7 +365,7 @@ async function judge(sections, verdict) {
   showSummary(data.summary);
 }
 const go = p => { if (p >= 0 && p < pages) { page = p; show(); } };
-$("group").onchange = e => { group = e.target.value; page = 0; show(); };
+$("filters").onchange = () => { page = 0; show(); };
 $("prev").onclick = () => go(page - 1);
 $("next").onclick = () => go(page + 1);
 document.onkeydown = e => {
@@ -355,11 +390,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parts = [urllib.parse.unquote(p) for p in self.path.split("?")[0].split("/")[1:]]
         if parts == [""]:
-            self.send(PAGE.replace("%VERDICTS%", json.dumps(VERDICTS_GIVEN)).replace("%BUTTONS%", json.dumps(BUTTONS)).encode(), "text/html; charset=utf-8")
+            self.send(PAGE.replace("%FILTERS_JS%", FILTERS_JS).replace("%VERDICTS%", json.dumps(VERDICTS_GIVEN)).replace("%BUTTONS%", json.dumps(BUTTONS)).encode(), "text/html; charset=utf-8")
         elif parts == ["list"]:
-            self.send({"groups": list(review.groups), "summary": review.summary()})
-        elif len(parts) == 3 and parts[0] == "page" and parts[1] in review.groups and parts[2].isdigit():
-            self.send(review.page(parts[1], int(parts[2])))
+            self.send({"facets": facet_counts(review.facets)})
+        elif len(parts) == 2 and parts[0] == "page" and parts[1].isdigit():
+            self.send(review.page(filters_of(self.path), int(parts[1])))
         elif len(parts) == 2 and parts[0] == "image" and parts[1] in review.entries:
             self.send(review.image(parts[1]), "image/jpeg")
         else:
@@ -373,11 +408,11 @@ class Handler(BaseHTTPRequestHandler):
             if data["name"] not in review.entries:
                 return self.send_error(400)
             review.delete(data["name"])
-            return self.send({"summary": review.summary()})
+            return self.send({"summary": review.summary(data["filters"])})
         if any(n not in review.entries or review.shown[n] is None or review.state(n) == "hand-placed" for n in data["names"]) or data["verdict"] not in VERDICTS_GIVEN + (None,):
             return self.send_error(400)
         review.judge(data["names"], data["verdict"])
-        self.send({"summary": review.summary()})
+        self.send({"summary": review.summary(data["filters"])})
 
     def log_message(self, *args):
         pass
@@ -385,5 +420,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     review = Review()
-    print(f"{len(review.entries)} photos, {len(review.groups['not judged'])} fits not judged; review them at http://localhost:{PORT}/ (ctrl-C to stop)")
+    print(f"{len(review.entries)} photos, {len(review.facets['plastic']['not judged'])} fits not judged; review them at http://localhost:{PORT}/ (ctrl-C to stop)")
     ThreadingHTTPServer(("localhost", PORT), Handler).serve_forever()
