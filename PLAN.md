@@ -35,6 +35,10 @@ search-photos, name-photos.
 - **A tool comparing labels by their look against their serials**: similar labels with different serials (likely
   misreads: about 2 % of photos named by their text are wrong), and identical serials that look different (misnamed
   photos, or real variants such as reprints).
+- **Photos named by release, not by their label** (on hold, 2026-11-02): 244 photos had no serial read, so
+  add-photos kept the release the downloader searched for (e.g. jauce/dmg/DMG-A7CJ_2.jpg; no region in the name):
+  otakaraou 115, gbhwdb 28, jauce 25, ebay-hitjapan 24, others 52. Another 242 have a full serial in the name but no
+  serial_on_label in sources.json, so how they were named is unknown.
 - **Verify photos against game-boy-database.com's scans**: parked. Built on the branch `verify-labels-gbdb` (make
   fetch-scans, watermark-mask, verify-labels; tested on one scan only), but it needs about 560 scans downloaded from
   their site, and I'd rather not crawl it.
