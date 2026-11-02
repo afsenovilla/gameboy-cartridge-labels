@@ -8,7 +8,9 @@ from fit_cartridge import load
 # find-doubles: a local page listing every photo in photos/, one release per row (the release its serial is filed
 # under in gb-game-list, the region dropped if gb-game-list lacks it; else the serial itself), its photos sorted by
 # their source's quality (SOURCES, best first), each marked with an orange check if its plastic is fitted (accepted or
-# placed by hand), a green one if its label is too. Each photo can be deleted (photos.delete), its fits with it.
+# placed by hand), a green one if its label is too. Each photo can be deleted (photos.delete), its fits with it, or
+# renamed to a corrected serial (photos.rename: tidied, numbered if taken, moved to its system's folder), its fits
+# following it.
 # Usage: find_doubles.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8770
 # The sources, best first: Hit-Japan highest, otakaraou the lowest real photos, the fakes made from box art below it.
@@ -62,7 +64,7 @@ figure img{width:180px;height:180px;object-fit:contain;display:block}
 figcaption{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:4px 0}
 .check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;text-align:center;line-height:22px}
 .check.plastic{background:#e8830c}.check.label{background:#2a9d3a}
-button{font:inherit;padding:2px 8px;border:none;border-radius:0.3em;color:#b00}
+button{font:inherit;padding:2px 8px;border:none;border-radius:0.3em}button.delete{color:#b00}
 </style>
 <header><b>Find doubles</b><label><input type="checkbox" id="doubles"> only releases with several photos</label>
 <span><span class="check plastic" style="position:static;display:inline-block">✓</span> plastic fitted
@@ -79,17 +81,27 @@ function render() {
     r.photos.map(p => `<figure>${p.fitted ? `<span class="check ${p.fitted}" title="${p.fitted} fitted">✓</span>` : ""}` +
       `<a href="/image?size=1600&path=${encodeURIComponent(p.path)}" target="_blank"><img loading="lazy" src="/image?size=360&path=${encodeURIComponent(p.path)}" alt=""></a>` +
       `<figcaption title="${esc(p.path)}">${esc(p.source)}<br>${esc(p.path.split("/").pop())}</figcaption>` +
-      `<button data-path="${esc(p.path)}">Delete</button></figure>`).join("") + `</div></div>`).join("");
+      `<button data-action="rename" data-path="${esc(p.path)}">Rename</button> <button class="delete" data-action="delete" data-path="${esc(p.path)}">Delete</button></figure>`).join("") + `</div></div>`).join("");
 }
 $("rows").onclick = async e => {
-  const path = e.target.dataset && e.target.dataset.path;
-  if (!path || !confirm(`Delete ${path} from photos/?`)) return;
+  const {action, path} = e.target.dataset || {};
+  if (action === "rename") return rename(path);
+  if (action !== "delete" || !confirm(`Delete ${path} from photos/?`)) return;
   const response = await fetch("/delete", {method: "POST", body: JSON.stringify({path})});
   if (!response.ok) return alert("Not deleted: " + await response.text());
   for (const r of rows) r.photos = r.photos.filter(p => p.path !== path);
   rows = rows.filter(r => r.photos.length);
   render();
 };
+async function rename(path) {
+  const old = path.split("/").pop().replace(/\\.[^.]*$/, "").replace(/_\\d+$/, "");
+  const name = (prompt(`The serial on the label of ${path}:`, old) || "").trim();
+  if (!name || name === old) return;
+  const response = await fetch("/rename", {method: "POST", body: JSON.stringify({path, name})});
+  if (!response.ok) return alert("Not renamed: " + await response.text());
+  rows = await (await fetch("/rows")).json();
+  render();
+}
 $("doubles").onchange = render;
 fetch("/rows").then(r => r.json()).then(r => { rows = r; render(); });
 </script>
@@ -124,11 +136,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        if self.path != "/delete":
+        if self.path not in ("/delete", "/rename"):
             return self.send_error(404)
-        path = json.loads(self.rfile.read(int(self.headers["Content-Length"])))["path"]
+        data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        path = data["path"]
         if not is_photo(path):
             return self.send(b"not a photo in photos/", "text/plain", 400)
+        if self.path == "/rename":
+            try:
+                new_path = photos.rename(path, data["name"])
+            except ValueError as e:
+                return self.send(str(e).encode(), "text/plain", 400)
+            with fits.editing():
+                pass  # its fits follow it (fits.reconcile)
+            print(f"{path} -> {new_path}", flush=True)
+            return self.send({"path": new_path})
         photos.delete(path)
         with fits.editing():
             pass  # its fits go with it (fits.reconcile)

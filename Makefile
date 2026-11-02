@@ -35,7 +35,7 @@
 #   A tool, not a step: a local page for naming the photos whose serial isn't known, one at a time: type the serial on its label and press enter; the photo is renamed in photos/, its fits in fits.json with it; or delete it (src/name_photos.py).
 #
 #   make find-doubles
-#   A tool, not a step: a local page listing every photo in photos/, one release per row, its photos sorted by their source's quality (Hit-Japan first, otakaraou the last real photos, the box-art fakes below), each marked with an orange check if its plastic is fitted, a green one if its label is too; each can be deleted, its fits with it (src/find_doubles.py).
+#   A tool, not a step: a local page listing every photo in photos/, one release per row, its photos sorted by their source's quality (Hit-Japan first, otakaraou the last real photos, the box-art fakes below), each marked with an orange check if its plastic is fitted, a green one if its label is too; each can be deleted, its fits with it, or renamed to a corrected serial, its fits following it (src/find_doubles.py).
 #
 # Plain make lists these.
 
