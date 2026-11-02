@@ -13,6 +13,8 @@ from fit_cartridge import load
 # following it. Clicking a photo makes it its release's preferred one (clicking it again unmakes it), saved in
 # preferred.json: release id -> the photo's SHA-1, so a renamed photo stays preferred; an entry whose photo is no longer
 # in its release (deleted, or renamed to another serial) is dropped on the next save. The preferred photo comes first.
+# The rows can be narrowed to the releases with several photos, and to those with no preferred photo (a release given
+# one stays shown until the rows are drawn again).
 # Usage: find_doubles.py [port]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8770
 # The sources, best first: Hit-Japan highest, otakaraou the lowest real photos, the fakes made from box art below it.
@@ -104,6 +106,7 @@ figcaption a{color:inherit}
 button{font:inherit;padding:2px 8px;border:none;border-radius:0.3em}button.delete{color:#b00}
 </style>
 <header><b>Find doubles</b><label><input type="checkbox" id="doubles"> only releases with several photos</label>
+<label><input type="checkbox" id="unpreferred"> only releases with no preferred photo</label>
 <span><span class="check plastic" style="position:static;display:inline-block">✓</span> plastic fitted
 <span class="check label" style="position:static;display:inline-block">✓</span> label fitted</span>
 <span>click a photo to prefer it</span><span id="count"></span></header>
@@ -113,7 +116,7 @@ const $ = id => document.getElementById(id);
 const esc = s => s.replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 let rows = [];
 function render() {
-  const shown = $("doubles").checked ? rows.filter(r => r.photos.length > 1) : rows;
+  const shown = rows.filter(r => (!$("doubles").checked || r.photos.length > 1) && (!$("unpreferred").checked || !r.photos.some(p => p.preferred)));
   $("count").textContent = `${shown.length} releases, ${shown.reduce((n, r) => n + r.photos.length, 0)} photos`;
   $("rows").innerHTML = shown.map(r => `<div class="row" data-release="${esc(r.release)}"><div class="release"><b>${esc(r.release)}</b><span>${esc(r.title)}</span></div><div class="photos">` +
     r.photos.map(p => `<figure data-path="${esc(p.path)}"${p.preferred ? ' class="preferred"' : ""}>${p.fitted ? `<span class="check ${p.fitted}" title="${p.fitted} fitted">✓</span>` : ""}` +
@@ -158,7 +161,7 @@ async function rename(path) {
   rows = await (await fetch("/rows")).json();
   render();
 }
-$("doubles").onchange = render;
+$("doubles").onchange = $("unpreferred").onchange = render;
 fetch("/rows").then(r => r.json()).then(r => { rows = r; render(); });
 </script>
 """
