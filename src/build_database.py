@@ -19,7 +19,7 @@ OUT = "generated/database"
 SCHEMA_VERSION = 1
 SCHEMA = """
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-CREATE TABLE releases (id TEXT PRIMARY KEY, title TEXT NOT NULL, system TEXT NOT NULL, serials TEXT NOT NULL, in_catalog INTEGER NOT NULL CHECK (in_catalog IN (0, 1)));
+CREATE TABLE releases (id TEXT PRIMARY KEY, title TEXT NOT NULL, system TEXT NOT NULL, serials TEXT NOT NULL, in_catalog INTEGER NOT NULL CHECK (in_catalog IN (0, 1)), title_source TEXT, sources TEXT NOT NULL);
 CREATE TABLE photos (
  stem TEXT PRIMARY KEY, path TEXT NOT NULL UNIQUE, sha1 TEXT NOT NULL, source TEXT NOT NULL, system TEXT NOT NULL, serial TEXT NOT NULL,
  release_id TEXT REFERENCES releases(id), is_fake INTEGER NOT NULL CHECK (is_fake IN (0, 1)), image_url TEXT, page_url TEXT, serial_on_label TEXT,
@@ -82,7 +82,7 @@ def commit():
 
 def release_key(serial, release_of):
     """The release a serial is filed under, as find-doubles keys it; (key, in the catalog)."""
-    match = next((s for s in (serial, re.sub(r"-[A-Z]{3}$", "", serial)) if s in release_of), None)
+    match = next((s for s in (serial, serials.without_region(serial)) if s in release_of), None)
     return (release_of[match]["id"], True) if match else (serial, False)
 
 
@@ -138,6 +138,7 @@ def look_issues(thumbs, serial_of):
 def build():
     release_of = serials.releases_by_serial()
     catalog = os.path.exists(serials.RELEASES)
+    partial = serials.RELEASES == serials.OWN_CATALOG
     known, preferred = fits.load(), {}
     if os.path.exists("preferred.json"):
         preferred = json.load(open("preferred.json", encoding="utf-8"))
@@ -155,7 +156,7 @@ def build():
     releases = {}
     if catalog:
         for r in {r["id"]: r for r in release_of.values()}.values():
-            releases[r["id"]] = (r["id"], r.get("title", ""), r["id"].split("-")[0], json.dumps(r.get("cartridgeSerials", [])), 1)
+            releases[r["id"]] = (r["id"], r.get("title", ""), r["id"].split("-")[0], json.dumps(r.get("cartridgeSerials", [])), 1, r.get("title_source", "gb-game-list" if not partial else None), json.dumps(r.get("sources", ["gb-game-list"])))
 
     rows, label_rows, by_release, thumbs, serial_of, by_sha = [], [], {}, {}, {}, {}
     for source, system, name, entry in photos.all_sources():
@@ -165,7 +166,7 @@ def build():
         if key not in releases:
             is_serial = re.match(r"(DMG|CGB|AGB)-", serial, re.I)
             if is_serial or in_catalog:
-                releases[key] = (key, "", serial.split("-")[0].upper(), json.dumps([serial]), 0)
+                releases[key] = (key, "", serial.split("-")[0].upper(), json.dumps([serial]), 0, None, "[]")
             else:
                 key = None
         is_fake = source in photos.FAKES
@@ -182,15 +183,15 @@ def build():
                 if hashlib.sha1(f.read()).hexdigest() != sha1:
                     issue("error", "sha1_differs", stem, key, "the file isn't the one its sources.json records")
         said = entry.get("serial_on_label")
-        if said and said != serial and re.sub(r"-[A-Z]{3}$", "", said) != re.sub(r"-[A-Z]{3}$", "", serial):
+        if said and said != serial and serials.without_region(said) != serials.without_region(serial):
             issue("warning", "name_differs_from_read", stem, key, f"named {serial}, but {said} was read on its label")
         if key is None and system != "unknown":
             issue("warning", "not_a_serial", stem, None, f"{serial} isn't a serial")
         elif key is None:
             issue("info", "unnamed", stem, None, "no serial known (make name-photos)")
-        elif catalog and not in_catalog:
-            issue("warning", "not_in_catalog", stem, key, f"{serial} isn't in gb-game-list")
-        if serial == re.sub(r"-[A-Z]{3}$", "", serial) and not said and not is_fake:
+        elif catalog and not in_catalog and system != "agb":
+            issue("warning", "not_in_catalog", stem, key, f"{serial} isn't in the catalog")
+        if serial == serials.without_region(serial) and not said and not is_fake:
             issue("info", "named_by_release", stem, key, "named by the release searched for, not read on its label")
         if state(fit.get("label")) == "almost":
             issue("info", "label_almost", stem, key, "its label was judged almost: place it by hand (make fit-by-hand)")
@@ -233,18 +234,19 @@ def build():
         issue(severity, kind, stem, None, detail)
     if catalog:
         for key in sorted(releases):
-            if releases[key][4] and key not in by_release and releases[key][2] in ("DMG", "CGB"):
+            confirmed = not partial or "gbdb" in json.loads(releases[key][6])
+            if releases[key][4] and confirmed and key not in by_release and releases[key][2] in ("DMG", "CGB"):
                 issue("warning", "release_without_label", None, key, "no good label")
     for row in label_rows:
         row[11] = int(row[0] in best)
 
-    db.executemany("INSERT INTO releases VALUES (?, ?, ?, ?, ?)", [releases[k] for k in sorted(releases)])
+    db.executemany("INSERT INTO releases VALUES (?, ?, ?, ?, ?, ?, ?)", [releases[k] for k in sorted(releases)])
     db.executemany("INSERT INTO photos VALUES (" + ", ".join("?" * 14) + ")", sorted(rows))
     db.executemany("INSERT INTO labels VALUES (" + ", ".join("?" * 12) + ")", sorted(label_rows))
     order = {"error": 0, "warning": 1, "info": 2}
     db.executemany("INSERT INTO issues (severity, kind, stem, release_id, detail) VALUES (?, ?, ?, ?, ?)",
                    sorted(issues, key=lambda i: (order[i[0]], i[1], i[2] or "", i[3] or "", i[4])))
-    db.executemany("INSERT INTO meta VALUES (?, ?)", [("schema_version", str(SCHEMA_VERSION)), ("commit", commit()), ("catalog", "gb-game-list" if catalog else "photo names only: gb-game-list missing")])
+    db.executemany("INSERT INTO meta VALUES (?, ?)", [("schema_version", str(SCHEMA_VERSION)), ("commit", commit()), ("catalog", ("own partial catalog: can't say which Japanese or European releases are missing" if partial else "gb-game-list") if catalog else "photo names only: no catalog")])
     db.commit()
     db.close()
     final = os.path.join(OUT, "labels.sqlite")

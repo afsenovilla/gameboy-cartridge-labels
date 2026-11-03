@@ -2,7 +2,7 @@ import json, multiprocessing, os, sys, tempfile, time, unittest, cv2, numpy as n
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import build_database, fits, images, ocr_rapid, photos, rectify
+import build_catalog, build_database, fits, images, ocr_rapid, photos, rectify, serials
 
 
 class Images(unittest.TestCase):
@@ -123,6 +123,25 @@ class Rectify(unittest.TestCase):
         self.assertEqual(straight.shape[:2], (100, 200))
         self.assertGreater(straight[5:-5, 5:-5].min(), 245)
         self.assertEqual(rectify.native_scale(H, label), 20)
+
+
+class Catalog(unittest.TestCase):
+    def test_sources_and_titles(self):
+        gbdb = [{"t": "Nobunaga's Ambition", "s": "DMG-NY-USA", "p": "Koei", "d": "03/01/1991", "v": ["DMG-NY-USA", "DMG-NY-USA-1"]}]
+        named = [("DMG-NY-USA", "DMG-NY-USA"), ("DMG-ABJJ-JPN", "DMG-ABJJ-JPN"), ("DMG-ZZZ-JPN", None), ("UNKNOWN", None)]
+        found = {r["id"]: r for r in build_catalog.build(gbdb, {"ABJJ": "A Game"}, named)}
+        self.assertEqual(sorted(found), ["DMG-ABJJ", "DMG-NY", "DMG-ZZZ"])
+        self.assertEqual(found["DMG-NY"]["sources"], ["gbdb", "label"])
+        self.assertEqual(found["DMG-NY"]["cartridgeSerials"], ["DMG-NY-USA"])
+        self.assertEqual((found["DMG-ABJJ"]["sources"], found["DMG-ABJJ"]["title_source"]), (["label"], "gb-rom-database"))
+        self.assertEqual((found["DMG-ZZZ"]["sources"], found["DMG-ZZZ"]["title"]), (["name"], ""))
+
+
+class Serials(unittest.TestCase):
+    def test_a_code_is_not_a_region(self):
+        self.assertEqual(serials.without_region("DMG-HKJ"), "DMG-HKJ")
+        self.assertEqual(serials.without_region("DMG-HKJ-JPN"), "DMG-HKJ")
+        self.assertEqual(serials.without_region("DMG-A8-UKV"), "DMG-A8")
 
 
 class Grades(unittest.TestCase):

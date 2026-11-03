@@ -5,7 +5,7 @@ import os, re, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = {"add-photos": "add_photos", "read-text": "read_text", "fit-cartridge": "fit_cartridge", "fit-label": "fit_label",
-           "rectify": "rectify", "database": "build_database", "learn-choice": "learn_choice", "review-fits": "review_fits",
+           "catalog": "build_catalog", "rectify": "rectify", "database": "build_database", "learn-choice": "learn_choice", "review-fits": "review_fits",
            "review-labels": "review_labels", "fit-by-hand": "fit_by_hand", "search-photos": "search_photos",
            "name-photos": "name_photos", "find-doubles": "find_doubles"}
 CLEAN = {"clean-read-text": "generated/read-text", "clean-fit-cartridge": "generated/fit-cartridge", "clean-fit-label": "generated/fit-label",

@@ -5,9 +5,21 @@ collected into a database with a quality grade and the origin of every label.
 
 ## Setup
 
-Needs Python 3.12 or newer and, for the release names and to know which releases are missing,
-[gb-game-list](../gb-game-list) checked out next to this repository (or wherever the environment variable `GB_GAME_LIST`
-says). Without it everything runs, using only the serials in the photos' names, and the database says so.
+Needs Python 3.12 or newer.
+
+## The catalog of releases
+
+`catalog/releases.json` is this fork's own catalog (`python run.py catalog`), with where each release is known from:
+
+| Source | What it gives | How far to trust it |
+| --- | --- | --- |
+| [gbdb.org](http://gbdb.org/games_list.php?cat=title) | North American serials, titles, publishers, dates | the only source that confirms a serial |
+| Labels read on the photos | serials, mostly Japanese | one reading each |
+| Photos' names | serials | nothing confirms them |
+| [gb-rom-database](https://github.com/catskull/gb-rom-database) (MIT) | titles, by the code in the ROM's header | only part of the games; may be wrong |
+
+It is partial: it can say which North American releases have no label, not which Japanese or European ones are missing.
+[gb-game-list](../gb-game-list), if checked out next to this repository (or where `GB_GAME_LIST` says), is used instead.
 
 ### Windows
 
@@ -40,7 +52,7 @@ afresh each time, so a wrong row is corrected where it comes from (a photo's nam
 
 | Table | What's in it |
 | --- | --- |
-| `releases` | each release known |
+| `releases` | each release known, with its sources |
 | `photos` | every photo: source, URLs, serial, state of its fit |
 | `labels` | every straightened label: file, SHA-256, measures, grade, why it isn't better, `is_best` |
 | `issues` | what to check: wrong or misnamed files, labels that look like another serial's, releases with poor labels |

@@ -14,12 +14,21 @@ from difflib import SequenceMatcher
 # MADE IN JAPAN"). A region code read without its dash (AGB・A20JJPN for AGB-A2OJ-JPN) is read too, for the known region
 # codes, and every read with a region also without it, as gb-game-list lists some serials only so (AGB-A2OJ).
 # Where gb-game-list's database is: next to this repository, or wherever GB_GAME_LIST says.
+# Without it, this repository's own partial catalog (make catalog, src/build_catalog.py).
 RELEASES = os.path.join(os.environ.get("GB_GAME_LIST", os.path.join("..", "gb-game-list")), "database", "releases.json")
+OWN_CATALOG = os.path.join("catalog", "releases.json")
+if not os.path.exists(RELEASES) and os.path.exists(OWN_CATALOG):
+    RELEASES = OWN_CATALOG
 RANK = {"exact": 0, "near": 1, "unknown": 2}
 REGIONS = ("ASI", "AUS", "BRA", "CAN", "CHN", "DAN", "ESA", "ESP", "EUB", "EUR", "EUU", "FAH", "FRA", "FRG", "GPS", "HKG",
            "HOL", "ITA", "JPG", "JPN", "KOR", "MSA", "NOE", "SCN", "SPA", "UKV", "USA")
 SERIAL = re.compile(r"(DMG|CGB|AGB)-?([A-Z0-9]{1,5})(?:-([A-Z]{3}))?(?:-([0-9]))?")
 NO_DASH = re.compile(r"(DMG|CGB|AGB)-?([A-Z0-9]{1,5})(" + "|".join(REGIONS) + r")(?:-([0-9]))?")
+
+
+def without_region(serial):
+    """A serial without its region: DMG-HKJ-JPN -> DMG-HKJ; DMG-HKJ stays (its last letters are its code, not a region)."""
+    return re.sub(r"^([A-Za-z]{3}-[^-]+)-[A-Z]{3}$", r"\1", serial)
 
 
 def known_from_photos():
@@ -30,7 +39,7 @@ def known_from_photos():
     for _, _, name, _ in photos.all_sources():
         serial = photos.serial_of(name)
         if re.match(r"(DMG|CGB|AGB)-", serial):
-            id = re.sub(r"-[A-Z]{3}$", "", serial)
+            id = without_region(serial)
             release = found.setdefault(id, {"id": id, "gameId": id, "title": "(gb-game-list missing)", "titles": [], "cartridgeSerials": []})
             if serial not in release["cartridgeSerials"]:
                 release["cartridgeSerials"].append(serial)

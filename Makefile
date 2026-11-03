@@ -16,6 +16,9 @@
 #   make fit-label
 #   Fits the label in the recess of every photo whose plastic is accepted or placed by hand, into fits.json: its pose, as a homography from the label's model to the photo's pixels, not yet reviewed; its shift, turn and width into generated/fit-label/<photo>.json; a fit sticking out of the recess is rejected; a label accepted or placed by hand is kept (src/fit_label.py).
 #
+#   make catalog
+#   Builds catalog/releases.json, a partial catalog of releases from gbdb.org, the labels read and the photos' names, used when gb-game-list isn't there (src/build_catalog.py).
+#
 #   make rectify
 #   Straightens the label of every photo whose plastic and label are accepted or placed by hand, into generated/labels/<photo>.png at 20 px/mm, and measures each (src/rectify.py).
 #
@@ -52,7 +55,7 @@ PYTHON := .venv/bin/python
 # macOS reads text with its Vision framework, by a tool compiled from src/ocr.swift; other systems don't need it.
 OCR_TOOL := $(if $(filter Darwin,$(shell uname -s)),src/ocr)
 
-.PHONY: rectify clean-rectify database test help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
+.PHONY: catalog rectify clean-rectify database test help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -83,6 +86,9 @@ clean-rectify:
 
 clean-fit-label:
 	rm -rf generated/fit-label
+
+catalog:
+	$(PYTHON) src/build_catalog.py
 
 rectify:
 	$(PYTHON) src/rectify.py
