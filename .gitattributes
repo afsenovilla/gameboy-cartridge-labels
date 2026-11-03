@@ -1,0 +1,15 @@
+# The data files are hashed, diffed and read by every system: always LF, whatever core.autocrlf says.
+*.py text eol=lf
+*.json text eol=lf
+*.tsv text eol=lf
+*.md text eol=lf
+*.swift text eol=lf
+Makefile text eol=lf
+# The photos are identified by their SHA-1 in sources.json: never touched.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.webp binary
+*.avif binary
+*.heic binary
+*.heif binary

@@ -16,6 +16,15 @@
 #   make fit-label
 #   Fits the label in the recess of every photo whose plastic is accepted or placed by hand, into fits.json: its pose, as a homography from the label's model to the photo's pixels, not yet reviewed; its shift, turn and width into generated/fit-label/<photo>.json; a fit sticking out of the recess is rejected; a label accepted or placed by hand is kept (src/fit_label.py).
 #
+#   make rectify
+#   Straightens the label of every photo whose plastic and label are accepted or placed by hand, into generated/labels/<photo>.png at 20 px/mm, and measures each (src/rectify.py).
+#
+#   make database
+#   Builds generated/database/labels.sqlite from the labels and everything known about their photos: a quality grade for each, the best label of each release, and an issues table of what to check; generated/database/report.html lists it (src/build_database.py).
+#
+#   make test
+#   Runs the tests (src/test_*.py), without needing the photos' results.
+#
 #   make learn-choice
 #   A tool, not a step: learns how fit-cartridge chooses among a photo's fits from the photos whose plastic is accepted or placed by hand, into src/choice.json (committed; fit-cartridge then fits again the photos not yet known to be right), and prints how many each choice gets right (src/learn_choice.py).
 #
@@ -40,8 +49,10 @@
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
+# macOS reads text with its Vision framework, by a tool compiled from src/ocr.swift; other systems don't need it.
+OCR_TOOL := $(if $(filter Darwin,$(shell uname -s)),src/ocr)
 
-.PHONY: help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
+.PHONY: rectify database test help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -49,10 +60,10 @@ setup:
 	python3 -m venv .venv
 	$(PYTHON) -m pip install -r requirements.txt
 
-add-photos: | src/ocr
+add-photos: | $(OCR_TOOL)
 	$(PYTHON) src/add_photos.py
 
-read-text: | src/ocr
+read-text: | $(OCR_TOOL)
 	$(PYTHON) src/read_text.py
 
 clean-read-text:
@@ -69,6 +80,15 @@ fit-label:
 
 clean-fit-label:
 	rm -rf generated/fit-label
+
+rectify:
+	$(PYTHON) src/rectify.py
+
+database:
+	$(PYTHON) src/build_database.py
+
+test:
+	$(PYTHON) -m unittest discover -s src -p "test_*.py"
 
 learn-choice:
 	$(PYTHON) src/learn_choice.py

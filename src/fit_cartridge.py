@@ -1,7 +1,7 @@
-import concurrent.futures, glob, json, os, subprocess, sys, tempfile, cv2, numpy as np
+import concurrent.futures, glob, json, os, sys, cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import color, fits, photos
+import color, fits, images, photos
 from cartridge import DISTANCE_TOLERANCE, MAX_TILT, SPECIAL_SHELLS, Fitter, camera_distance, color_lines, color_start, corners_of, emboss_lines, emboss_start, outline_quads, outline_starts, project, shell_of, special_shell, text_starts, tilt
 
 # fit-cartridge: fits the model of the cartridge's shell (src/cartridge.py: the Game Boy's, or the Game Boy Color
@@ -28,14 +28,8 @@ SIDES = ("top", "right", "bottom", "left")
 
 
 def load(path, even_colors=True):
-    """The photo, upright (OpenCV applies the EXIF orientation, as the text recognition does); formats OpenCV can't
-    read (HEIC) through a JPEG copy made by sips. Its colors evened out (src/color.py) unless even_colors is False."""
-    photo = cv2.imread(path)
-    if photo is None:
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = os.path.join(tmp, "photo.jpg")
-            subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "95", path, "--out", copy], check=True, capture_output=True)
-            photo = cv2.imread(copy)
+    """The photo, upright (src/images.py), its colors evened out (src/color.py) unless even_colors is False."""
+    photo = images.read(path)
     return color.corrected(photo, path) if photo is not None and even_colors else photo
 
 
@@ -108,7 +102,7 @@ def choice_rows(candidates):
 
 def scores(candidates):
     """The choice's score of each of a photo's fits (higher: likelier right)."""
-    with open(CHOICE) as f:
+    with open(CHOICE, encoding="utf-8") as f:
         model = json.load(f)
     if model["features"] != FEATURES + list(DERIVED):
         sys.exit(f"{CHOICE} was learned on other features: make learn-choice")
@@ -162,7 +156,7 @@ def fit(photo_path, text_path):
     photo = load(photo_path)
     if photo is None:
         return {"error": "the photo can't be read"}
-    lines = json.load(open(text_path))
+    lines = json.load(open(text_path, encoding="utf-8"))
     shell = shell_of(photos.serial_of(os.path.basename(photo_path)))
     size = (photo.shape[1], photo.shape[0])
     recess = shell.recess
@@ -221,7 +215,7 @@ def fit_into(stem, photo_path, text_path, sha1):
     except Exception as e:
         result = {"error": f"{type(e).__name__}: {e}"}
     result["sha1"] = sha1
-    json.dump(result, open(out, "w"))
+    json.dump(result, open(out, "w", encoding="utf-8", newline="\n"))
     return stem, result
 
 
@@ -265,7 +259,7 @@ if __name__ == "__main__":
         out = os.path.join(OUT, stem + ".json")
         if not os.path.exists(text):
             no_text.append(stem)
-        elif not os.path.exists(out) or json.load(open(out)).get("sha1") != sha1s[stem] or os.path.getmtime(out) < max(os.path.getmtime(path), os.path.getmtime(text), code):
+        elif not os.path.exists(out) or json.load(open(out, encoding="utf-8")).get("sha1") != sha1s[stem] or os.path.getmtime(out) < max(os.path.getmtime(path), os.path.getmtime(text), code):
             todo.append((stem, path, text, sha1s[stem]))
     print(f"{len(paths)} photos ({len(special)} of cartridges with another shell left out, {SPECIAL_SHELLS}), {len(kept)} with their plastic accepted or placed by hand, kept; {len(todo)} to fit" + (f"; {len(no_text)} without their text (make read-text): {' '.join(no_text)}" if no_text else ""))
     with concurrent.futures.ProcessPoolExecutor() as pool:
@@ -276,11 +270,11 @@ if __name__ == "__main__":
         current = 0
         for stem in paths:
             out = os.path.join(OUT, stem + ".json")
-            found = json.load(open(out)) if os.path.exists(out) else None
+            found = json.load(open(out, encoding="utf-8")) if os.path.exists(out) else None
             if found is not None and found.get("sha1") != sha1s[stem]:
                 found = None
             current += take(fits.entry(known, stem, sha1s[stem]), found)
     # Only the photos this step fits: the files of kept ones may be of an older version of it.
-    results = [json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json")) if photos.stem(os.path.basename(p)) not in kept]
+    results = [json.load(open(p, encoding="utf-8")) for p in glob.glob(os.path.join(OUT, "*.json")) if photos.stem(os.path.basename(p)) not in kept]
     print(f"{len(kept)} kept, {current} fitted and not known to be wrong; {sum('error' in r for r in results)} couldn't be fitted, "
           f"{sum('error' not in r and not r['ambiguous'] and not r['broken_line'] for r in results)} files not flagged (ambiguous or broken recess line)")

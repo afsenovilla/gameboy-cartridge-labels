@@ -5,7 +5,7 @@ import photos, text
 
 # read-text: reads the text on every photo in photos/ (src/text.py) into generated/read-text/<photo>.json: every line
 # of text found, with its corners in the photo. A photo is read again only when its file is missing or older than the
-# photo or src/ocr.swift. Files of photos no longer in photos/ (renamed or deleted) are removed.
+# photo or the text recognition's code. Files of photos no longer in photos/ (renamed or deleted) are removed.
 # Usage: read_text.py
 OUT = "generated/read-text"
 
@@ -15,7 +15,7 @@ paths = {photos.stem(n): os.path.join(photos.ROOT, s, system, n) for s, system, 
 for path in glob.glob(os.path.join(OUT, "*.json")):
     if photos.stem(os.path.basename(path)) not in paths:
         os.remove(path)
-tool = os.path.getmtime("src/ocr.swift")
+tool = max(os.path.getmtime(p) for p in text.code_paths())
 todo = []
 for stem, path in sorted(paths.items()):
     out = os.path.join(OUT, stem + ".json")

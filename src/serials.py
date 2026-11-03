@@ -13,7 +13,8 @@ from difflib import SequenceMatcher
 # (vertical text on the strips is read with gaps, "DMG-Z G-NOE"), and also kept, for text after the serial ("DMG-PVJ
 # MADE IN JAPAN"). A region code read without its dash (AGB・A20JJPN for AGB-A2OJ-JPN) is read too, for the known region
 # codes, and every read with a region also without it, as gb-game-list lists some serials only so (AGB-A2OJ).
-RELEASES = "../gb-game-list/database/releases.json"
+# Where gb-game-list's database is: next to this repository, or wherever GB_GAME_LIST says.
+RELEASES = os.path.join(os.environ.get("GB_GAME_LIST", os.path.join("..", "gb-game-list")), "database", "releases.json")
 RANK = {"exact": 0, "near": 1, "unknown": 2}
 REGIONS = ("ASI", "AUS", "BRA", "CAN", "CHN", "DAN", "ESA", "ESP", "EUB", "EUR", "EUU", "FAH", "FRA", "FRG", "GPS", "HKG",
            "HOL", "ITA", "JPG", "JPN", "KOR", "MSA", "NOE", "SCN", "SPA", "UKV", "USA")
@@ -21,9 +22,28 @@ SERIAL = re.compile(r"(DMG|CGB|AGB)-?([A-Z0-9]{1,5})(?:-([A-Z]{3}))?(?:-([0-9]))
 NO_DASH = re.compile(r"(DMG|CGB|AGB)-?([A-Z0-9]{1,5})(" + "|".join(REGIONS) + r")(?:-([0-9]))?")
 
 
+def known_from_photos():
+    """Without gb-game-list: releases made from the photos' names, one per serial without its region, with no titles. A
+    read can then only match a serial already in photos/, and nothing checks the names themselves."""
+    import photos
+    found = {}
+    for _, _, name, _ in photos.all_sources():
+        serial = photos.serial_of(name)
+        if re.match(r"(DMG|CGB|AGB)-", serial):
+            id = re.sub(r"-[A-Z]{3}$", "", serial)
+            release = found.setdefault(id, {"id": id, "gameId": id, "title": "(gb-game-list missing)", "titles": [], "cartridgeSerials": []})
+            if serial not in release["cartridgeSerials"]:
+                release["cartridgeSerials"].append(serial)
+    return [found[k] for k in sorted(found)]
+
+
 def releases_by_serial():
     """Each serial in gb-game-list, and each release's id and game id, -> its release."""
-    releases = json.load(open(RELEASES))
+    if os.path.exists(RELEASES):
+        releases = json.load(open(RELEASES, encoding="utf-8"))
+    else:
+        print(f"warning: {RELEASES} not found (put gb-game-list there, or set GB_GAME_LIST): using only the serials in photos/'s names", flush=True)
+        releases = known_from_photos()
     release_of = {}
     for r in releases:
         for s in r["cartridgeSerials"]:
@@ -86,7 +106,7 @@ def serials(text_dir):
     rows = []
     for path in sorted(glob.glob(os.path.join(text_dir, "*.json"))):
         name = os.path.basename(path)[:-5]
-        lines = [l["text"] for l in json.load(open(path))]
+        lines = [l["text"] for l in json.load(open(path, encoding="utf-8"))]
         found = sorted({r for line in lines for r in reads(line)})
         if not found:
             rows.append((name, "none", "", "", "", "", ""))

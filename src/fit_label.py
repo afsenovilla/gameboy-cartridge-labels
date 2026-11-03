@@ -173,7 +173,7 @@ def fit_into(stem, photo_path, plastic, sha1):
     except Exception as e:
         result = {"error": f"{type(e).__name__}: {e}", "mm_to_photo": plastic["mm_to_photo"]}
     result["sha1"] = sha1
-    json.dump(result, open(out, "w"))
+    json.dump(result, open(out, "w", encoding="utf-8", newline="\n"))
     return stem, result
 
 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             kept += 1
             continue
         out = os.path.join(OUT, stem + ".json")
-        made = json.load(open(out)) if os.path.exists(out) else None
+        made = json.load(open(out, encoding="utf-8")) if os.path.exists(out) else None
         if made is None or made.get("sha1") != sha1s[stem] or not fits.same(made["mm_to_photo"], plastic) or os.path.getmtime(out) < code:
             todo.append((stem, paths[stem], {"shell": shell_of(photos.serial_of(stem)).name, "mm_to_photo": plastic["mm_to_photo"]}, sha1s[stem]))
     print(f"{len(plastics)} photos with their plastic accepted or placed by hand, {kept} with their label too, kept; {len(todo)} to fit")
@@ -225,10 +225,10 @@ if __name__ == "__main__":
         for stem in plastics:
             e = fits.entry(known, stem, sha1s[stem])
             out = os.path.join(OUT, stem + ".json")
-            found = json.load(open(out)) if os.path.exists(out) else None
+            found = json.load(open(out, encoding="utf-8")) if os.path.exists(out) else None
             # The plastic may have been judged again meanwhile.
             if found is not None and found.get("sha1") == sha1s[stem] and fits.good(e["fit"].get("plastic")) and fits.same(found["mm_to_photo"], e["fit"]["plastic"]):
                 current += take(e, found)
-    results = [json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json"))]
+    results = [json.load(open(p, encoding="utf-8")) for p in glob.glob(os.path.join(OUT, "*.json"))]
     print(f"{kept} kept, {current} fitted and not known to be wrong ({sum(r.get('width_at_limit', False) for r in results)} files at the "
           f"median width, as they stopped at a width limit), {sum('error' in r for r in results)} couldn't be fitted or stuck out of the recess")

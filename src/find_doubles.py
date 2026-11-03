@@ -29,14 +29,14 @@ lock = threading.Lock()
 
 
 def load_preferred():
-    return json.load(open(PREFERRED)) if os.path.exists(PREFERRED) else {}
+    return json.load(open(PREFERRED, encoding="utf-8")) if os.path.exists(PREFERRED) else {}
 
 
 def save_preferred(preferred):
     """One line per release, so that the file's history reads as choices changed."""
     lines = [f"{json.dumps(k)}: {json.dumps(v)}" for k, v in sorted(preferred.items())]
-    open(PREFERRED + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
-    os.replace(PREFERRED + ".tmp", PREFERRED)
+    open(PREFERRED + ".tmp", "w", encoding="utf-8", newline="\n").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
+    fits.replace(PREFERRED + ".tmp", PREFERRED)
 
 
 def rank(source):
@@ -123,7 +123,7 @@ function render() {
   $("rows").innerHTML = shown.map(r => `<div class="row" data-release="${esc(r.release)}"><div class="release"><b>${esc(r.release)}</b><span>${esc(r.title)}</span></div><div class="photos">` +
     r.photos.map(p => `<figure data-path="${esc(p.path)}"${p.preferred ? ' class="preferred"' : ""}>${p.fitted ? `<span class="check ${p.fitted}" title="${p.fitted} fitted">✓</span>` : ""}` +
       `<img loading="lazy" data-action="prefer" data-path="${esc(p.path)}" src="/image?size=1000&v=${p.sha1}&path=${encodeURIComponent(p.path)}" alt="">` +
-      `<figcaption title="${esc(p.path)}">${esc(p.source)} · <a href="/image?size=1600&v=${p.sha1}&path=${encodeURIComponent(p.path)}" target="_blank">open</a><br>${esc(p.path.split("/").pop())}</figcaption>` +
+      `<figcaption title="${esc(p.path)}">${esc(p.source)} · <a href="/image?size=1600&v=${p.sha1}&path=${encodeURIComponent(p.path)}" target="_blank">open</a><br>${esc(p.path.split(/[\\\\/]/).pop())}</figcaption>` +
       `<button data-action="rename" data-path="${esc(p.path)}">Rename</button> <button class="delete" data-action="delete" data-path="${esc(p.path)}">Delete</button></figure>`).join("") + `</div></div>`).join("");
 }
 $("rows").onclick = async e => {
@@ -155,7 +155,7 @@ async function prefer(path) {
   }
 }
 async function rename(path) {
-  const old = path.split("/").pop().replace(/\\.[^.]*$/, "").replace(/_\\d+$/, "");
+  const old = path.split(/[\\\\/]/).pop().replace(/\\.[^.]*$/, "").replace(/_\\d+$/, "");
   const name = (prompt(`The serial on the label of ${path}:`, old) || "").trim();
   if (!name || name === old) return;
   const response = await fetch("/rename", {method: "POST", body: JSON.stringify({path, name})});

@@ -84,7 +84,7 @@ class Review:
             if not fits.good(plastic):
                 continue
             path = os.path.join(DETAILS, name + ".json")
-            details = json.load(open(path)) if os.path.exists(path) else None
+            details = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else None
             if details is not None and (details.get("sha1") != sha1s[name] or not fits.same(details["mm_to_photo"], plastic)):
                 details = None
             label = e["fit"].get("label") or next((r["label"] for r in reversed(e["rejected"]) if "label" in r and fits.same(r["plastic"], plastic)), None)

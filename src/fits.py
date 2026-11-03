@@ -1,4 +1,10 @@
-import contextlib, fcntl, json, os, sys, numpy as np
+import contextlib, json, os, sys, time, numpy as np
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+    import msvcrt
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos
@@ -22,21 +28,44 @@ SOURCES = ("auto-generated", "hand-placed")
 
 
 def load():
-    return json.load(open(FILE)) if os.path.exists(FILE) else {}
+    return json.load(open(FILE, encoding="utf-8")) if os.path.exists(FILE) else {}
 
 
 def save(fits):
     """One line per photo, so that the file's history reads as fits changed; entries with nothing in them are left out."""
     lines = [f"{json.dumps(name)}: {json.dumps(entry, ensure_ascii=False)}" for name, entry in sorted(fits.items()) if entry["fit"] or entry["rejected"]]
-    open(FILE + ".tmp", "w").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
-    os.replace(FILE + ".tmp", FILE)
+    open(FILE + ".tmp", "w", encoding="utf-8", newline="\n").write("{\n" + ",\n".join(lines) + "\n}\n" if lines else "{}\n")
+    replace(FILE + ".tmp", FILE)
+
+
+def take_lock(lock):
+    """Waits for the lock on an open file; it goes when the file is closed, or its process ends."""
+    if fcntl:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return
+    while True:
+        try:
+            return msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            time.sleep(0.05)
+
+
+def replace(temporary, path):
+    """Puts the finished temporary file in path's place. On Windows it fails for a moment while another process (a tool
+    reading the file, an antivirus) has path open, so it's tried again for a few seconds."""
+    for wait in (0.05, 0.1, 0.2, 0.5, 1, 2, 2):
+        try:
+            return os.replace(temporary, path)
+        except PermissionError:
+            time.sleep(wait)
+    os.replace(temporary, path)
 
 
 @contextlib.contextmanager
 def editing():
     """fits.json, read afresh under a lock, and saved when the block ends without an error."""
-    with open(FILE + ".lock", "w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with open(FILE + ".lock", "w", encoding="utf-8", newline="\n") as lock:
+        take_lock(lock)
         fits = reconcile(load())
         yield fits
         save(fits)

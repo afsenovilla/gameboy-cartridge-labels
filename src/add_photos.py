@@ -87,7 +87,7 @@ if incoming:
 else:
     same = []
 
-# The serial on each label, read from links to the photos (src/ocr reads every format here, HEIC and AVIF too).
+# The serial on each label, read from copies of the photos under plain names (making links takes a privilege on Windows).
 reads = {}
 if incoming:
     shutil.rmtree(WORK, ignore_errors=True)
@@ -95,7 +95,7 @@ if incoming:
     links = []
     for k, (_, path, _) in enumerate(incoming):
         links.append(os.path.join(WORK, "photos", f"p{k}{os.path.splitext(path)[1].lower()}"))
-        os.symlink(os.path.abspath(path), links[-1])
+        shutil.copyfile(path, links[-1])
     text.read(links, os.path.join(WORK, "ocr"))
     reads = {row[0]: (row[1], row[2]) for row in serials.serials(os.path.join(WORK, "ocr"))}
     shutil.rmtree(WORK)

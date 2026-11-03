@@ -23,7 +23,7 @@ SPECIAL_SHELLS = "special-shells.tsv"
 
 def special_shell(serial):
     """What is special about the shell of the cartridge with this serial or release id (special-shells.tsv), or None."""
-    rows = csv.DictReader((l for l in open(SPECIAL_SHELLS) if not l.startswith("#")), delimiter="\t")
+    rows = csv.DictReader((l for l in open(SPECIAL_SHELLS, encoding="utf-8") if not l.startswith("#")), delimiter="\t")
     return next((r["shell"] for r in rows if re.match(re.escape(r["code"]) + r"[A-Z]?(-|$)", serial)), None)
 
 

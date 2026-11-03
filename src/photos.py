@@ -57,12 +57,12 @@ def folder(source, system):
 def sources(source, system):
     """A folder's sources.json: file name -> entry."""
     path = os.path.join(ROOT, source, system, "sources.json")
-    return json.load(open(path)) if os.path.exists(path) else {}
+    return json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
 
 
 def save_sources(source, system, entries):
     path = os.path.join(folder(source, system), "sources.json")
-    json.dump(dict(sorted(entries.items())), open(path, "w"), ensure_ascii=False, indent=1)
+    json.dump(dict(sorted(entries.items())), open(path, "w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
 
 
 def folders():

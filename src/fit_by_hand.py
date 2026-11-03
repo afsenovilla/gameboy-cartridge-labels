@@ -70,7 +70,7 @@ class Hand:
         self.entries, self.details = {}, {}
         for name in sorted(self.paths):
             path = os.path.join(DETAILS, name + ".json")
-            details = json.load(open(path)) if os.path.exists(path) else None
+            details = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else None
             e = fits.of(known, name, self.sha1s[name])
             if details is None and not e["fit"] and not e["rejected"]:
                 continue  # never fitted (Game Boy Advance, another shell)

@@ -25,11 +25,11 @@ def found(stem, path, text, sha1, plastic):
     cv2.setNumThreads(1)
     photo = load(path)
     shell = shell_of(photos.serial_of(stem))
-    candidates, groups = candidates_of(photo, json.load(open(text)), shell) if photo is not None else ([], [])
+    candidates, groups = candidates_of(photo, json.load(open(text, encoding="utf-8")), shell) if photo is not None else ([], [])
     G = np.array(plastic)
     kept = [{k: v for k, v in c.items() if k != "group"} | {"H": c["H"].tolist(), "error_mm": same_place(c["H"], G, shell.recess)} for c in candidates]
     result = {"sha1": sha1, "plastic": plastic, "shell": shell.name, "candidates": kept}
-    json.dump(result, open(os.path.join(OUT, stem + ".json"), "w"))
+    json.dump(result, open(os.path.join(OUT, stem + ".json"), "w", encoding="utf-8", newline="\n"))
     return stem
 
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     todo = []
     for stem, path, text, sha1, plastic in good:
         out = os.path.join(OUT, stem + ".json")
-        old = json.load(open(out)) if os.path.exists(out) else None
+        old = json.load(open(out, encoding="utf-8")) if os.path.exists(out) else None
         if old is None or old["sha1"] != sha1 or old["plastic"] != plastic or os.path.getmtime(out) < max(os.path.getmtime(path), os.path.getmtime(text), code):
             todo.append((stem, path, text, sha1, plastic))
     print(f"{len(good)} photos with a good plastic fit; {len(todo)} to find the fits of")
@@ -85,7 +85,7 @@ if __name__ == "__main__":
                 print(f"{done} of {len(todo)}", flush=True)
     data = []
     for stem, *_ in good:
-        r = json.load(open(os.path.join(OUT, stem + ".json")))
+        r = json.load(open(os.path.join(OUT, stem + ".json"), encoding="utf-8"))
         if r["candidates"]:
             data.append((stem, r["shell"], r["candidates"], choice_rows(r["candidates"]), np.array([c["error_mm"] < GOOD for c in r["candidates"]])))
     # Cross-validated: each photo chosen by a score learned without it.
@@ -106,5 +106,5 @@ if __name__ == "__main__":
               f"best of the fits {within(best, .5)}; within 1 mm: {within(after, 1)}, {within(before, 1)}, {within(best, 1)}")
     w, mean, sd = train([(rows, right) for _, _, _, rows, right in data])
     json.dump({"features": FEATURES + list(DERIVED), "mean": mean.tolist(), "sd": sd.tolist(), "weights": w.tolist(), "photos": len(data)},
-              open(CHOICE, "w"), indent=1)
+              open(CHOICE, "w", encoding="utf-8", newline="\n"), indent=1)
     print(f"{CHOICE} written; the largest weights: " + ", ".join(f"{n} {x:+.2f}" for n, x in sorted(zip(FEATURES + list(DERIVED), w), key=lambda p: -abs(p[1]))[:8]))

@@ -99,7 +99,9 @@ def serial_links(release):
                     for s in release["cartridgeSerials"])
 
 
-all_releases = json.load(open(RELEASES))
+if not os.path.exists(RELEASES):
+    sys.exit(f"search-photos needs gb-game-list: {RELEASES} not found (set GB_GAME_LIST if it's elsewhere)")
+all_releases = json.load(open(RELEASES, encoding="utf-8"))
 nintendo_power = nintendo_power_only(all_releases)
 releases = [r for r in all_releases if r["system"] in SYSTEMS and (r["cartridgeSerials"] or r["id"] in nintendo_power)]
 release_of = serials.releases_by_serial()
@@ -156,5 +158,5 @@ make add-photos.</p>
 {''.join(sections)}
 </body></html>"""
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
-open(OUT, "w").write(page)
+open(OUT, "w", encoding="utf-8", newline="\n").write(page)
 print(f"{len(missing)} releases to search ({fake_only} with fakes alone), {len(np_missing)} only on Nintendo Power, {len(replace)} from otakaraou alone -> {pathlib.Path(OUT).resolve().as_uri()}")
