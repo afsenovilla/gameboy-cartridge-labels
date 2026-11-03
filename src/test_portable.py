@@ -1,4 +1,4 @@
-import json, os, sys, tempfile, unittest, cv2, numpy as np
+import json, multiprocessing, os, sys, tempfile, time, unittest, cv2, numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -59,6 +59,46 @@ class Files(unittest.TestCase):
         self.assertNotRegex(photos.tidy('a<b>c:d"e|f?g*.jpg'), r'[<>:"|?*\\/]')
 
 
+def hold_lock(path, seconds):
+    with open(path, "w", encoding="utf-8") as lock:
+        fits.take_lock(lock)
+        time.sleep(seconds)
+
+
+class Locks(unittest.TestCase):
+    def test_a_second_process_waits(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "lock")
+            other = multiprocessing.get_context("spawn").Process(target=hold_lock, args=(path, 2))
+            other.start()
+            time.sleep(1.5)  # it has started and holds the lock
+            start = time.time()
+            with open(path, "a", encoding="utf-8") as lock:
+                fits.take_lock(lock)
+            waited = time.time() - start
+            other.join()
+            self.assertGreater(waited, 0.05)
+
+
+class Reading(unittest.TestCase):
+    def picture(self):
+        picture = np.full((200, 700, 3), 255, np.uint8)
+        cv2.putText(picture, "DMG-ABCJ-JPN", (30, 120), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 4, cv2.LINE_AA)
+        return picture
+
+    def test_a_serial_is_read_with_its_corners_as_it_reads(self):
+        lines = ocr_rapid.read_lines(self.picture())
+        line = next(l for l in lines if "ABCJ" in l["text"])
+        q = np.array(line["quad"])
+        self.assertLess(q[0][0], q[1][0])  # its top left is left of its top right
+
+    def test_text_turned_up_reads_up(self):
+        lines = ocr_rapid.read_lines(cv2.rotate(self.picture(), cv2.ROTATE_90_COUNTERCLOCKWISE))
+        line = next(l for l in lines if "ABCJ" in l["text"])
+        q = np.array(line["quad"])
+        self.assertLess(q[1][1], q[0][1])  # it runs up the picture
+
+
 class Directions(unittest.TestCase):
     def test_a_box_is_read_along_its_long_side(self):
         wide = np.array([[0, 0], [100, 0], [100, 20], [0, 20]], np.float64)
@@ -86,12 +126,15 @@ class Rectify(unittest.TestCase):
 
 
 class Grades(unittest.TestCase):
-    GOOD = {"native_px_per_mm": 20, "sharpness": 100, "clipped": 0, "contrast": 200}
+    GOOD = {"native_px_per_mm": 20, "sharpness": 1000, "clipped": 0, "contrast": 200}
 
     def test_grades(self):
         self.assertEqual(build_database.grade(self.GOOD, False)[0], "A")
         self.assertEqual(build_database.grade(dict(self.GOOD, native_px_per_mm=8), False), ("B", "few pixels"))
         self.assertEqual(build_database.grade(dict(self.GOOD, clipped=0.5), False), ("C", "blown out"))
+
+    def test_a_watermark_is_at_most_c(self):
+        self.assertEqual(build_database.grade(self.GOOD, False, True)[0], "C")
 
     def test_a_fake_is_never_more_than_a_placeholder(self):
         self.assertEqual(build_database.grade(self.GOOD, True)[0], "F")

@@ -52,7 +52,7 @@ PYTHON := .venv/bin/python
 # macOS reads text with its Vision framework, by a tool compiled from src/ocr.swift; other systems don't need it.
 OCR_TOOL := $(if $(filter Darwin,$(shell uname -s)),src/ocr)
 
-.PHONY: rectify database test help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
+.PHONY: rectify clean-rectify database test help setup add-photos read-text clean-read-text fit-cartridge clean-fit-cartridge fit-label clean-fit-label learn-choice review-fits review-labels fit-by-hand search-photos name-photos find-doubles
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -77,6 +77,9 @@ clean-fit-cartridge:
 
 fit-label:
 	$(PYTHON) src/fit_label.py
+
+clean-rectify:
+	rm -rf generated/labels
 
 clean-fit-label:
 	rm -rf generated/fit-label

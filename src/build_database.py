@@ -13,7 +13,7 @@ import fits, images, photos, rectify, serials
 # Grades (src/build_database.grade):
 #   A  a real photo, sharp, well exposed and with plenty of pixels: good enough to publish as it is;
 #   B  a real photo, usable, with one measure below A's;
-#   C  a real photo of poor quality: only until a better one turns up;
+#   C  a real photo of poor quality, or watermarked: only until a better one turns up;
 #   F  a fake (photos.FAKES: box art pasted on a rendered cartridge): a placeholder, whatever its measures.
 OUT = "generated/database"
 SCHEMA_VERSION = 1
@@ -33,9 +33,11 @@ CREATE INDEX photos_release ON photos(release_id);
 CREATE INDEX issues_kind ON issues(kind);
 CREATE VIEW best_labels AS SELECT p.release_id, l.* FROM labels l JOIN photos p USING (stem) WHERE l.is_best = 1;
 """
+# Sources whose photos carry a watermark across the label: never more than C, however sharp.
+WATERMARKED = ("otakaraou",)
 # What A asks, then C's floor. Set from this data's distribution and by looking at labels at each level (see README).
 A_PX_PER_MM, C_PX_PER_MM = 12.0, 6.0
-A_SHARPNESS, C_SHARPNESS = 25.0, 6.0
+A_SHARPNESS, C_SHARPNESS = 400.0, 100.0  # about the 4th percentile of real photos, and below any seen; it depends on the art too
 A_CLIPPED, C_CLIPPED = 0.03, 0.20
 A_CONTRAST, C_CONTRAST = 120.0, 60.0
 GRADE_ORDER = {"A": 0, "B": 1, "C": 2, "F": 3}
@@ -44,10 +46,12 @@ THUMB = (40, 35)
 LOOKALIKE, UNLIKE = 0.95, 0.35
 
 
-def grade(measures, is_fake):
+def grade(measures, is_fake, watermarked=False):
     """A label's grade, and why it isn't better."""
     if is_fake:
         return "F", "not a photo: box art on a rendered cartridge"
+    if watermarked:
+        return "C", "watermark across the label"
     checks = [("few pixels", measures["native_px_per_mm"], A_PX_PER_MM, C_PX_PER_MM, False), ("soft", measures["sharpness"], A_SHARPNESS, C_SHARPNESS, False),
               ("blown out", measures["clipped"], A_CLIPPED, C_CLIPPED, True), ("low contrast", measures["contrast"], A_CONTRAST, C_CONTRAST, False)]
     below_a = [n for n, v, a, _, more_is_worse in checks if (v > a if more_is_worse else v < a)]
@@ -199,7 +203,7 @@ def build():
             if not m or m.get("sha1") != sha1 or m.get("mm_to_photo") != fit["label"]["mm_to_photo"] or "error" in m or not os.path.exists(png):
                 issue("error", "label_stale", stem, key, "its straightened label is missing or out of date (make rectify)")
                 continue
-            g, why = grade(m, is_fake)
+            g, why = grade(m, is_fake, source in WATERMARKED)
             with open(png, "rb") as f:
                 digest = hashlib.sha256(f.read()).hexdigest()
             label_rows.append([stem, posix(png), digest, m["width"], m["height"], m["native_px_per_mm"], m["sharpness"], m["clipped"], m["contrast"], g, why, 0])

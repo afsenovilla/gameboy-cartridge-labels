@@ -1,0 +1,21 @@
+name: test
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # The tests don't use the photos: without them this takes seconds, not a 3 GB download.
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python run.py setup
+      - run: python run.py test

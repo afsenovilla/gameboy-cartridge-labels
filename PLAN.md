@@ -31,10 +31,12 @@ search-photos, name-photos.
 - **Depth layers for the CGB shell**: built (cartridge.camera_of, seen_at; 2026-11-01) and tried; no clear gain
   (results in src/cartridge.py). The measured ridges are taken in flat (cgb_ridge_samples; not inside the recess):
   hard photos 11 -> 25 within 1 mm, accepted ones 57 -> 48 within 0.3 mm. CGB photos not yet refitted.
-- Then: rectify (straighten the label), group the artwork, pick the best photo of each release.
-- **A tool comparing labels by their look against their serials**: similar labels with different serials (likely
-  misreads: about 2 % of photos named by their text are wrong), and identical serials that look different (misnamed
-  photos, or real variants such as reprints).
+- Rectify and the database are built (`make rectify`, `make database`). Then: compositing, and working through the
+  database's `issues` table. The quality grades' thresholds are a first setting, to be checked by eye.
+- **A photo's name versus its look**: the database lists labels that look alike under different serials and labels
+  unlike the others of their serial, for checking. Group the artwork from there.
+- **RapidOCR and new fits**: learned on Vision's text; on 350 reviewed photos, within 0.5 mm of the reviewed fit on 195 of
+  220 DMG and 76 of 130 CGB. Run learn-choice on RapidOCR's text if new CGB photos are fitted off macOS.
 - **Photos named by release, not by their label** (on hold, 2026-11-02): 244 photos had no serial read, so
   add-photos kept the release the downloader searched for (e.g. jauce/dmg/DMG-A7CJ_2.jpg; no region in the name):
   otakaraou 115, gbhwdb 28, jauce 25, ebay-hitjapan 24, others 52. Another 242 have a full serial in the name but no
