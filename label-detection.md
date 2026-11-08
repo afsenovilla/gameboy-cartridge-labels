@@ -165,6 +165,19 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     this MADE IN JAPAN, on the grey side strip at about 2.0, 28.8 mm, is found on 300 USA labels and some European ones,
     never on Japanese ones. As evidence for the serial vote (a region where OCR reads only the game code), not proof.
   - Later, new details can be found the same way from this branch's own label photos.
+- **Telling prints apart** (settled), per linked set, in ink coordinates:
+  1. Each label photo's colors evened: per channel a scale and offset fitted to the set's median.
+  2. Compared in tiles (1 mm to start; 5 mm may do as well) after a blur of about 0.25 mm, so sub-pixel misalignment
+     and sharpness don't count. Tile size and blur are set on the sample by the steps' own measures.
+  3. Per tile, label photos grouped by how alike they look: all alike, a shared area; one different, a defect on that
+     sticker (dirt, scratch, glare); two or more groups of at least two each, a print difference.
+  4. Label photos agreeing on every tile with a print difference are one print.
+  5. Per print, which other prints share each tile: the pooling masks for restoration.
+  - A difference seen in one label photo only counts as a defect: a revision seen once is missed until more photos of
+    it turn up (it shows in the list of prints with few label photos).
+  - Different serials, ratings or CE logos are different prints (different plates), so every one gets its own
+    restored image; they're masked out only when pooling and judging designs.
+  - Designs may be judged by hand before a print has more than one label photo.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
   read by OCR on the straightened label photos and voted within a print.
