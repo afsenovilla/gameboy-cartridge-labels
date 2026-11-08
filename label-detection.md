@@ -234,6 +234,12 @@ so a change is measured in minutes; full runs only once a step is stable on it. 
 CGB name with 3 or more, 12 AGB names with 3, and per shape 5 names with 2 photos and 10 with 1. Konsolenkost isn't in
 photos/; photos with several cartridges can't be told from the names, so they're in only by chance. Can be changed.
 
+## Tests (settled)
+
+Unit tests are written along with the code, from the first step on (the last attempt had none, nor has main). Mostly on
+small made-up cases with known answers (a joint solve recovering known homographies, the key matching, the tile
+grouping telling a planted revision from planted dirt), so they run in seconds; run with `make test`.
+
 ## Still to discuss
 
 Approach, architecture, data structures, steps (each simple for a human to run; no needless steps).
