@@ -79,6 +79,16 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   the worst case, human input.
 - **Telling prints apart** (dirt and scratches from layout revisions) is central, not a refinement. With 10 or more label
   photos it should work for about 90 % of releases; the rest are corrected by hand.
+- **Few label photos per print:** of main's old names, 2459 (65 %) have one photo, 1034 two, 224 three, 46 four, 25 five
+  or more, one (DMG-APSJ-JPN) 12. Different serials are different prints, so most prints have one or two label photos.
+  So:
+  - **Nearly-same prints are pooled:** where prints agree (everything but the serial, the rating and CE logos, say),
+    their label photos are pooled for restoring that area. The rating and CE logos are ignored, both for pooling and for
+    judging designs.
+  - **More photos on demand:** prints with too few label photos are listed; more are downloaded when needed.
+  - **A single label photo is used as it is:** if it's good there's nothing to restore. Its quality can't be measured,
+    so it's marked as from one photo; website visitors may report problems.
+- **Several cartridges in a photo** are rare (never downloaded on purpose) but happen: never assume one per photo.
 - **Prints seen in only one photo** (about half the photos earlier) have nothing to match: their extent and straightening
   come from the recess and the label's own edges.
 
