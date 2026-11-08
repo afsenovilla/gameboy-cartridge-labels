@@ -15,6 +15,7 @@ architecture, data structures, steps. Each section says whether it's settled.
 | cartridge | One physical cartridge. A photo can show several; the same cartridge can be in several photos, often without us knowing. |
 | label photo | One physical label as seen in one photo. A photo has zero or more. |
 | candidate | A place in a photo that may be a label photo, until shown to be one. |
+| label photo key | The photo's SHA-1 and the label photo's centre where first found, in whole percent of the photo's width and height: `<sha1>@48,55`. A later detection whose centre falls inside an existing label photo's outline is that label photo and keeps its key. Stickers can't overlap in a photo, so two label photos can't share a key. |
 | print | The idealized image made by one set of printing plates. Two label photos of one print differ only by physical imperfections: dirt, smear, scratches, glare, misregistration of the color plates, lens distortion, compression, lighting, sensor noise. |
 | design | Prints judged not meaningfully different (only the serial or the regional logos differ). Judged by hand, never computed. |
 | the database | gb-game-list. One record is a database entry. "Release" is informal. |
