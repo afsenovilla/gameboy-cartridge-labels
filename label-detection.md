@@ -141,6 +141,18 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     OCR's job); duplicates merged (all their copies in the most complete one's frame); the CE + seal + licensed split.
     25 details in details/; no pairs left that align with a high correlation. No masks:
     noise around a detail only adds keypoints that match nothing.
+  - **Where they sit (measured 2026-11-08,** every straightened label of main's accepted fits searched for every
+    detail; positions in mm on main's label model, whose fits are off by about 0.3 mm, so spreads of that size are the
+    limit of the measurement):
+    - At one place on almost every label (97 % or more within 1 mm, spread about 0.3 mm): both GAME BOY COLOR logos
+      (CGB at 3.8, 18.8 mm; DMG at 3.8, 18.6), KONAMI (AGB, 100 %), ONLY FOR GAME BOY COLOR (CGB, 96 %); licensed by
+      nintendo on CGB 88 %. These can anchor the label's position.
+    - At a few fixed places, one main: THIS SIDE OUT (DMG 76 %), ゲームボーイ アドバンス (AGB about 65 %), licensed by
+      nintendo (DMG, AGB), MADE IN JAPAN (DMG 42 %, several others).
+    - Anywhere: ORIGINAL, the Super GAME BOY logo, the link cable logos, HUDSON and its bee, K-A esrb rating, Ubi Soft.
+    - Not found at all: seal of quality and CE dark bg + top of seal (18 keypoints each, too few for the SIFT search).
+    - Copies found on another platform at unrelated places are mostly false matches (similar katakana, turned 5° or
+      more).
   - Later, new details can be found the same way from this branch's own label photos.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
