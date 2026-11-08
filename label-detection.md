@@ -111,6 +111,19 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - Several cartridges in a photo: several strings, several matches per pair of photos (RANSAC repeated).
 - **Several versions of a step will be tried** before it works reliably: methods are compared on the sample by the
   steps' own measures.
+- **The joint solve** (proposed):
+  - Each linked set (label photos connected by matches) is solved on its own: sets share nothing, a bad match spoils
+    only its own set. A label photo linked to no other is a set of one, from its own edges.
+  - One least-squares fit per set, each constraint weighted by its precision (a match spread over the whole label
+    weighs more than one on the logo bar alone; the recess to about 0.15 mm; the placement softly limited to about
+    1 mm).
+  - Label photos of one print share their scale exactly. Nearly-same prints probably do, but nothing dictates it, and
+    some include logos or background art at a different scale: each print gets its own similarity (scale, shift, turn)
+    in ink coordinates, expected near none, fitted on the areas it shares; an element at another scale is then simply
+    an area that differs.
+  - Starts chained through the set's matches.
+  - A plain homography, no lens distortion: it hasn't seemed to matter. Each label photo's leftover error shows if it
+    does.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
   read by OCR on the straightened label photos and voted within a print.
