@@ -68,7 +68,29 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 - Main's sources.json (URL by SHA-1; 2950 of 5519 photos have one) is for output only, never read by a detection
   step.
 
-## Approach notes so far
+## Approach (being settled)
+
+- **One frame per shape, in mm:** a coordinate system on the label's nominal place in the recess (DMG: main's model's
+  42.5 × 37 mm rectangle, 7.25 mm from the cartridge's left edge and 19 mm from its top). A point means the same place
+  on every label photo of that shape, whatever print it shows, so label photos of different prints compare and pool
+  pixel by pixel. Every straightened image is drawn in it at a fixed px/mm. Each print has a small shift and turn within
+  it (the median of its label photos').
+- **Every label photo gets a homography from its photo into its shape's frame,** from two kinds of evidence, solved
+  jointly:
+  - relative: SIFT matches between label photos of different photos. Not only of the same print: nearly-same prints
+    and shared templates (the grey frame and logo bar of US and European DMG labels) align too, which is wanted; the
+    pixels decide afterwards what is the same.
+  - absolute (mm, perspective): the recess edges and the label's own cut edges, both soft. The cut is sloppy (about
+    1 mm) but its edges are close to straight (bowing about 0.1 mm on the long side, from the cutting); the recess
+    is found to about 0.15 mm, and a label can stick out of it by about 1 mm. Pooled per print.
+- **Finding label photos:** matches find every label photo whose print, or a nearly-same one, is in another photo; the
+  rest are found from the photo alone (cut edges, recess, main's shape models). Both run on every photo, since only
+  the photo's own edges give mm.
+- **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
+  print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
+  read by OCR on the straightened label photos and voted within a print.
+- **Fakes** (box art on rendered cartridges) stay in photos/: a fake either matches real label photos or it doesn't. One
+  matching nothing is a print from a single label photo, and shows in that list.
 
 - **Scale:** all label photos of a print have exactly the same physical scale. (The 0.46 % spread measured earlier is
   most likely error in finding the recess, about 0.15 mm.)
