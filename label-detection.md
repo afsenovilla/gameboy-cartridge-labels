@@ -93,15 +93,22 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - **Anchoring:** for each set of prints linked by shared areas, the median placement over their label photos is the
     nominal label place (DMG: main's 42.5 × 37 mm rectangle, 7.25 mm from the cartridge's left edge, 19 mm from its
     top). A print linked to no other is anchored by its own label photos.
-- **Finding label photos** (proposed): the plastic isn't needed for it.
-  - Seeds: OCR of every photo (it worked well before); a serial read and found in the database makes a candidate where
-    it was read, the text line giving rough place, turn and size. A candidate with a serial is a label photo.
-  - Spreading: SIFT matches from a label photo to another photo make candidates there; one in the ink area is a label
-    photo, even when no serial is read on it (its serial is read once it's straightened, or stays unknown).
-  - Matches that never touch a label photo (watermarks, backgrounds, embossing) are never used: no serial, nothing to
-    spread from.
+- **Finding label photos** (proposed): the plastic isn't needed for it. Evidence adds up; no single piece is required.
+  - Seeds: OCR of every photo (it worked well before). A serial-looking string is a candidate, the text line giving
+    rough place, turn and size.
+  - A SIFT match near a similar string in another photo is a strong sign of a label photo. The database confirms the
+    serial, more so when the title is read too and matches the entry's. (Not requiring the database is also what lets
+    serials not in it be found.)
+  - Spreading: SIFT matches from a label photo make candidates in other photos, also where no serial is read (it's read
+    once straightened, or stays unknown).
+  - The ink's extent: the continuous area where a match's aligned pixels agree; it may run onto the plastic where that
+    looks alike, so it's bounded by the label's cut edges, detected at this stage. Matches off it (a watermark in the
+    same photo) don't spread.
+  - Watermarks, backgrounds and embossing carry no serial-looking string and so never start anything.
+  - The shape comes from the serial's prefix (DMG-, CGB-, AGB-; the black dual-mode cartridges are DMG- on the DMG
+    shape); a label photo found only by matching takes its match's.
   - Photos with no label photo are listed.
-  - Several cartridges in a photo: several serials, several matches per pair of photos (RANSAC repeated).
+  - Several cartridges in a photo: several strings, several matches per pair of photos (RANSAC repeated).
 - **Several versions of a step will be tried** before it works reliably: methods are compared on the sample by the
   steps' own measures.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
