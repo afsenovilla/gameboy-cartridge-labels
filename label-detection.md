@@ -153,6 +153,17 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     - Not found at all: seal of quality and CE dark bg + top of seal (18 keypoints each, too few for the SIFT search).
     - Copies found on another platform at unrelated places are mostly false matches (similar katakana, turned 5° or
       more).
+  - The spread of the fixed-place logos (about 0.3 mm) is measured on main's label fits, which follow each sticker's
+    cut outline: cut sloppiness and fit error together are about 0.3 mm on those labels (accepted fits only, which may
+    favour clean cuts), less than the "up to about 1 mm" assumed above. In ink coordinates a template's logo sits at the
+    same place by definition, so its spread measured against the cut is the best measure of the cut.
+  - Details with few keypoints (seal of quality, CE: 18 each, after being split and cropped) aren't found by SIFT in a
+    raw photo. In straightened label photos (known scale and turn) they're found by template matching instead; that's
+    where they're needed (masking the CE when pooling and judging).
+  - **To experiment with: details as evidence of region.** A detail's wording tells nothing (MADE IN JAPAN is on US
+    and European labels too), but its version and place tell the label's layout, and the layout correlates with region:
+    this MADE IN JAPAN, on the grey side strip at about 2.0, 28.8 mm, is found on 300 USA labels and some European ones,
+    never on Japanese ones. As evidence for the serial vote (a region where OCR reads only the game code), not proof.
   - Later, new details can be found the same way from this branch's own label photos.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
