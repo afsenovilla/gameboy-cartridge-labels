@@ -134,8 +134,10 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - Made 2026-11-08 (one-off scripts, not in the repo): main's 3941 accepted label fits straightened at 20 px/mm with a
     3 mm margin (the mm approximate); SIFT matches between labels of different games, only within a platform; recurring
     areas found from 1200 of them, then every label of the platform searched for each; each instance aligned by a
-    homography (SIFT, then ECC against the median, twice), lighting evened per channel; the median color, alpha from
-    the spread (opaque below about 10 of 255, clear above 35). 42 details in details/ (DMG 28, AGB 8, CGB 6), to be
+    homography (SIFT, then ECC against the median, twice), in the median of the copies' own straightenings (not the
+    reference's, which skewed some); each copy's contrast and brightness per channel fitted to the median; the median
+    color, no alpha (the spread mostly marked edges, not content), cropped 0.5 mm around the keypoints matched in at
+    least 30 % of the copies. 42 details in details/ (DMG 28, AGB 8, CGB 6), to be
     renamed and deleted by hand.
   - Later, new details can be found the same way from this branch's own label photos.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
