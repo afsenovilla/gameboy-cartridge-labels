@@ -131,6 +131,12 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - Found once, from main's fits (a one-off, like the sample; no step reads main): main's label fits straightened,
     areas that match across label photos of many different serials (a game's own art doesn't recur across games) cut
     out in mm, one image per detail, committed. Named once on a page, and marked whether ignored.
+  - Made 2026-11-08 (one-off scripts, not in the repo): main's 3941 accepted label fits straightened at 20 px/mm with a
+    3 mm margin (the mm approximate); SIFT matches between labels of different games, only within a platform; recurring
+    areas found from 1200 of them, then every label of the platform searched for each; each instance aligned by a
+    homography (SIFT, then ECC against the median, twice), lighting evened per channel; the median color, alpha from
+    the spread (opaque below about 10 of 255, clear above 35). 42 details in details/ (DMG 28, AGB 8, CGB 6), to be
+    renamed and deleted by hand.
   - Later, new details can be found the same way from this branch's own label photos.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
