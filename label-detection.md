@@ -124,6 +124,14 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - Starts chained through the set's matches.
   - A plain homography, no lens distortion: it hasn't seemed to matter. Each label photo's leftover error shows if it
     does.
+- **Common details** (the Game Boy Color logo, the Nintendo seals, the ESRB E, CE...): found automatically, named
+  once by hand. Uses: the rating and CE logos masked out when pooling and judging designs; seeds for finding label
+  photos (like a serial-looking string); starts (a 2D picture with many keypoints gives place, turn and rough size; their
+  size varies between labels); a difference that is only a known detail is named as such, not taken for a revision.
+  - Found once, from main's fits (a one-off, like the sample; no step reads main): main's label fits straightened,
+    areas that match across label photos of many different serials (a game's own art doesn't recur across games) cut
+    out in mm, one image per detail, committed. Named once on a page, and marked whether ignored.
+  - Later, new details can be found the same way from this branch's own label photos.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
   read by OCR on the straightened label photos and voted within a print.
