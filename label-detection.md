@@ -14,6 +14,7 @@ architecture, data structures, steps. Each section says whether it's settled.
 | photo | One file in photos/. |
 | cartridge | One physical cartridge. A photo can show several; the same cartridge can be in several photos, often without us knowing. |
 | label photo | One physical label as seen in one photo. A photo has zero or more. |
+| candidate | A place in a photo that may be a label photo, until shown to be one. |
 | print | The idealized image made by one set of printing plates. Two label photos of one print differ only by physical imperfections: dirt, smear, scratches, glare, misregistration of the color plates, lens distortion, compression, lighting, sensor noise. |
 | design | Prints judged not meaningfully different (only the serial or the regional logos differ). Judged by hand, never computed. |
 | the database | gb-game-list. One record is a database entry. "Release" is informal. |
@@ -92,9 +93,17 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - **Anchoring:** for each set of prints linked by shared areas, the median placement over their label photos is the
     nominal label place (DMG: main's 42.5 × 37 mm rectangle, 7.25 mm from the cartridge's left edge, 19 mm from its
     top). A print linked to no other is anchored by its own label photos.
-- **Finding label photos:** matches find every label photo whose print, or a nearly-same one, is in another photo; the
-  rest are found from the photo alone (cut edges, recess, main's shape models). Both run on every photo, since only
-  the photo's own edges give mm.
+- **Finding label photos** (proposed): the plastic isn't needed for it.
+  - Seeds: OCR of every photo (it worked well before); a serial read and found in the database makes a candidate where
+    it was read, the text line giving rough place, turn and size. A candidate with a serial is a label photo.
+  - Spreading: SIFT matches from a label photo to another photo make candidates there; one in the ink area is a label
+    photo, even when no serial is read on it (its serial is read once it's straightened, or stays unknown).
+  - Matches that never touch a label photo (watermarks, backgrounds, embossing) are never used: no serial, nothing to
+    spread from.
+  - Photos with no label photo are listed.
+  - Several cartridges in a photo: several serials, several matches per pair of photos (RANSAC repeated).
+- **Several versions of a step will be tried** before it works reliably: methods are compared on the sample by the
+  steps' own measures.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
   read by OCR on the straightened label photos and voted within a print.
