@@ -187,13 +187,17 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   one setting):
   - Contributing to a pixel: the print's own label photos, plus other prints' wherever the pooling masks say the tile
     is shared.
-  - Each label photo, colors evened, split into frequency bands in Oklab. A label photo counts in a band only if it
-    carries it (by its photo pixels per mm and its measured sharpness): a low-resolution or out-of-focus one is left
-    out of the fine bands rather than blurring them.
+  - Each label photo, colors evened, split into frequency bands in Oklab: a Laplacian pyramid from 20 px/mm, halving
+    until one pixel is left (about 10 bands). A label photo counts in a band only where it carries it, as in focus
+    stacking: per band, a weight map from the band's local energy, blurred over a radius larger than the details,
+    compared between the label photos at each pixel; bands finer than a photo's own resolution get no weight. A partly
+    focused label photo then counts where it's sharp.
   - Per band, weighted by sharpness: one label photo as it is; two averaged (halving scratches and glare); three or
     more by a soft median, an M-estimator such as Tukey's biweight (starting from the median, values reweighted
-    smoothly by their distance from the estimate: no ridges where gradients point different ways). Its scale from the
-    bands' own noise.
+    smoothly by their distance from the estimate: no ridges where gradients point different ways), its scale from the
+    bands' own noise. The plain median is made too; the user judges which is better.
+  - To try: the lowest bands de-emphasized to even the lighting (like the iPhone's "Brilliance"); not sound, may look
+    fine. Dropped if complex.
   - Crop: position and turn from the median of the label photos' cut outlines; size main's canonical label sizes (DMG
     42.5 x 37 mm, CGB 41.5 x 37, AGB 43 x 22).
   - Colors: to be experimented with (paper white with clipping as in main, which was noticeable as it had to be
