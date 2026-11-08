@@ -289,6 +289,37 @@ photos/; photos with several cartridges can't be told from the names, so they're
 
 match and find are separate so that the rule for a label photo can be tried in versions without redoing the matching.
 
+## Data structures (being settled)
+
+**Conventions:**
+- Photo coordinates: pixels of the photo as stored, its EXIF turn applied; x right, y down.
+- Ink coordinates: mm, origin at the nominal label's top left (main's label model moved to 0, 0); plastic
+  coordinates: main's cartridge mm.
+- Homographies: 3 x 3 lists named `<from>_to_<to>` (photo_to_ink).
+- JSON for what a person might read; .npz for large arrays; generated images AVIF at a high quality (they can be
+  regenerated; checked once on the sample: tile differences and file sizes with and without compression); details/
+  stays PNG (used for matching).
+- Label photo key: `<sha1>@<x>,<y>`. Print id: the smallest key among its label photos (within a run only, never in hand
+  files).
+
+| Step | File | Contents |
+|---|---|---|
+| read-text | read-text/<sha1>.json | size, engine; lines: text, confidence, corners |
+| features | features/<sha1>.npz | points, sizes, angles, descriptors (uint8) |
+| edges | edges/<sha1>.npz | segments (x1, y1, x2, y2), strength |
+| match | match/<sha1>.npz | matches against the photos processed before it: each pair once, in the later photo's file; a file never changes once written; per match the other SHA-1, a_to_b, the inlier point pairs |
+| find | find/label-photos.json | per label photo: key, outline (rough), shape, evidence (strings and whether in the database, title, details, matches and their pixel agreement); sets (lists of keys); rejected candidates and why |
+| solve | solve/solve.json | per label photo: photo_to_ink, placement (dx, dy mm, turn), fallback (null or "sift median"), leftover error; per set: recess spread, leftover errors |
+| straighten | straighten/<key>.avif | 20 px/mm, the nominal label plus 5 mm around it, uncropped (the crop is decided by restore, and restoration pools the overflow past the cut) |
+| read-serials | read-serials/serials.json, missing.json, unknown-serials.json | per key: reads, serial (voted or null), in_database; database entries with no label photo; serials not in the database |
+| prints | prints/prints.json, prints/<print>/<other>.png, few-photos.json | per print: id, keys, serial, shape. Optional pair images, one pixel per tile, white where the two look alike; only for pairs whose shared area, less the tiles many prints of the set share (the grey frame), is above a limit (tuned on the sample) |
+| restore | restore/<print>.avif, restore/<print>.json | the image (cropped); label photos used, how many count in each band, single-photo flag, crop (position, turn, size) |
+| publish | publish/ | prints/<print>.avif; label-photos/<key>.avif (each drawn straight from its photo through photo_to_ink and its print's crop: one resampling); index.json (per label photo: print, serial, source, URL; per print: label photos, serial); the lists collected |
+
+designs.json (hand-edited): `{"<key>": "<design name>"}`; a label photo not listed has no design yet.
+
+- To try (restore): the designer's vision, a print restored without the extra logos and seals.
+
 ## Tests (settled)
 
 Unit tests are written along with the code, from the first step on (the last attempt had none, nor has main). Mostly on
@@ -297,4 +328,4 @@ grouping telling a planted revision from planted dirt), so they run in seconds; 
 
 ## Still to discuss
 
-Data structures: the formats of each step's output and of designs.json.
+Whatever the data structures leave open.
