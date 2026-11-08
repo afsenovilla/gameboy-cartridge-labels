@@ -177,7 +177,11 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     it turn up (it shows in the list of prints with few label photos).
   - Different serials, ratings or CE logos are different prints (different plates), so every one gets its own
     restored image; they're masked out only when pooling and judging designs.
-  - Designs may be judged by hand before a print has more than one label photo.
+  - Designs may be judged by hand before a print has more than one label photo, so designs group **label photos**,
+    not prints (print groups change as photos are added; label photos don't). A print whose label photos are in
+    different designs is a contradiction, flagged, never resolved silently.
+  - Main's designs.json (designs of database entries) is converted once into designs of label photos, as soon as
+    label photos have serials, and then dropped; if it doesn't convert easily, it's ignored and regrouped by hand.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
   read by OCR on the straightened label photos and voted within a print.
