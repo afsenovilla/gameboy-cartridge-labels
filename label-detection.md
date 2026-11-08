@@ -253,12 +253,48 @@ so a change is measured in minutes; full runs only once a step is stable on it. 
 CGB name with 3 or more, 12 AGB names with 3, and per shape 5 names with 2 photos and 10 with 1. Konsolenkost isn't in
 photos/; photos with several cartridges can't be told from the names, so they're in only by chance. Can be changed.
 
+## Architecture (settled)
+
+- **A step owns its output and never changes another step's.** Data flows one way: no step's output feeds an earlier
+  step. (The last attempt broke this: three steps deleted each other's fits, and results depended on the order they
+  ran in.) Steps iterate within themselves (find's spreading, solve's least squares, restore's soft median), never
+  between each other. The one loop across steps is through hand input: new details found later go into details/ by
+  hand, and find uses them on the next run.
+- **One make target per step:** it runs its own step only, skips what's done, redoes what's older than its step's code
+  (as main; misses changes in shared modules, enough for now); make clean-<step> redoes all of it.
+- **Output in generated/<step>/:** one file per photo where the work is per photo (by SHA-1: a photo is processed once,
+  unless the step's settings change), else one file for the step.
+- **Each step writes a page,** generated/<step>/index.html: its measures, worst first, with the images.
+- **Hand input,** committed, read by steps and never written: details/ and designs.json (label photo key -> design). No
+  corrections file: print detection splits prints; a label photo put in a design of its own makes a wrongly lumped
+  print a flagged contradiction; merges are what designs.json does.
+- **Keys aren't remembered between runs:** each run names a label photo by its current centre; a key in designs.json
+  belongs to the label photo whose outline contains that point.
+- **The sample:** make <step> SAMPLE=1 runs on sample.txt into generated-sample/, so trying a version of a step never
+  touches the full run.
+
+| Step | Work | Output |
+|---|---|---|
+| read-text | OCR of each photo; first, RapidOCR compared with Apple Vision on the sample (valid serials read, agreement), the better one kept | text lines and their corners, per photo |
+| features | SIFT of each photo, nothing label-specific | keypoints, per photo |
+| edges | every straight line segment in each photo, no interpretation | segments, per photo |
+| match | one index of all keypoints; pairs checked by RANSAC, several homographies per pair; incremental (a new photo matched against all; old pairs kept) | matches and their inlier areas |
+| find | label photos from the evidence (serial-looking strings, details, matches, the database; the ink's extent from agreeing pixels and cut edges); spreading until nothing changes | label photos: keys, rough outlines, evidence |
+| solve | the joint solve per linked set; which segments are a cut or a recess decided against the shape model | homography into ink and placement, per label photo |
+| straighten | each label photo drawn in ink coordinates | images, for the next steps and the user's judging |
+| read-serials | OCR of the straightened label photos, voted per linked set | serials |
+| prints | the tile comparison | prints, pooling masks |
+| restore | bands, weights, combining, crop | restored prints |
+| publish | the outputs | label photo crops with source and URL, restored prints, the lists |
+
+match and find are separate so that the rule for a label photo can be tried in versions without redoing the matching.
+
 ## Tests (settled)
 
 Unit tests are written along with the code, from the first step on (the last attempt had none, nor has main). Mostly on
 small made-up cases with known answers (a joint solve recovering known homographies, the key matching, the tile
-grouping telling a planted revision from planted dirt), so they run in seconds; run with `make test`.
+grouping telling a planted revision from planted dirt), so they run in seconds; pytest, run with `make test`.
 
 ## Still to discuss
 
-Approach, architecture, data structures, steps (each simple for a human to run; no needless steps).
+Data structures: the formats of each step's output and of designs.json.
