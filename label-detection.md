@@ -118,8 +118,8 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     weighs more than one on the logo bar alone; the recess to about 0.15 mm; the placement softly limited to about
     1 mm).
   - Label photos of one print share their scale exactly. Nearly-same prints probably do, but nothing dictates it, and
-    some include logos or background art at a different scale: each print gets its own similarity (scale, shift, turn)
-    in ink coordinates, expected near none, fitted on the areas it shares; an element at another scale is then simply
+    some include logos or background art at a different scale: each print gets its own scale, turn and shift (4
+    numbers, no stretch or shear) in ink coordinates, expected near none, fitted on the areas it shares; an element at another scale is then simply
     an area that differs.
   - Starts chained through the set's matches.
   - A plain homography, no lens distortion: it hasn't seemed to matter. Each label photo's leftover error shows if it
