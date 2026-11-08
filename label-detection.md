@@ -26,9 +26,8 @@ architecture, data structures, steps. Each section says whether it's settled.
 
 ### Output
 
-- **Restored prints:** for every print a human has judged visually distinct, a restored image, reconstructed from all
-  its label photos, in mm, with its serial. Other prints are ignored in the output, but every print group gets a quick
-  restoration first, since there's nothing to judge before that. Cropped at the median cut position of its label photos (labels are printed with overflow and cut
+- **Restored prints:** at least every print a human has judged visually distinct (judged on the straightened label
+  photos): a restored image, reconstructed from all its label photos, in mm, with its serial. Cropped at the median cut position of its label photos (labels are printed with overflow and cut
   sloppily; the whole print is detected first, then cropped).
 - **Label photos:** each one straightened in its print's frame, the same crop, with the photo's source and original
   URL.
@@ -49,8 +48,7 @@ out of scope.
 The database entries are grouped into designs by main's designs.json: by default one design per game stem and market
 (Japan, the USA, the rest of the world), and its 111 records the exceptions judged by hand (merges and splits). It's
 input data about database entries, not a verdict on any fit, so it's reused. Several prints within one database entry
-(DMG-TRA) can't be known in advance; they're found as separate print groups and judged then. *(Proposed: is designs.json
-the design input, and is "done" then "every design has a restored print"?)*
+(DMG-TRA) can't be known in advance; they're found as separate print groups and judged then.
 
 ### Review
 
@@ -65,7 +63,8 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 - Input: the photos, OCR, the database, main's code, main's designs.json.
 - Not as input: main's fits.json or any other verdicts main's tools stored, the old file names, the sources.
 - Not as ground truth either: main's fits are mostly fairly accurate but have outliers off by about 3 mm, and main's
-  approach is what this branch replaces.
+  approach is what this branch replaces. Comparing with main statistically (distributions, agreement rates) is fine;
+  no single photo's data in main is taken as true.
 - Main's sources.json (URL by SHA-1; 2950 of 5519 photos have one) is for output only, never read by a detection
   step.
 
@@ -85,7 +84,8 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 
 ## How results are judged (under discussion)
 
-There is no ground truth: main's fits aren't one (see above). Results are judged by each step's own measures, on its
+There is no ground truth: main's fits aren't one (see above), though main may be compared with statistically. Results
+are judged by each step's own measures, on its
 page, worst first, so the human looks where things are most likely wrong:
 
 | Step's job | Measure |
@@ -99,17 +99,11 @@ page, worst first, so the human looks where things are most likely wrong:
 The weakness: consistency can't show an error every label photo of a print shares (all recesses found 1 mm too low,
 say). Only looking catches that, so each page shows the images, not only the numbers.
 
-**Development sample (agreed):** a fixed set of about 300 photos, committed, so a change is measured in minutes. Full
-runs only once a step is stable on it. How to choose it is open (below).
-
-Open questions:
-
-1. **Choosing the sample.** It needs prints seen many times, or grouping prints can't be tried: 300 random photos of
-   5518 would hold few repeats. Knowing which photos show which print takes the old names. Proposal: use main's names
-   only to pick the sample, never in a step: about 35 database entries and all their photos (about 300): DMG-TRA-JPN
-   (two revisions), entries with 20 or more photos, entries with one, all three shapes, Konsolenkost composites, photos
-   with several cartridges.
-2. **Designs:** is designs.json the design input, and "done" every design having a restored print (above)?
+**Development sample:** sample.txt, one SHA-1 per line: 276 photos of 96 old names (DMG 157 photos, CGB 63, AGB 56),
+so a change is measured in minutes; full runs only once a step is stable on it. Chosen once from main's old names
+(never read by a step), seeded random: DMG-TRA (with the [MINUET] photos), every DMG name with 5 or more photos, every
+CGB name with 3 or more, 12 AGB names with 3, and per shape 5 names with 2 photos and 10 with 1. Konsolenkost isn't in
+photos/; photos with several cartridges can't be told from the names, so they're in only by chance. Can be changed.
 
 ## Still to discuss
 
