@@ -183,6 +183,21 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     different designs is a contradiction, flagged, never resolved silently.
   - Main's designs.json (designs of database entries) is converted once into designs of label photos, as soon as
     label photos have serials, and then dropped; if it doesn't convert easily, it's ignored and regrouped by hand.
+- **Restoration** (settled), per print, in ink coordinates at 20 px/mm (508 dpi: prints are commonly 600 dpi or less;
+  one setting):
+  - Contributing to a pixel: the print's own label photos, plus other prints' wherever the pooling masks say the tile
+    is shared.
+  - Each label photo, colors evened, split into frequency bands in Oklab. A label photo counts in a band only if it
+    carries it (by its photo pixels per mm and its measured sharpness): a low-resolution or out-of-focus one is left
+    out of the fine bands rather than blurring them.
+  - Per band, weighted by sharpness: one label photo as it is; two averaged (halving scratches and glare); three or
+    more by a soft median, an M-estimator such as Tukey's biweight (starting from the median, values reweighted
+    smoothly by their distance from the estimate: no ridges where gradients point different ways). Its scale from the
+    bands' own noise.
+  - Crop: position and turn from the median of the label photos' cut outlines; size main's canonical label sizes (DMG
+    42.5 x 37 mm, CGB 41.5 x 37, AGB 43 x 22).
+  - Colors: to be experimented with (paper white with clipping as in main, which was noticeable as it had to be
+    strong; the median of the label photos; others). Pooling in bands should leave less noise in the paper.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
   read by OCR on the straightened label photos and voted within a print.
