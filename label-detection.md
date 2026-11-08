@@ -137,8 +137,10 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     homography (SIFT, then ECC against the median, twice), in the median of the copies' own straightenings (not the
     reference's, which skewed some); each copy's contrast and brightness per channel fitted to the median; the median
     color, no alpha (the spread mostly marked edges, not content), cropped 0.5 mm around the keypoints matched in at
-    least 30 % of the copies. 42 details in details/ (DMG 28, AGB 8, CGB 6), to be
-    renamed and deleted by hand.
+    least 30 % of the copies. Then by hand and on request: named; serial fragments deleted (text is
+    OCR's job); duplicates merged (all their copies in the most complete one's frame); the CE + seal + licensed split.
+    25 details in details/; no pairs left that align with a high correlation. No masks:
+    noise around a detail only adds keypoints that match nothing.
   - Later, new details can be found the same way from this branch's own label photos.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
   print of its own; a random one is dirt); restoration pools every label photo that agrees in an area; the serial is
