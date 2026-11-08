@@ -18,6 +18,8 @@ architecture, data structures, steps. Each section says whether it's settled.
 | design | Prints judged not meaningfully different (only the serial or the regional logos differ). Judged by hand, never computed. |
 | the database | gb-game-list. One record is a database entry. "Release" is informal. |
 | shape | The cartridge's plastic: DMG (grey, also the black dual-mode cartridges), CGB (clear, CGB only), AGB. Not the platform, which is the serial's prefix. |
+| ink / plastic coordinates | mm on the printed image (one per shape) / mm on the cartridge (main's shape models). |
+| placement | Where one sticker's ink sits on its plastic: a shift and a turn. |
 | similar | A measured quantity (aligned pixels alike). Never means "the same print". |
 
 "Label" alone is informal: never in names, files or fields.
@@ -70,19 +72,26 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 
 ## Approach (being settled)
 
-- **One frame per shape, in mm:** a coordinate system on the label's nominal place in the recess (DMG: main's model's
-  42.5 × 37 mm rectangle, 7.25 mm from the cartridge's left edge and 19 mm from its top). A point means the same place
-  on every label photo of that shape, whatever print it shows, so label photos of different prints compare and pool
-  pixel by pixel. Every straightened image is drawn in it at a fixed px/mm. Each print has a small shift and turn within
-  it (the median of its label photos').
-- **Every label photo gets a homography from its photo into its shape's frame,** from two kinds of evidence, solved
-  jointly:
-  - relative: SIFT matches between label photos of different photos. Not only of the same print: nearly-same prints
-    and shared templates (the grey frame and logo bar of US and European DMG labels) align too, which is wanted; the
-    pixels decide afterwards what is the same.
-  - absolute (mm, perspective): the recess edges and the label's own cut edges, both soft. The cut is sloppy (about
-    1 mm) but its edges are close to straight (bowing about 0.1 mm on the long side, from the cutting); the recess
-    is found to about 0.15 mm, and a label can stick out of it by about 1 mm. Pooled per print.
+- **Two coordinate systems, both in mm:**
+  - **ink coordinates:** on the printed image; one per shape, shared by all its prints. Prints sharing areas are
+    positioned so those areas coincide (two US DMG prints' logo bars on the same mm). The restored prints and the
+    straightened label photos are drawn in them, at a fixed px/mm.
+  - **plastic coordinates:** on the cartridge, as main's shape models; the recess is there.
+  - The paper isn't a coordinate system: each sticker's cut outline is a shape in ink coordinates, different for every
+    sticker; their median is the crop.
+- **Each label photo has two unknowns,** solved jointly over all label photos:
+  - **photo → ink,** a homography (8 numbers), from SIFT matches between label photos of different photos. Not only of
+    the same print: nearly-same prints and shared templates (the grey frame and logo bar of US and European DMG labels)
+    align too, which is wanted; the pixels decide afterwards what is the same.
+  - **ink → plastic, the placement:** where this sticker's ink sits on its cartridge, a shift and a turn (3 numbers;
+    about 1 mm and 2° at most), from the recess edges (found to about 0.15 mm; a label can stick out by about 1 mm). The
+    recess thus gives scale and perspective through the placement, which absorbs its position (and the small offset of
+    the label lying below the face, seen at an angle).
+  - The cut edges are close to straight (bowing about 0.1 mm on the long side, from the cutting) and help the
+    perspective; their position only gives the crop.
+  - **Anchoring:** for each set of prints linked by shared areas, the median placement over their label photos is the
+    nominal label place (DMG: main's 42.5 × 37 mm rectangle, 7.25 mm from the cartridge's left edge, 19 mm from its
+    top). A print linked to no other is anchored by its own label photos.
 - **Finding label photos:** matches find every label photo whose print, or a nearly-same one, is in another photo; the
   rest are found from the photo alone (cut edges, recess, main's shape models). Both run on every photo, since only
   the photo's own edges give mm.
