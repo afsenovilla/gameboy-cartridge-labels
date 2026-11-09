@@ -85,3 +85,23 @@ def test_apart_survives_a_singular_candidate():
     good = {"cut_to_photo": solve.similarity_to_H((500, 500), 0, 10, "dmg")}
     bad = {"cut_to_photo": np.array([[1.0, 2, 3], [2, 4, 6], [0, 0, 1]])}
     assert solve.apart_mm(bad, good, "dmg") == float("inf")
+
+
+def test_refining_corrects_a_corner_off_by_a_millimetre():
+    from test_match import textured
+    print_ = textured(np.random.default_rng(5), 600, 700)
+    px = 12
+    good = np.array([[px, 0, 30.0], [0, px, 30.0], [0, 0, 1]])   # label mm -> photo px
+    # a third label photo's fit with one corner 1 mm off: its "label mm" are distorted
+    mm = solve.corners_mm("dmg")
+    off = mm.copy(); off[3] += [0, 1.0]
+    bent = good @ cv2.getPerspectiveTransform(mm.astype(np.float32), off.astype(np.float32)).astype(np.float64)
+    views = {"a": solve.compare_view(print_, good, "dmg"), "b": solve.compare_view(print_, good, "dmg"),
+             "c": solve.compare_view(print_, bent, "dmg")}
+    offsets = {k: np.zeros(3) for k in views}
+    corrections, bad = solve.refine_family(list(views), views, offsets, "dmg")
+    assert not bad and corrections["a"][1] < 0.2
+    # a print point at true mm p lies at D^-1(p) in c's mm (D: mm -> off), so the correction should be D: it takes c's
+    # label corners to where the distortion put them
+    C = corrections["c"][0]
+    assert np.abs(solve.project(C, mm) - off).max() < 0.25

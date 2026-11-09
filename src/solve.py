@@ -29,7 +29,8 @@
 #      recess-like lines: on the sample, 0.4 kept 69 of 70 fits within 2 mm of main's and dropped 87 of 109 farther off).
 #   2. Families: link candidates (one per match homography), counted where the matched points agree within
 #      LINK_FIT_MM and the pixels agree (see stage2's comment); poor fits flagged; offsets per family by a robust fit,
-#      each family's median cut its anchor.
+#      each family's median cut its anchor; then each family's label photos aligned to its median view by the pixels
+#      (refine_family: a homography per label photo, correcting the outline fit's perspective errors).
 # Done again when solve.json is older than this file or its inputs.
 # Usage: solve.py [--sample]
 import argparse, html, json, os, sys
@@ -721,11 +722,88 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
         for k, n in idx.items():
             offsets[k] = x[n]
     fam_of = {k: (min(m), len(m)) for m in families.values() for k in m}
+    corrections = {}
+    release_of = {lp["key"]: next((t["release"] for t in lp["strings"] if t.get("release")), None) for lp in lps}
+    for members in families.values():
+        # refined per release within the family (a family can hold a series' games sharing a layout: aligning them to
+        # one median pulls them apart); label photos without a serial with the family's largest release group
+        by_release = {}
+        for k in members:
+            if release_of.get(k):
+                by_release.setdefault(release_of[k], []).append(k)
+        largest = max(by_release.values(), key=len) if by_release else members
+        for k in members:
+            if not release_of.get(k) and largest is not members:
+                largest.append(k)
+        for group in (by_release.values() if by_release else [members]):
+            if len(group) >= 2:
+                c, bad = refine_family(group, views, offsets, shape_of[group[0]])
+                corrections.update(c)
+                poor |= bad
     info = {"link candidates": len(candidates), "judged": len(judged),
             "pixels agree": sum(pixel_ok(j) for j in judged.values()),
             "counting links": len(links), "poor fits": len(poor),
-            "families": sorted((len(m) for m in families.values()), reverse=True)[:10]}
-    return offsets, fam_of, poor, info
+            "families": sorted((len(m) for m in families.values()), reverse=True)[:10],
+            "refined": len(corrections),
+            "correction_mm": {"median": round(float(np.median([v[1] for v in corrections.values()])), 3) if corrections else None,
+                              "90 %": round(float(np.percentile([v[1] for v in corrections.values()], 90)), 3) if corrections else None}}
+    return offsets, fam_of, poor, info, corrections
+
+
+# Refinement by pixels: within a family (per release: a series' games share a family), each label photo's view (stage 2's, carried into ink coordinates by its
+# offset) is aligned to the family's median view by a homography (ECC), twice, the reference rebuilt in between: it
+# corrects what the outline fit got wrong in perspective (DMG-A7CJ-JPN (3): a corner about 1 mm off split its family).
+# A correction moving the label's corners over MAX_CORRECTION_MM isn't applied: that label photo is a poor fit.
+MAX_CORRECTION_MM = 2.0
+REFINE_ROUNDS = 2
+
+
+def mm_to_view_px():
+    s, m = COMPARE_PX_PER_MM, COMPARE_MARGIN
+    return np.array([[s, 0, m * s], [0, s, m * s], [0, 0, 1.0]])
+
+
+def ink_view(view, offset):
+    """A sticker-frame view (compare_view) carried into ink coordinates by the label photo's offset."""
+    S = mm_to_view_px()
+    M = S @ offset_matrix(offset) @ np.linalg.inv(S)  # sticker px -> ink px
+    return cv2.warpPerspective(view, M, (view.shape[1], view.shape[0]), flags=cv2.INTER_LINEAR, borderValue=np.nan)
+
+
+def refine_family(members, views, offsets, shape):
+    """{key: (correction: ink mm -> corrected ink mm, how far it moves the label's corners, mm)} for a family's label
+    photos, and those whose correction would be too large."""
+    S = mm_to_view_px()
+    corners = corners_mm(shape)
+    inks = {k: ink_view(views[k], offsets[k]) for k in members if views.get(k) is not None}
+    W = {k: np.eye(3, dtype=np.float32) for k in inks}  # ref px -> member px
+    for _ in range(REFINE_ROUNDS):
+        warped = []
+        for k, v in inks.items():
+            warped.append(cv2.warpPerspective(v, W[k], (v.shape[1], v.shape[0]), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=np.nan))
+        with np.errstate(all="ignore"):
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)  # the margin is outside every view
+                ref = np.nanmedian(np.stack(warped), 0)
+        mask = np.isfinite(ref).astype(np.uint8)
+        ref = np.nan_to_num(ref).astype(np.float32)
+        for k, v in inks.items():
+            try:
+                _, W[k] = cv2.findTransformECC(ref, np.nan_to_num(v).astype(np.float32), W[k], cv2.MOTION_HOMOGRAPHY,
+                                               (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 100, 1e-5), mask, 3)
+            except cv2.error:
+                pass
+    out, bad = {}, set()
+    for k in inks:
+        Wmm = np.linalg.inv(S) @ W[k].astype(np.float64) @ S  # ref mm -> member mm
+        C = np.linalg.inv(Wmm)                               # member ink mm -> corrected (the reference's)
+        moved = float(np.max(np.linalg.norm(project(C, corners) - corners, axis=1)))
+        if moved > MAX_CORRECTION_MM:
+            bad.add(k)
+        else:
+            out[k] = (C / C[2, 2], moved)
+    return out, bad
 
 
 def apply_offset(o, pts):
@@ -744,7 +822,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
     for lp in lps:
         lp["centre"] = np.float64(lp["centre"])
     fits, failed, choice = stage1(lps, edges_dir, None)
-    offsets, family_of, poor, links_info = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
+    offsets, family_of, poor, links_info, corrections = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
     out = {}
     for lp in lps:
         k = lp["key"]
@@ -752,7 +830,8 @@ def solve(found, matches, edges_dir, photo_paths=None):
             continue
         f = fits[k]
         o = offsets.get(k, np.zeros(3))
-        photo_to_ink = offset_matrix(o) @ np.linalg.inv(f["cut_to_photo"])
+        C, moved = corrections.get(k, (np.eye(3), None))
+        photo_to_ink = C @ offset_matrix(o) @ np.linalg.inv(f["cut_to_photo"])
         out[k] = {"photo": lp["photo"], "shape": lp["shape"], "photo_to_ink": (photo_to_ink / photo_to_ink[2, 2]).tolist(),
                   "cut_to_photo": (f["cut_to_photo"] / f["cut_to_photo"][2, 2]).tolist(),
                   "offset": [round(float(o[1]), 3), round(float(o[2]), 3), round(float(np.degrees(o[0])), 3)],
@@ -762,7 +841,8 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "candidates": f["candidates"], "probability": f["probability"] and round(f["probability"], 3),
                   "changed_by_choice": not f["round1_same"],
                   "fallback": "a poor fit: its links disagree" if k in poor else ("found by the pose search" if f["start"].startswith("search") else None),
-                  "family": family_of[k][0], "family_size": family_of[k][1]}
+                  "family": family_of[k][0], "family_size": family_of[k][1],
+                  "correction_mm": None if moved is None else round(moved, 3)}
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
 
 
