@@ -263,7 +263,7 @@ def page(out_dir, result, gen):
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>prints</title>
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} .print{{display:inline-block;vertical-align:top;margin:4px 12px 12px 0;padding:4px;border:1px solid #666}}
-.ph{{position:relative;display:inline-block;margin:2px}} .ph img{{width:150px;display:block}} .ph svg, .stack svg{{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}} img.poor{{outline:3px solid #f44}}
+.ph{{position:relative;display:inline-block;margin:2px}} .ph img{{width:150px;display:block}} .ph svg, .stack svg{{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}} img.poor{{outline:3px solid #fa0}}
 .viewer{{display:inline-block;vertical-align:top;margin:0 16px 12px 0;cursor:pointer}} .stack{{position:relative;width:420px}} .stack img{{width:420px}} .caption{{font-weight:bold}}</style>
 <script>
 function flip(v){{const imgs=v.querySelectorAll('.stack img');let i=[...imgs].findIndex(x=>x.style.display!='none');imgs[i].style.display='none';i=(i+1)%imgs.length;imgs[i].style.display='block';v.querySelector('.caption').textContent=imgs[i].dataset.label;}}
@@ -271,7 +271,7 @@ function auto(box){{const v=box.closest('.viewer');if(box.checked){{v._t=setInte
 </script>
 <h1>prints</h1>
 <p>{n} prints; families with more than one print: {multi}; poor fits: {len(poor)}. Tiles of {result["tile_mm"]} mm.</p>
-{steps.legend([("#f33", "a tile that splits the family into prints (a square on every image of the family)"), ("#f44", "a poor fit (outline around the image; a print of its own)")])}
+{steps.legend([("#f33", "a tile that splits the family into prints (a square on every image of the family)"), ("#fa0", "a poor fit (outline around the image; a print of its own)")])}
 <p>The large viewer stacks one label photo per print in the same place: click it, or tick "flip by itself", to switch between them. Families of one label photo left out.</p>
 {"".join(blocks)}""")
 
