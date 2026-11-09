@@ -298,7 +298,7 @@ photos/; photos with several cartridges can't be told from the names, so they're
 
 match and find are separate so that the rule for a label photo can be tried in versions without redoing the matching.
 
-## Data structures (being settled)
+## Data structures (settled)
 
 **Conventions:**
 - Photo coordinates: pixels of the photo as stored, its EXIF turn applied; x right, y down.
