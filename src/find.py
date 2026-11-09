@@ -1,6 +1,6 @@
 # find: the label photos in every photo, from the evidence, into <generated>/find/label-photos.json:
-#   {"label_photos": [{"key", "photo", "centre" [x, y], "radius", "outline" [[x, y]...] (rough: the hull of the
-#                      evidence), "shape", "found_by" ("serial", "near serial", "detail", "string and match", "match"),
+#   {"label_photos": [{"key", "photo", "centre" [x, y], "radius", "outline" [[x, y]...] (the label's rectangle if
+#                      placed, else the hull of the evidence: rough), "placed_by" (a detail or null), "shape", "found_by" ("serial", "near serial", "detail", "string and match", "match"),
 #                      "strings": [{"text", "serial", "kind" (exact, near, unknown), "cost", "release", "corners"}],
 #                      "details": [{"detail", "corners", "px_per_mm", "inliers"}],
 #                      "matches": [{"to" (key), "inliers"}]}],
@@ -9,14 +9,19 @@
 # The evidence, in this order:
 #   1. Seeds: the serial-looking strings each photo's text holds (read-text): exact serials the database knows, near
 #      serials (serials.near) and strings it doesn't know; and the details found in it (src/details.py). Seeds of one
-#      label (strings within MERGE line heights, details within half a label's diagonal) are one candidate. A candidate
+#      label (strings within MERGE line heights, details within DETAIL_REACH of a label's diagonal) are one candidate. A candidate
 #      with an exact or near serial, or a detail, is a label photo; one with only unknown strings is one if a match
 #      links it to a serial-looking string in another photo (possibly a new release).
-#   2. Its area: a circle of a label's diagonal around the seeds: RADIUS line heights of a string (the serial's line is
+#   2. Its area. Placed, if it has a detail at one place on every label of its shape (details/places.json: the GAME BOY
+#      COLOR logos, KONAMI): the label's rectangle through the detail's homography is its outline, its circle just
+#      around it, and the detail gives the shape; not if a serial's shape contradicts it (the white-background GAME
+#      BOY COLOR logo is also on European CGB labels, elsewhere). Otherwise a circle of a label's diagonal around the seeds: RADIUS line heights of a string (the serial's line is
 #      about 2.2 mm tall on DMG labels and sits anywhere on the label), or LABEL_DIAGONAL mm at a detail's scale (its
 #      image is 20 px/mm, so its homography gives the photo's px/mm); the matched points inside it make the outline.
 #   3. Spreading: a match whose points in one photo lie mostly inside a label photo's circle makes a label photo where
-#      they lie in the other photo (its circle and outline carried over through the match's homography), or links the
+#      they lie in the other photo (its circle carried over through the match's homography; not a placed label's
+#      rectangle: a match shows two areas alike, not one layout, and a shared template sits elsewhere on another
+#      layout), or links the
 #      one already there; repeated until nothing changes. A match that touches no label photo (a watermark, a
 #      background, embossing) starts nothing.
 #   4. Label photos of one photo whose outlines (the hull of their evidence) share MERGE_OVERLAP of the smaller are
@@ -31,11 +36,13 @@ import argparse, html, json, os, re, sys
 import numpy as np, cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, serials, steps, match, details
+import photos, serials, steps, match, details, shapes
 
 MERGE = 12          # line heights: strings closer than this are one label's
 RADIUS = 28         # line heights: a label's diagonal around its serial
 LABEL_DIAGONAL = 60  # mm, a little over the DMG label's 56
+DETAIL_REACH = 0.75  # of a label's diagonal: a detail and a serial at opposite ends of one label are one candidate
+PLACED_RADIUS = 1.15  # a placed label's circle: its half diagonal, and a little
 INSIDE = 0.5        # the share of a match's points that must lie in a label photo's circle for it to spread
 MIN_POINTS = 15
 MERGE_OVERLAP = 0.5  # label photos of one photo sharing this much of the smaller outline are one
@@ -65,8 +72,9 @@ def seeds(lines, release_of, regions):
 
 
 def detail_seeds(found):
-    """A photo's detections as seeds: reach half a label's diagonal, radius a whole one, at the detail's scale."""
-    return [{**d, "reach": LABEL_DIAGONAL / 2 * d["px_per_mm"], "radius": LABEL_DIAGONAL * d["px_per_mm"], "kind": "detail"}
+    """A photo's detections as seeds: reach DETAIL_REACH of a label's diagonal, radius a whole one, at the detail's
+    scale."""
+    return [{**d, "reach": DETAIL_REACH * LABEL_DIAGONAL * d["px_per_mm"], "radius": LABEL_DIAGONAL * d["px_per_mm"], "kind": "detail"}
             for d in found]
 
 
@@ -95,7 +103,10 @@ def shape_of(serial):
 
 
 def outline(lp):
-    """The hull of a label photo's evidence: its matched points and its strings' corners."""
+    """A placed label photo's rectangle; else the hull of its evidence: its matched points, its strings' and details'
+    corners."""
+    if lp.get("placed") is not None:
+        return np.round(lp["placed"], 1).tolist()
     pts = [np.asarray(p) for p in lp["points"]] + [np.array(t["corners"], float) for t in lp["strings"] + lp.get("details", [])]
     pts = np.vstack(pts) if pts else lp["centre"].reshape(1, 2)
     return cv2.convexHull(pts.astype(np.float32)).reshape(-1, 2).round(1).tolist() if len(pts) >= 3 else pts.tolist()
@@ -127,6 +138,8 @@ def merge_overlapping(lps):
         keep["strings"] = keep["strings"] + other["strings"]
         keep["points"] = keep["points"] + other["points"]
         keep["details"] = keep.get("details", []) + other.get("details", [])
+        if keep.get("placed") is None and other.get("placed") is not None:
+            keep["placed"], keep["placed_by"] = other["placed"], other["placed_by"]
         keep["found_by"] = min(keep["found_by"], other["found_by"], key=FOUND_BY.index)
         for o, n in other.get("links", []):
             o["links"] = [(keep if x is other else x, m) for x, m in o["links"]]
@@ -137,7 +150,26 @@ def merge_overlapping(lps):
     return out
 
 
-def find(chosen, texts, matches, release_of, detections=None, use_strings=True):
+def place(lp, places, photo_seeds=()):
+    """Places a label photo by its best fixed-place detail (most inliers), if it has one: its rectangle, centre, a
+    circle just around it, and its shape if no serial gave one. Not by a detail whose shape contradicts a serial of
+    the label photo's or one within a label's diagonal of the detail (photo_seeds: the photo's seeds)."""
+    def allowed(d):
+        near = [t for t in photo_seeds if t.get("kind") in ("exact", "near") and
+                np.hypot(*np.subtract(t["centre"], d["centre"])) < LABEL_DIAGONAL * d["px_per_mm"]]
+        shapes_seen = {shape_of(t["serial"]) for t in list(lp["strings"]) + near if t["kind"] in ("exact", "near")}
+        return not shapes_seen or places[d["detail"]]["shape"] in shapes_seen
+    best = max((d for d in lp.get("details", []) if d["detail"] in places and allowed(d)), key=lambda d: d["inliers"], default=None)
+    if best is None:
+        return
+    corners = details.placed_label(best, places, best["size"], shapes.LABEL_MM)
+    lp["placed"], lp["placed_by"] = corners, best["detail"]
+    lp["centre"] = corners.mean(0)
+    lp["radius"] = PLACED_RADIUS * max(np.hypot(*(corners - lp["centre"]).T))
+    lp["detail_shape"] = places[best["detail"]]["shape"]
+
+
+def find(chosen, texts, matches, release_of, detections=None, use_strings=True, places=None):
     """The label photos, their sets and the rejected candidates, from the photos' texts (unless not use_strings), the
     details found in them (sha1 -> detections) and the matches."""
     regions = serials.by_region(release_of)
@@ -151,9 +183,10 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True):
             radius = max(t["radius"] for t in g)
             kinds = {t["kind"] for t in g}
             strings = [{k: t[k] for k in ("text", "serial", "kind", "cost", "release", "corners")} for t in g if t["kind"] != "detail"]
-            found_details = [{k: t[k] for k in ("detail", "corners", "px_per_mm", "inliers")} for t in g if t["kind"] == "detail"]
+            found_details = [{k: t[k] for k in ("detail", "size", "corners", "centre", "px_per_mm", "inliers")} for t in g if t["kind"] == "detail"]
             cand = {"photo": s, "centre": centre, "radius": radius, "strings": strings, "details": found_details, "points": [],
                     "found_by": "serial" if "exact" in kinds else "near serial" if "near" in kinds else "detail" if "detail" in kinds else None}
+            place(cand, places or {}, found)
             if cand["found_by"]:
                 lps.append(cand)
             else:
@@ -217,7 +250,7 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True):
         lp["key"] = key(lp["photo"], lp["centre"], sizes[lp["photo"]])
     for lp in lps:
         own = [shape_of(t["serial"]) for t in lp["strings"] if t["kind"] != "unknown"]
-        lp["shape"] = max(set(own), key=own.count) if own else None
+        lp["shape"] = max(set(own), key=own.count) if own else lp.get("detail_shape")
     for _ in range(len(lps)):  # shapes spread along links
         moved = False
         for lp in lps:
@@ -242,7 +275,7 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True):
         sets.setdefault(root(id(lp)), []).append(lp["key"])
     out = [{"key": lp["key"], "photo": lp["photo"], "centre": np.round(lp["centre"], 1).tolist(),
             "radius": round(float(lp["radius"]), 1), "outline": lp["outline"], "shape": lp["shape"],
-            "found_by": lp["found_by"], "strings": lp["strings"], "details": lp.get("details", []),
+            "found_by": lp["found_by"], "placed_by": lp.get("placed_by"), "strings": lp["strings"], "details": lp.get("details", []),
             "matches": [{"to": o["key"], "inliers": n} for o, n in lp.get("links", [])]} for lp in lps]
     return {"label_photos": out, "sets": sorted(sets.values(), key=len, reverse=True), "rejected": rejected}
 
@@ -271,7 +304,7 @@ def page(out_dir, chosen, result, texts):
             c = colours[lp["found_by"]]
             shapes_svg += (f'<circle cx="{lp["centre"][0]}" cy="{lp["centre"][1]}" r="{lp["radius"]}" fill="none" stroke="{c}" stroke-dasharray="8 8" stroke-width="{max(w, h) / 300}"/>'
                            f'<polygon points="{pts}" fill="{c}" fill-opacity="0.15" stroke="{c}" stroke-width="{max(w, h) / 200}"/>')
-        label = "<br>".join(html.escape(f'{lp["found_by"]}: {", ".join(t["serial"] for t in lp["strings"]) or "-"}{"; " + ", ".join(d["detail"][:-4] for d in lp.get("details", [])) if lp.get("details") else ""} ({lp["shape"]}, {len(lp["matches"])} links)') for lp in by_photo.get(s, []))
+        label = "<br>".join(html.escape(f'{lp["found_by"]}: {", ".join(t["serial"] for t in lp["strings"]) or "-"}{"; " + ", ".join(d["detail"][:-4] for d in lp.get("details", [])) if lp.get("details") else ""} ({lp["shape"]}, {len(lp["matches"])} links{", placed by " + lp["placed_by"] if lp.get("placed_by") else ""})') for lp in by_photo.get(s, []))
         return (f'<figure><div class="ph"><img loading="lazy" src="{rel}/{chosen[s]}"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">{shapes_svg}</svg></div>'
                 f'<figcaption><code>{s[:10]}</code><br>{label}</figcaption></figure>')
 
@@ -308,11 +341,12 @@ def main():
         sys.exit(f"{len(missing)} inputs missing: run make read-text and make match first")
     found = details.detections(gen, chosen)
     detail_files = [os.path.join(gen, "details", s + ".json") for s in chosen]
-    newest = max(os.path.getmtime(p) for p in list(text_files.values()) + match_files + detail_files)
+    places_file = os.path.join(details.DETAILS, details.PLACES)
+    newest = max(os.path.getmtime(p) for p in list(text_files.values()) + match_files + detail_files + [places_file])
     texts = {s: json.load(open(p)) for s, p in text_files.items()}
     if steps.stale(out, __file__) or os.path.getmtime(out) < newest:
         result = find(chosen, texts, match.read_matches(os.path.join(gen, "match"), list(chosen)), serials.load_database(),
-                      found, use_strings=not args.no_strings)
+                      found, use_strings=not args.no_strings, places=details.load_places())
         steps.write_json(out, result)
     result = json.load(open(out))
     page(out_dir, chosen, result, texts)

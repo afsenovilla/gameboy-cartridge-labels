@@ -1,0 +1,8 @@
+{
+  "about": "Details at one place on every label of their shape: the detail image's centre in mm from the label's top left (main's label model), its turn taken as none. Measured 2026-11-08 on main's accepted label fits (97-100 % of copies within 1 mm). Renaming a detail image means renaming it here too.",
+  "places": {
+    "GAME BOY COLOR logo black bg.png": {"shape": "cgb", "centre_mm": [3.8, 18.8]},
+    "GAME BOY COLOR logo white bg.png": {"shape": "dmg", "centre_mm": [3.8, 18.6]},
+    "KONAMI.png": {"shape": "agb", "centre_mm": [8.1, 3.3]}
+  }
+}

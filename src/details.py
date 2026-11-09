@@ -1,6 +1,7 @@
 # Details in photos: where each image of details/ (common details of the labels, 20 px/mm, named by hand) is found
 # in a photo, for find. Each photo's detections are cached in <generated>/details/<sha1>.json:
-#   [{"detail" (its file name), "corners" (the detail image's corners in the photo), "centre", "px_per_mm", "inliers"}]
+#   [{"detail" (its file name), "size" (its image's), "corners" (the image's corners in the photo), "centre",
+#     "px_per_mm", "inliers"}]
 # A detail is matched against the photo's SIFT keypoints (features), each neighbour clearly nearer than the
 # (MAX_PER_PHOTO + 1)-th kept (the plain ratio test would reject a detail found twice), then a RANSAC homography:
 # kept with MIN_INLIERS or more, plausible, at 2 to 60 photo pixels per mm; repeated without its inliers (a detail on
@@ -69,7 +70,7 @@ def detect(features, details):
             corners = cv2.perspectiveTransform(np.float64([[[0, 0]], [[w, 0]], [[w, h]], [[0, h]]]), H).reshape(-1, 2)
             px_per_mm = np.sqrt(abs(cv2.contourArea(corners.astype(np.float32))) / (w * h)) * DETAIL_PX_PER_MM
             if PX_PER_MM[0] <= px_per_mm <= PX_PER_MM[1]:
-                found.append({"detail": name, "corners": corners.round(1).tolist(), "centre": corners.mean(0).round(1).tolist(),
+                found.append({"detail": name, "size": [w, h], "corners": corners.round(1).tolist(), "centre": corners.mean(0).round(1).tolist(),
                               "px_per_mm": round(float(px_per_mm), 3), "inliers": int(inl.sum())})
     return found
 
@@ -92,3 +93,37 @@ def detections(gen, chosen, workers=8, folder=DETAILS):
             if not os.path.exists(out(s)) or os.path.getmtime(out(s)) < newest]
     steps.run(detect_photo, jobs, workers, what="details searched in")
     return {s: json.load(open(out(s))) for s in chosen}
+
+
+# Details at one place on every label of their shape (details/places.json): such a detail, found, places the whole label.
+PLACES = "places.json"
+
+
+def load_places(folder=DETAILS):
+    """Detail name -> {"shape", "centre_mm"}."""
+    path = os.path.join(folder, PLACES)
+    return json.load(open(path))["places"] if os.path.exists(path) else {}
+
+
+def label_mm_to_detail_px(centre_mm, detail_size):
+    """mm on the label -> the detail image's pixels (20 px/mm, no turn), the detail's centre at centre_mm."""
+    w, h = detail_size
+    ox, oy = centre_mm[0] - w / 2 / DETAIL_PX_PER_MM, centre_mm[1] - h / 2 / DETAIL_PX_PER_MM
+    return np.array([[DETAIL_PX_PER_MM, 0, -DETAIL_PX_PER_MM * ox], [0, DETAIL_PX_PER_MM, -DETAIL_PX_PER_MM * oy], [0, 0, 1.0]])
+
+
+def placed_label(detection, places, detail_size, label_mm):
+    """The label's corners in the photo (top left, top right, bottom right, bottom left), placed by a fixed-place
+    detection (label_mm: shape -> label size); None if the detail has no place. Through an affine fit to the detail's
+    corners, not its homography: a small detail's perspective, carried across a whole label, magnifies its error (3 to
+    6 mm for KONAMI); the label's perspective is solve's."""
+    place = places.get(detection["detail"])
+    if place is None:
+        return None
+    w, h = detail_size
+    src = np.float64([[0, 0, 1], [w, 0, 1], [w, h, 1], [0, h, 1]])
+    A = np.linalg.lstsq(src, np.float64(detection["corners"]), rcond=None)[0].T  # 2 x 3, least squares
+    H = np.vstack([A, [0, 0, 1]])
+    lw, lh = label_mm[place["shape"]]
+    M = H @ label_mm_to_detail_px(place["centre_mm"], detail_size)
+    return cv2.perspectiveTransform(np.float64([[[0, 0]], [[lw, 0]], [[lw, lh]], [[0, lh]]]), M).reshape(-1, 2)
