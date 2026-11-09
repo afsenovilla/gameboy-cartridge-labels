@@ -237,6 +237,20 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **solve, the pose search**: thousands of poses of the model near the evidence scored against direction-binned distance maps of the segments, the best few fitted. First run: 66 % under 5 mm, the failures turned a quarter or half turn (a DMG label is nearly square) or 15-20 % too small or large. The turn from the direction most of the label's text reads (along the label on 193 of 194 label photos; a detail's turn was a quarter turn off on 17 of 152): 84 % under 5 mm, none turned. Carried starts (a fitted pose through a match): 37 % under 5 mm, dropped. Now: 268 of 276 solved; of the 191 with a main fit, placed 60 of 60 and searched 110 of 131 under 5 mm (89 % overall); the searched failures are nearly all the scale (34-38 or 45-50 mm wide for 42.5). 2 min 46 s for the sample.
 
+**Main's fitter against this branch** (2026-11-09; run in place from main's src, the shell from find, the text from read-text): measured on photos whose main label fit was placed by hand (main's own auto fits favour main's fitter). The development sample has 35 such; for more, an evaluation set: 300 photos chosen at random (seeded) from the 1119 with a hand-placed main label fit outside the sample, this branch's steps run on them into generated-eval/ (one-off scripts). Worst corner off the hand fit, 299 photos:
+
+| Pipeline | within 0.5 mm | 0.5-1 | 1-2 | 2-5 | 5+ | no fit | under 5 mm |
+|---|---|---|---|---|---|---|---|
+| main, all of it | 160 | 83 | 29 | 2 | 19 | 6 | 92 % |
+| A: main's plastic, then this branch's nested fit | 188 | 66 | 17 | 4 | 17 | 7 | 92 % |
+| B: this branch's starts, then main's fitter, choice and label fit | 110 | 58 | 24 | 10 | 89 | 8 | 68 % |
+| C: main's starts and fitter, chosen by agreement only (no learned score) | 134 | 76 | 35 | 6 | 46 | 2 | 84 % |
+| this branch, all of it | 61 | 108 | 46 | 28 | 47 | 9 | 81 % |
+
+- The nested fit is as good as main's from a good start, and closer to the hand fits (A). This branch's weak part is its starts (B); main's strength is its starts (the embossed text, outline quadrilaterals) with its learned choice among their candidates (C: 92 -> 84 % without it).
+- They complement each other: of main's 25 failures, this branch is right on 15 (search 9, placed 6); of this branch's 56, main is right on 46; both fail on 10. At least one is right on 289 of 299 (97 %).
+- Most of the hand-placed photos are ones main's fitter now gets right (92 %), so the set isn't mainly main's failures.
+
 ## Next
 
-Main's plastic fit ported and evaluated against this; if much better, what makes it work.
+Main's starts added to this branch's (logo placement, pose search), all refined by the nested fit, and a choice among them.
