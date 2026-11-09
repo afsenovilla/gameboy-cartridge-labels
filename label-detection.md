@@ -189,7 +189,7 @@ match and find are separate so that the rule for a label photo can be tried in v
 | read-serials | read-serials/serials.json, missing.json, unknown-serials.json | per key: reads, serial (voted or null), in_database; database entries with no label photo; serials not in the database |
 | prints | prints/prints.json, prints/<print>/<other>.png, few-photos.json | per print: id, keys, serial, shape. Optional pair images, one pixel per tile, white where the two look alike; only for pairs whose shared area, less the tiles many prints of the set share (the grey frame), is above a limit (tuned on the sample) |
 | restore | restore/<print>.avif, restore/<print>.json | the image (cropped); label photos used, how many count in each band, single-photo flag |
-| publish | publish/ | prints/<print>.avif; label-photos/<key>.avif (cut from its straightened image: whole pixels, no resampling); index.json (per label photo: print, serial, source, URL; per print: label photos, serial); the lists collected |
+| publish | publish/ | prints/<print>.avif (restore's image: paper white where found, else median colours); label-photos/<key>.avif (cut from its straightened image: whole pixels, no resampling; poor fits get none, as restore leaves them out, and are listed with poor_fit true); index.json (per label photo: print, serial, source (main's photos/ folder), page_url, image_url, image, poor_fit; per print: serial, release, shape, image, paper, label photos); missing.json, unknown-serials.json, few-photos.json copied |
 
 designs.json (hand-edited): `{"<key>": "<design name>"}`; a label photo not listed has no design yet.
 
@@ -296,4 +296,8 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 ## Next
 
-The user's judgement of the colours; the designer's vision; publish.
+**One image per print** (the user): restore writes the paper-white image where paper is found, else the median colours.
+
+**publish, first version** (the sample): 121 prints, 273 label photos with images; 94 with a page URL, 18 more with only an image URL (main's sources.json: every photo has an entry, 2459 of 5518 a page URL).
+
+The designer's vision (skipped for now).

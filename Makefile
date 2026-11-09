@@ -42,8 +42,12 @@
 #   into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
 #
 #   make restore
-#   An image of every print from its label photos (bands, focus-stacking weights, a soft median), cropped to the
-#   canonical label, into generated/restore/; the page generated/restore/index.html. Needs make prints.
+#   An image of every print from its label photos (bands, the median), cropped to the canonical label, paper white
+#   where found, into generated/restore/; the page generated/restore/index.html. Needs make prints.
+#
+#   make publish
+#   The outputs collected into generated/publish/: prints/, label-photos/ (straightened, the same crop), index.json
+#   (source and URLs from main's sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
 # Plain make lists these.
 
@@ -51,7 +55,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -121,3 +125,9 @@ restore:
 
 clean-restore:
 	rm -rf $(GENERATED)/restore
+
+publish:
+	$(PYTHON) src/publish.py $(SAMPLE_FLAG)
+
+clean-publish:
+	rm -rf $(GENERATED)/publish
