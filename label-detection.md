@@ -279,6 +279,8 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **Paper white, second try**: the user found the clipping far too aggressive (the paper's median made white, 5 % over: 10 % of the label clipped at the median, up to 27 %). Now the paper's 90th percentile of lightness becomes white, nothing pushed past it: 1.0 % clipped at the median (0.3-3.1 %).
 
+**restore, fine registration** (the user: very blurry text at the bottom of DMG-APSJ-JPN, a blurry Hudson bee on DMG-AM3J-JPN with sharp source photos): solve's alignment at 5 px/mm left the label photos of a print 0.4-1.8 px apart at 20 px/mm, most at the top and bottom. Now restore registers them at full resolution: a homography each by ECC against the median (lighting-evened gray), twice; then a smooth local correction by dense optical flow (smoothed over 2 mm, at most 3 px). Median tile offsets (top / middle / bottom): DMG-APSJ-JPN 0.67/0.72/1.08 -> 0.39/0.29/0.34 px; DMG-AM3J-JPN 0.67/0.45/0.79 -> 0.31/0.25/0.32 px.
+
 ## Open questions for the user (remind them)
 
 - 15938cc543 (DMG-FBJ_5): which way is the perspective off, which corner, how far? (outline support 0.57, refinement moved it 0.54 mm)
