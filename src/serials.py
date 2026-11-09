@@ -47,3 +47,56 @@ def release(serial, release_of):
         if candidate in release_of:
             return release_of[candidate]
     return None
+
+
+# Near serials: OCR garbles or cuts off serials (B-B96J-JPN, COB-B96J-JPN, GAB-896J-JPN for CGB-B96J-JPN). A code with a
+# known region and up to 3 characters before it for the platform, compared with the database's serials of that region:
+# the code by an edit distance where look-alikes cost half, plus half if the platform isn't read exactly (garbled, cut
+# off or missing).
+LOOK_ALIKE = [set("8B"), set("0OD"), set("1IL"), set("5S"), set("6G"), set("2Z"), set("UV")]
+NEAR = re.compile(r"(?<![A-Z0-9])([A-Z0-9]{0,3})-?([A-Z0-9]{2,5})-?(" + "|".join(REGIONS) + r")(?![A-Z])")
+NEAR_MAX = 1.0     # the most a near serial may cost
+NEAR_MARGIN = 1.0  # by how much the second best must cost more
+PLATFORM_COST = 0.5
+
+
+def _sub(a, b):
+    return 0 if a == b else 0.5 if any(a in s and b in s for s in LOOK_ALIKE) else 1
+
+
+def edit_cost(a, b):
+    """Edit distance, look-alike substitutions costing half."""
+    d = list(range(len(b) + 1))
+    for i in range(1, len(a) + 1):
+        prev, d[0] = d[0], i
+        for j in range(1, len(b) + 1):
+            prev, d[j] = d[j], min(d[j] + 1, d[j - 1] + 1, prev + _sub(a[i - 1], b[j - 1]))
+    return d[-1]
+
+
+def near_cost(platform, code, serial_platform, serial_code):
+    return edit_cost(code, serial_code) + (0 if platform == serial_platform else PLATFORM_COST)
+
+
+def by_region(release_of):
+    """Region -> [(platform, code, the serial)] of the database's serials, for near serials."""
+    out = {}
+    for s in release_of:
+        m = re.fullmatch(r"(DMG|CGB|AGB)-([A-Z0-9]{1,5})-([A-Z]{3})", s)
+        if m:
+            out.setdefault(m.group(3), []).append((m.group(1), m.group(2), s))
+    return out
+
+
+def near(text, regions):
+    """The near serials in a line of text (regions: by_region()): [(the database serial, cost, what was read)], only
+    where the best costs at most NEAR_MAX and clearly less than the second best; exact reads are left to reads()."""
+    t = unicodedata.normalize("NFKC", text).upper()
+    t = re.sub(r"[ー―–—一:・.]", "-", t)
+    found = []
+    for u in dict.fromkeys((t, t.replace(" ", ""))):
+        for m in NEAR.finditer(u):
+            costs = sorted((near_cost(m.group(1), m.group(2), p, c), s) for p, c, s in regions.get(m.group(3), []))
+            if costs and 0 < costs[0][0] <= NEAR_MAX and (len(costs) == 1 or costs[1][0] >= costs[0][0] + NEAR_MARGIN):
+                found.append((costs[0][1], costs[0][0], m.group(0)))
+    return list(dict.fromkeys(found))

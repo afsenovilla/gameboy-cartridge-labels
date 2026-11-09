@@ -18,13 +18,17 @@
 #   Pairs of photos showing something alike, with their homographies, into generated/match/; the page
 #   generated/match/index.html. Needs make features.
 #
+#   make find
+#   The label photos in every photo, from serials read and matches, into generated/find/label-photos.json; the page
+#   generated/find/index.html. Needs make read-text and make match.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features match clean-match
+.PHONY: help setup test read-text clean-read-text features clean-features match clean-match find clean-find
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -52,3 +56,9 @@ match:
 
 clean-match:
 	rm -rf $(GENERATED)/match
+
+find:
+	$(PYTHON) src/find.py $(SAMPLE_FLAG)
+
+clean-find:
+	rm -rf $(GENERATED)/find
