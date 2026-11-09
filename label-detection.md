@@ -72,7 +72,7 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 - Main's sources.json (URL by SHA-1; 2950 of 5519 photos have one) is for output only, never read by a detection
   step.
 
-## Approach (being settled)
+## Approach (settled)
 
 - **Two coordinate systems, both in mm:**
   - **ink coordinates:** on the printed image; one per shape, shared by all its prints. Prints sharing areas are
@@ -103,7 +103,7 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   keypoints match many label photos of many looks; the same idea as the details). Linked sets then become families of
   nearly-same prints. Lost: the frame's help in aligning a label photo whose print is seen once; it's then a set of one,
   from its own cut and recess edges and the details at fixed places (the template, used deliberately).
-- **Finding label photos** (proposed): the plastic isn't needed for it. Evidence adds up; no single piece is required.
+- **Finding label photos:** the plastic isn't needed for it. Evidence adds up; no single piece is required.
   - Seeds: OCR of every photo (it worked well before). A serial-looking string is a candidate, the text line giving
     rough place, turn and size.
   - A SIFT match near a similar string in another photo is a strong sign of a label photo. The database confirms the
@@ -121,7 +121,7 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   - Several cartridges in a photo: several strings, several matches per pair of photos (RANSAC repeated).
 - **Several versions of a step will be tried** before it works reliably: methods are compared on the sample by the
   steps' own measures.
-- **The joint solve** (proposed):
+- **The joint solve:**
   - Each linked set (label photos connected by matches) is solved on its own: sets share nothing, a bad match spoils
     only its own set. A label photo linked to no other is a set of one, from its own edges.
   - One least-squares fit per set, each constraint weighted by its precision (a match spread over the whole label
@@ -239,7 +239,7 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 - **Prints seen in only one photo** (about half the photos earlier) have nothing to match: their extent and straightening
   come from the recess and the label's own edges.
 
-## How results are judged (under discussion)
+## How results are judged (settled)
 
 There is no ground truth: main's fits aren't one (see above), though main may be compared with statistically. Results
 are judged by each step's own measures, on its
@@ -335,6 +335,6 @@ Unit tests are written along with the code, from the first step on (the last att
 small made-up cases with known answers (a joint solve recovering known homographies, the key matching, the tile
 grouping telling a planted revision from planted dirt), so they run in seconds; pytest, run with `make test`.
 
-## Still to discuss
+## Next
 
-Whatever the data structures leave open.
+The first code: read-text, starting with RapidOCR compared with Apple Vision on the sample.
