@@ -251,6 +251,12 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 - They complement each other: of main's 25 failures, this branch is right on 15 (search 9, placed 6); of this branch's 56, main is right on 46; both fail on 10. At least one is right on 289 of 299 (97 %).
 - Most of the hand-placed photos are ones main's fitter now gets right (92 %), so the set isn't mainly main's failures.
 
+**Most hand fits were main's automatic fits, adjusted** (the user, 2026-11-09). On the evaluation set, the nearest rejected automatic plastic fit was within 1 mm of the hand fit on 194 photos, 5 mm or more off on 55 ("main failed then"). That favours main's fitter in precision and in success on the adjusted ones; and main's learned choice was trained on the user's judged fits, likely these photos (leakage): main without it (C) is the fair figure, 85 %. On the photos main failed then, this branch (before the port) had 89 % against C's 85 %.
+
+**Which of main's starts** (every start refined by this branch's nested fit, chosen by mean support; evaluation set, under 5 mm): main's outline quadrilaterals alone 97 % (100 % where main failed then); main's text starts alone 42 %; all starts 97 %. The oracle (the candidate closest to the hand fit) 98 %.
+
+**Main's outline starts ported** (src/outlines.py, computed in edges; solve: the logo placement, else every outline start, the best supported, else the pose search): evaluation set 96 % under 5 mm, 84 % under 1 mm (98 % and 93 % where main failed then; this branch before: 81 % and 57 %). The sample: 273 of 276 solved, 98 % of those with a main fit under 5 mm. Keeping only outline starts near the label photo (find's circle) cost 2 points (87 % where main failed then): find's circles are too rough to filter by.
+
 ## Next
 
-Main's starts added to this branch's (logo placement, pose search), all refined by the nested fit, and a choice among them.
+The iterative refinement (a first round's confident fits teaching the next: a choice model, the logos' places and the label's scale from this branch's own fits, starts carried within a print); then straighten.
