@@ -8,8 +8,8 @@
 # An image is drawn again when it's missing or older than solve.json or this file; its cut found again when that's
 # missing or older than the image or cuts.py. Those of label photos no longer solved are removed.
 # The page, <generated>/straighten/index.html: every image, the label's nominal rectangle, the recess and the cut
-# found drawn on it, the fits with the largest leftover error first. <generated>/straighten/cuts.html: each side's middle
-# CLOSE_MM close up (CLOSE_ZOOM times), the cut found, its INSET and the fitted cut drawn, the sides moved most first.
+# found drawn on it, the fits with the largest leftover error first. <generated>/straighten/cuts.html: each label photo
+# with CUTS_MARGIN mm around the nominal label, the cut found, its INSET and the fitted cut drawn.
 # Usage: straighten.py [--sample] [--workers N]
 import argparse, html, json, os, sys
 import cv2, numpy as np
@@ -122,14 +122,14 @@ def page(out_dir, solved):
 {"".join(figs)}""")
 
 
-CLOSE_MM = 6.0
-CLOSE_OUT, CLOSE_IN = 1.5, 1.0
-CLOSE_ZOOM = 3
+CUTS_MARGIN = 3.0   # mm around the nominal label on cuts.html
 
 
 def cuts_page(out_dir, solved):
-    P, Z = PX_PER_MM, CLOSE_ZOOM
-    tiles = []
+    """cuts.html: each label photo, the nominal label plus CUTS_MARGIN mm, one image pixel per screen pixel, with the cut
+    found, the crop's edge INSET inside it and the fitted cut; the label photos whose sides moved most first."""
+    P, C = PX_PER_MM, CUTS_MARGIN
+    figs = []
     for key, r in solved.items():
         cut = load_cut(os.path.dirname(out_dir), key)
         if not cut:
@@ -137,44 +137,31 @@ def cuts_page(out_dir, solved):
         (w, h), _ = canvas(r["shape"])
         lw, lh = shapes.LABEL_MM[r["shape"]]
         fitted = cuts.corners_in_ink(np.float64(r["photo_to_ink"]) @ np.float64(r["cut_to_photo"]), r["shape"])
+        px = lambda q: (np.asarray(q) + C) * P
+        poly = lambda q, colour, extra="": (f'<polygon points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in px(q))}" '
+                                             f'fill="none" stroke="{colour}" stroke-width="1"{extra}/>')
+        moved = {}
         for side in cuts.SIDES:
-            c = cut[side]
             inward = 1 if side in ("top", "left") else -1
-            moved = (c["position"] - cuts.side_position(fitted, side)) * inward
-            vertical = side in ("left", "right")
-            along = (lh if vertical else lw) / 2
-            # the tile in ink mm: along [along - CLOSE_MM / 2, + CLOSE_MM / 2], across CLOSE_OUT outside to CLOSE_IN inside the cut
-            a0 = along - CLOSE_MM / 2
-            c0 = c["position"] - CLOSE_OUT if inward == 1 else c["position"] - CLOSE_IN
-            span = CLOSE_OUT + CLOSE_IN
-            tw, th = (span, CLOSE_MM) if vertical else (CLOSE_MM, span)
-            x0, y0 = (c0, a0) if vertical else (a0, c0)
-            to_px = lambda mm_x, mm_y: ((mm_x - x0) * P * Z, (mm_y - y0) * P * Z)
-            lines = []
-            t = np.tan(np.radians(c["turn"]))
-            for off, colour, dash in ((0, "#0ff", ""), (cuts.INSET, "#0ff", ' stroke-dasharray="4 4"')):
-                p0 = c["position"] + inward * off
-                ends = [(a, p0 + t * (a - along)) for a in (a0, a0 + CLOSE_MM)]
-                pts = [to_px(q, a) if vertical else to_px(a, q) for a, q in ends]
-                lines.append(f'<line x1="{pts[0][0]:.1f}" y1="{pts[0][1]:.1f}" x2="{pts[1][0]:.1f}" y2="{pts[1][1]:.1f}" stroke="{colour}" stroke-width="1"{dash}/>')
-            f0 = cuts.side_position(fitted, side)
-            pts = [to_px(f0, a) if vertical else to_px(a, f0) for a in (a0, a0 + CLOSE_MM)]
-            lines.append(f'<line x1="{pts[0][0]:.1f}" y1="{pts[0][1]:.1f}" x2="{pts[1][0]:.1f}" y2="{pts[1][1]:.1f}" stroke="#f0f" stroke-width="1" stroke-dasharray="2 6"/>')
-            W, H = tw * P * Z, th * P * Z
-            img = (f'<div class="tile" style="width:{W:.0f}px;height:{H:.0f}px;background:url({file_name(key)}) '
-                   f'{-(x0 + MARGIN) * P * Z:.1f}px {-(y0 + MARGIN) * P * Z:.1f}px / {w * Z}px {h * Z}px">'
-                   f'<svg width="{W:.0f}" height="{H:.0f}">{"".join(lines)}</svg></div>')
-            label = f'<code>{html.escape(key[:10])}</code> {side}: {"moved " + format(moved, "+.2f") + " mm" if c["found"] else "not found: the fitted cut"}'
-            tiles.append((-(abs(moved) if c["found"] else 9), f'<figure>{img}<figcaption>{label}</figcaption></figure>'))
-    tiles.sort(key=lambda t: t[0])
+            moved[side] = (cut[side]["position"] - cuts.side_position(fitted, side)) * inward if cut[side]["found"] else None
+        W, H = (lw + 2 * C) * P, (lh + 2 * C) * P
+        svg = (poly(fitted, "#f0f", ' stroke-dasharray="2 6"') + poly(cuts.polygon(cut, r["shape"]), "#0ff")
+               + poly(cuts.polygon(cut, r["shape"], cuts.INSET), "#0ff", ' stroke-dasharray="4 4"'))
+        note = ", ".join(f"{s} {'not found' if m is None else format(m, '+.2f') + ' mm'}" for s, m in moved.items())
+        worst = max((9 if m is None else abs(m)) for m in moved.values())
+        figs.append((-worst, f'<figure><div class="ph" style="width:{W:.0f}px;height:{H:.0f}px;background:url({file_name(key)}) '
+                             f'{-(MARGIN - C) * P:.0f}px {-(MARGIN - C) * P:.0f}px / {w}px {h}px no-repeat">'
+                             f'<svg width="{W:.0f}" height="{H:.0f}">{svg}</svg></div>'
+                             f'<figcaption><code>{html.escape(key[:14])}</code> moved from the fitted cut (outward negative): {note}</figcaption></figure>'))
+    figs.sort(key=lambda f: f[0])
     with open(os.path.join(out_dir, "cuts.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>cuts</title>
-<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:6px;vertical-align:top}}
-.tile{{position:relative;image-rendering:pixelated;background-repeat:no-repeat}} .tile svg{{position:absolute;inset:0}} figcaption{{font-size:11px}}</style>
+<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{margin:12px 0 24px}}
+.ph{{position:relative}} .ph svg{{position:absolute;inset:0}} figcaption{{font-size:12px;margin-top:4px}}</style>
 <h1>cuts</h1>
-<p>{len(tiles)} sides of {len(solved)} label photos: each side's middle {CLOSE_MM:g} mm, {CLOSE_ZOOM}x ({PX_PER_MM * CLOSE_ZOOM} screen px per mm). Not found first, then the sides moved most from the fitted cut.</p>
-{steps.legend([("#0ff", "the cut found (solid) and the crop's edge, {} mm inside it (dashed)".format(cuts.INSET)), ("#f0f", "the fitted cut (solve's, dotted)")])}
-{"".join(t[1] for t in tiles)}""")
+<p>{len(figs)} label photos, each the nominal label plus {C:g} mm around it, one image pixel per screen pixel ({P} px per mm). A side not found first, then the label photos whose sides moved most from the fitted cut.</p>
+{steps.legend([("#0ff", f"the cut found (solid) and the crop's edge, {cuts.INSET} mm inside it (dashed)"), ("#f0f", "the fitted cut (solve's, dotted)")])}
+{"".join(f[1] for f in figs)}""")
 
 
 def main():
