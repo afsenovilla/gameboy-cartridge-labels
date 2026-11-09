@@ -270,7 +270,9 @@ function flip(v){{const imgs=v.querySelectorAll('.stack img');let i=[...imgs].fi
 function auto(box){{const v=box.closest('.viewer');if(box.checked){{v._t=setInterval(()=>flip(v),700);}}else{{clearInterval(v._t);}}}}
 </script>
 <h1>prints</h1>
-<p>{n} prints; families with more than one print: {multi}; poor fits (red outline around the image, a print of their own): {len(poor)}. Tiles of {result["tile_mm"]} mm; red squares: the tiles that split the family into prints. The large viewer stacks one label photo per print in the same place: click it, or tick "flip by itself", to switch between them. Families of one label photo left out.</p>
+<p>{n} prints; families with more than one print: {multi}; poor fits: {len(poor)}. Tiles of {result["tile_mm"]} mm.</p>
+{steps.legend([("#f33", "a tile that splits the family into prints (a square on every image of the family)"), ("#f44", "a poor fit (outline around the image; a print of its own)")])}
+<p>The large viewer stacks one label photo per print in the same place: click it, or tick "flip by itself", to switch between them. Families of one label photo left out.</p>
 {"".join(blocks)}""")
 
 

@@ -83,7 +83,8 @@ def page(out_dir, solved):
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:6px;vertical-align:top;width:300px}}
 .ph{{position:relative;display:inline-block}} .ph img{{width:300px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>straighten</h1>
-<p>{len(solved)} label photos in ink coordinates, {PX_PER_MM} px/mm, {MARGIN:g} mm around the nominal label (magenta: its canonical size at the linked set's median cut; yellow: this cartridge's recess, from the plastic's fit). Largest leftover error first.</p>
+<p>{len(solved)} label photos in ink coordinates, {PX_PER_MM} px/mm, {MARGIN:g} mm around the nominal label. Largest leftover error first.</p>
+{steps.legend([("#f0f", "the label's canonical size at its family's median cut"), ("#ff0", "this cartridge's recess, from the plastic's fit")])}
 {"".join(figs)}""")
 
 

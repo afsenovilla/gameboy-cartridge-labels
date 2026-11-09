@@ -321,7 +321,8 @@ def page(out_dir, chosen, result, texts):
 figcaption{{font-size:12px}}</style>
 <h1>find</h1>
 <p>{len(chosen)} photos, {len(lps)} label photos (found by: {", ".join(f"{k} {v}" for k, v in counts.items())}; shapes: {", ".join(f"{k} {v}" for k, v in shapes.items())}), {len(result["sets"])} linked sets (largest {len(result["sets"][0]) if result["sets"] else 0}). Photos with no label photo: {len(none)}; with several: {len(several)}.</p>
-<p>Outline filled: the hull of the evidence; dashed: the circle the evidence was looked for in. Green: serial, light green: near serial, purple: detail, orange: unknown string and match, blue: found by a match.</p>
+<p>Filled: the hull of the evidence (or the label placed by a logo); dashed: the circle the evidence was looked for in. The colour says how the label photo was found:</p>
+{steps.legend([(c, k) for k, c in colours.items()])}
 <h2>No label photo ({len(none)})</h2>{"".join(figure(s) for s in none)}
 <h2>Several label photos ({len(several)})</h2>{"".join(figure(s) for s in several)}
 <h2>Rejected candidates ({len(result["rejected"])})</h2><ul>{rejected}</ul>

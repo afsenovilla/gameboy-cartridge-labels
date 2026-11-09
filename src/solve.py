@@ -725,6 +725,7 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
     families = {}
     for k in fits:
         families.setdefault(root(k), []).append(k)
+    print(f"stage 2: {len(links)} links count, {len(poor)} poor fits; fitting the offsets of {len(families)} families", flush=True)
     offsets, residual = {}, {}
     for members in families.values():
         idx = {k: n for n, k in enumerate(members)}
@@ -756,7 +757,11 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
     fam_of = {k: (min(m), len(m)) for m in families.values() for k in m}
     corrections = {}
     release_of = {lp["key"]: next((t["release"] for t in lp["strings"] if t.get("release")), None) for lp in lps}
-    for members in families.values():
+    to_refine = sum(1 for m in families.values() if len(m) >= 2)
+    print(f"stage 2: refining the label photos of {to_refine} families by their pixels", flush=True)
+    for n_fam, members in enumerate((m for m in families.values() if len(m) >= 2), 1):
+        if n_fam % 100 == 0 or n_fam == to_refine:
+            print(f"stage 2: refining family {n_fam} of {to_refine}", flush=True)
         # refined per release within the family (a family can hold a series' games sharing a layout: aligning them to
         # one median pulls them apart); label photos without a serial with the family's largest release group
         by_release = {}
@@ -877,6 +882,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "fallback": "a poor fit: its links disagree" if k in poor else ("found by the pose search" if f["start"].startswith("search") else None),
                   "family": family_of[k][0], "family_size": family_of[k][1],
                   "correction_mm": None if moved is None else round(moved, 3)}
+    print("writing solve.json and the page", flush=True)
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
 
 
@@ -911,7 +917,8 @@ def page(out_dir, chosen, result, sizes):
 .ph{{position:relative;display:inline-block}} .ph img{{max-width:280px;max-height:280px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>solve</h1>
 <p>{len(lps)} label photos solved (started: {", ".join(f"{k} {v}" for k, v in starts.items())}), {len(result["unsolved"])} not. Links: {html.escape(str(result["links"]))}.</p>
-<p>Blue: the cartridge's outline; orange: the recess; green: the label's cut (canonical size); red dot: the label's top left. Grouped by how the fit was started; within a group, most outline support first.</p>
+{steps.legend([("#08f", "the cartridge's outline"), ("#fa0", "the recess"), ("#0c0", "the label's cut (canonical size)"), ("#f00", "the label's top left")])}
+<p>Grouped by how the fit was started; within a group, most outline support first.</p>
 <h2>Not solved ({len(result["unsolved"])})</h2><ul>{unsolved}</ul>
 {"".join(f'<h2>Started from: {k} ({len(by_kind[k])})</h2>' + "".join(figure(key, r) for key, r in by_kind[k]) for k in kinds)}
 """)

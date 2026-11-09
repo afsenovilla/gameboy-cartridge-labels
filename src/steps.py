@@ -39,3 +39,13 @@ def run(work, jobs, workers, initializer=None, initargs=(), what="done"):
         for done, _ in enumerate(pool.imap_unordered(work, jobs), 1):
             if done % 50 == 0 or done == len(jobs):
                 print(f"{what} {done} of {len(jobs)}", flush=True)
+
+
+def legend(items, title=None):
+    """A page's legend: one entry per line, each with its colour in a dot in front ([(colour, text)])."""
+    import html
+    rows = "".join(f'<li style="list-style:none;margin:2px 0"><span style="display:inline-block;width:0.8em;height:0.8em;'
+                   f'border-radius:50%;background:{c};margin-right:0.5em;vertical-align:-0.05em"></span>{html.escape(t)}</li>'
+                   for c, t in items)
+    head = f"<div>{html.escape(title)}</div>" if title else ""
+    return f'<div class="legend" style="margin:8px 0">{head}<ul style="margin:0;padding:0">{rows}</ul></div>'
