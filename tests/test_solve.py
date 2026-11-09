@@ -70,3 +70,18 @@ def test_confident_needs_two_kinds_of_start_agreeing():
     assert not solve.confident([c("outline (label)"), c("outline (label)"), c("outline (label)")], apart, 0)
     far = np.array([[0, 5.0], [5.0, 0]])
     assert not solve.confident([c("placed by X"), c("outline (body)")], far, 0)
+
+
+def test_a_degenerate_label_homography_isnt_usable():
+    assert solve.usable(solve.similarity_to_H((500, 500), 0, 10, "dmg"), "dmg")
+    singular = np.array([[1.0, 2, 3], [2, 4, 6], [0, 0, 1]])
+    assert not solve.usable(singular, "dmg")
+    assert not solve.usable(np.full((3, 3), np.nan), "dmg")
+    tiny = solve.similarity_to_H((500, 500), 0, 0.1, "dmg")          # under 20 px across
+    assert not solve.usable(tiny, "dmg")
+
+
+def test_apart_survives_a_singular_candidate():
+    good = {"cut_to_photo": solve.similarity_to_H((500, 500), 0, 10, "dmg")}
+    bad = {"cut_to_photo": np.array([[1.0, 2, 3], [2, 4, 6], [0, 0, 1]])}
+    assert solve.apart_mm(bad, good, "dmg") == float("inf")

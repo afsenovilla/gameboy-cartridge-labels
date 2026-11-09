@@ -311,6 +311,16 @@ def rigid_fit(a, b):
     return np.degrees(theta), cb - R @ ca
 
 
+def usable(cut, shape):
+    """Whether a label's homography is sound: finite, well conditioned, the label a convex quadrilateral at least 20
+    px across in the photo (a degenerate fit once got through and couldn't be inverted)."""
+    if not np.all(np.isfinite(cut)) or abs(cut[2, 2]) < 1e-12 or np.linalg.cond(cut) > 1e12:
+        return False
+    q = project(cut / cut[2, 2], corners_mm(shape))
+    return bool(np.all(np.isfinite(q)) and cv2.isContourConvex(q.astype(np.float32)) and
+                cv2.contourArea(q.astype(np.float32)) > 400)
+
+
 def candidate(lp, H0_plastic, segs, start):
     """A start (plastic mm -> photo) refined by the nested fit: the fit, or None if it fails the support checks."""
     shape = lp["shape"]
@@ -323,6 +333,8 @@ def candidate(lp, H0_plastic, segs, start):
     if np.mean(list(support.values())) < MIN_SUPPORT or support["face"] < MIN_FACE:
         return None
     cut = H @ placement_matrix(shape, placement[0], placement[1], np.radians(placement[2])) @ label_to_plastic(shape)
+    if not usable(cut, shape):
+        return None
     return {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement, "support": support,
             "error_mm": error, "start": start, "px_per_mm": local_scale(H, MODELS[shape]["label"]), "tilt": outlines.tilt(H)}
 
@@ -376,10 +388,14 @@ def kind_of(start):
 
 
 def apart_mm(a, b, shape):
-    """The worst corner of b's label cut in a's label mm."""
+    """The worst corner of b's label cut in a's label mm (infinite if a's can't be inverted)."""
     mm = corners_mm(shape)
-    m = project(np.linalg.inv(a["cut_to_photo"]), project(b["cut_to_photo"], mm))
-    return float(np.max(np.linalg.norm(m - mm, axis=1)))
+    try:
+        m = project(np.linalg.inv(a["cut_to_photo"]), project(b["cut_to_photo"], mm))
+    except np.linalg.LinAlgError:
+        return float("inf")
+    d = float(np.max(np.linalg.norm(m - mm, axis=1)))
+    return d if np.isfinite(d) else float("inf")
 
 
 def features(cands, shape):
@@ -432,18 +448,76 @@ def predict(model, X):
     return 1 / (1 + np.exp(-(((X - mean) / scale) @ w + b)))
 
 
+# Stage 1's candidates are cached per label photo in <generated>/solve/candidates/, stamped with a fingerprint of the
+# fitting code (the source of the functions stage 1 runs, and the models), so a change elsewhere in this file (stage
+# 2, the choice, the page) or a crash after stage 1 doesn't redo the fitting.
+FITTING = ["usable", "candidate", "fit_label_photo", "fit_nested", "correspond", "projected", "homography_from",
+           "model_samples", "placement_matrix", "label_to_plastic", "local_scale", "edge_maps", "base_estimate",
+           "search_poses", "corners_mm", "project"]
+
+
+def fitting_version():
+    import hashlib, inspect
+    h = hashlib.sha1()
+    for name in FITTING:
+        h.update(inspect.getsource(globals()[name]).encode())
+    for k in ("ANGLE", "WINDOWS", "ROBUST_MM", "ON_MM", "PLACEMENT_MM", "PLACEMENT_DEG", "MIN_SUPPORT", "MIN_FACE",
+              "MAP_SIDE", "DIRECTIONS", "SEARCH_TURNS", "SEARCH_SCALES", "SEARCH_RANGE", "SEARCH_STEP", "SEARCH_SIGMA", "SEARCH_REFINE"):
+        h.update(repr(globals()[k]).encode())
+    h.update(inspect.getsource(outlines).encode())
+    h.update(json.dumps(MODELS, sort_keys=True).encode())
+    return h.hexdigest()[:16]
+
+
+def cache_file(cache_dir, key):
+    return os.path.join(cache_dir, key.replace("@", "_").replace(",", "_") + ".json")
+
+
+def save_candidates(cache_dir, key, cands, why, version):
+    plain = [{k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in c.items()} for c in cands]
+    steps.write_json(cache_file(cache_dir, key), {"version": version, "candidates": plain, "why": why})
+
+
+def load_candidates(cache_dir, lp, version):
+    """(candidates, why) if cached for this fitting code and newer than the label photo's edges, else None."""
+    p = cache_file(cache_dir, lp["key"])
+    if not os.path.exists(p):
+        return None
+    d = json.load(open(p))
+    if d.get("version") != version:
+        return None
+    cands = [{k: (np.array(v) if k in ("cut_to_photo", "plastic_to_photo") else v) for k, v in c.items()} for c in d["candidates"]]
+    return cands, d["why"]
+
+
 def stage1(lps, edges_dir, pairs, workers=8):
     """The fits: round 1 (every candidate, in parallel), then the choice learned from its confident label photos:
     key -> fit; key -> why for those that failed; the choice model's description."""
     text_dir = os.path.join(os.path.dirname(edges_dir), "read-text")
+    cache_dir = os.path.join(os.path.dirname(edges_dir), "solve", "candidates")
+    os.makedirs(cache_dir, exist_ok=True)
     shape_of = {lp["key"]: lp["shape"] for lp in lps}
     all_cands, failed = {}, {}
+    version = fitting_version()
+    todo = []
+    for lp in lps:
+        cached = load_candidates(cache_dir, lp, version)
+        if cached is None:
+            todo.append(lp)
+        elif cached[0]:
+            all_cands[lp["key"]] = cached[0]
+        else:
+            failed[lp["key"]] = cached[1]
+    print(f"stage 1: {len(lps) - len(todo)} label photos' candidates cached, {len(todo)} to fit", flush=True)
     with Pool(workers) as pool:
-        for key, cands, why in pool.imap_unordered(fit_label_photo, [(lp, edges_dir, text_dir) for lp in lps]):
+        for n, (key, cands, why) in enumerate(pool.imap_unordered(fit_label_photo, [(lp, edges_dir, text_dir) for lp in todo]), 1):
+            save_candidates(cache_dir, key, cands, why, version)
             if cands:
                 all_cands[key] = cands
             else:
                 failed[key] = why
+            if n % 100 == 0 or n == len(todo):
+                print(f"stage 1: fitted {n} of {len(todo)}", flush=True)
     feats, examples, labels, first, sure = {}, [], [], {}, 0
     for key, cands in all_cands.items():
         X, apart = features(cands, shape_of[key])
@@ -548,9 +622,19 @@ def pixel_agreement(va, vb, theta_deg, t_mm, shape):
     return (agree / textured if textured else 0.0), textured
 
 
+def view_job(job):
+    k, path, cut, shape = job
+    img = photos.load(path) if path else None
+    return k, (compare_view(img, cut, shape) if img is not None else None)
+
+
+_VIEWS = {}  # set before forking stage 2's link workers, who share it
+
+
 def judge_link(job):
     """(index, fit leftover mm, turn, shift, pixel share, textured tiles) of one link candidate."""
-    i, a, b, ma, mb, va, vb, shape = job
+    i, a, b, ma, mb, shape = job
+    va, vb = _VIEWS.get(a), _VIEWS.get(b)
     theta, t = rigid_fit(mb, ma)  # b's frame -> a's
     th = np.radians(theta)
     R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
@@ -564,19 +648,27 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
     shape_of = {lp["key"]: lp["shape"] for lp in lps}
     photo_of = {lp["key"]: lp["photo"] for lp in lps}
     views = {}
-    for k, f in fits.items():
-        img = photos.load(photo_paths[photo_of[k]]) if photo_of[k] in photo_paths else None
-        views[k] = compare_view(img, f["cut_to_photo"], shape_of[k]) if img is not None else None
+    with Pool(workers) as pool:
+        jobs_v = [(k, photo_paths.get(photo_of[k]), f["cut_to_photo"], shape_of[k]) for k, f in fits.items()]
+        for n, (k, v) in enumerate(pool.imap_unordered(view_job, jobs_v, chunksize=4), 1):
+            views[k] = v
+            if n % 200 == 0 or n == len(jobs_v):
+                print(f"stage 2: drew {n} of {len(jobs_v)} label photos for the pixel comparison", flush=True)
     jobs = []
     for i, (a, b, pa, pb) in enumerate(candidates):
         if a in fits and b in fits and shape_of[a] == shape_of[b]:
             ma = project(np.linalg.inv(fits[a]["cut_to_photo"]), pa)
             mb = project(np.linalg.inv(fits[b]["cut_to_photo"]), pb)
-            jobs.append((i, a, b, ma, mb, views[a], views[b], shape_of[a]))
+            jobs.append((i, a, b, ma, mb, shape_of[a]))
     judged = {}
-    with Pool(workers) as pool:
-        for i, leftover, theta, t, share, textured in pool.imap_unordered(judge_link, jobs, chunksize=8):
+    global _VIEWS
+    _VIEWS = views
+    import multiprocessing
+    with multiprocessing.get_context("fork").Pool(workers) as pool:
+        for n, (i, leftover, theta, t, share, textured) in enumerate(pool.imap_unordered(judge_link, jobs, chunksize=8), 1):
             judged[i] = (leftover, theta, t, share, textured)
+            if n % 2000 == 0 or n == len(jobs):
+                print(f"stage 2: compared {n} of {len(jobs)} link candidates", flush=True)
     pixel_ok = lambda j: j[3] >= AGREE_SHARE and j[4] >= MIN_TEXTURED_TILES
     # poor fits: most of a label photo's pixel-agreeing links fail the fit test
     tally = {}
