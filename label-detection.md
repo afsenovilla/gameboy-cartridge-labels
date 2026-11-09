@@ -198,6 +198,22 @@ designs.json (hand-edited): `{"<key>": "<design name>"}`; a label photo not list
 
 Unit tests are written along with the code, from the first step on (the last attempt had none, nor has main). Mostly on small made-up cases with known answers (a joint solve recovering known homographies, the key matching, the tile grouping telling a planted revision from planted dirt), so they run in seconds; pytest, run with `make test`.
 
+## Measured
+
+**read-text: RapidOCR against Apple Vision** (2026-11-09, the sample's 276 photos; serials found in the database; the old names used only for totals):
+
+| | Apple Vision | RapidOCR |
+|---|---|---|
+| Photos with a serial the database knows | 216 | 251 |
+| …the old name's release | 211 | 249 |
+| …only another release | 5 | 2 |
+| Old name's title seen | 196 | 221 |
+| Japanese titles seen (Japanese script) | 86 of 171 | 82 of 171 |
+| Right serial DMG / CGB / AGB | 118 / 45 / 48 | 138 / 58 / 53 |
+| Time, one photo at a time | 55 s | 142 s |
+
+Both read one on 213 photos, agreeing on 208; RapidOCR alone on 38, Vision alone on 3, neither on 22. RapidOCR's two other releases are cut-off serials that exist (DMG-DD for DMG-DDA, DMG-BQ for DMG-BQIJ). RapidOCR was kept: more serials, portable (a pip package with its models), no Mac needed. Its boxes don't keep the reading direction (always the box's top left first); its 180° classifier is run again on each line to put the corners in reading order. With 4 workers the sample takes about 64 s.
+
 ## Next
 
-The first code: read-text, starting with RapidOCR compared with Apple Vision on the sample.
+features: SIFT of each photo.
