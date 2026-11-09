@@ -229,6 +229,8 @@ Both read one on 213 photos, agreeing on 208; RapidOCR alone on 38, Vision alone
 
 Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn't built), links only through uniquely shared areas.
 
+**edges** (the sample): OpenCV's LSD at most 2000 px across, segments of 10 px or more there; a median of 979 segments per photo, 16 s, 8 MB. On photos with an accepted main fit, the share of each side covered by segments along it (within 0.3 mm, parallel within 3°): the label's cut edges a median of 100 % (DMG, AGB) and 89 % (CGB), at least half covered on 93 / 88 / 74 % of sides; the recess 100 / 90 / 88 %, at least half on 81 / 67 / 71 %. (Main's fits were made from edges, so this favours photos whose edges show.)
+
 ## Next
 
-edges, then solve.
+solve: the joint solve per linked set.
