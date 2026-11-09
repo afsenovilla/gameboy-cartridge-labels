@@ -25,6 +25,14 @@ def test_evening_a_photo_to_itself_keeps_it():
     assert np.abs(out - img).max() < 1e-5
 
 
+def test_dark_grey_ink_becomes_black_and_the_paper_stays_white():
+    img = np.full((100, 100, 3), 0.8, np.float32)
+    img[:30] = 0.15                                                       # a solid black printed as dark grey
+    img[:30, :, 0] += np.linspace(-0.02, 0.02, 100)[None, :]              # its texture
+    _, out = restore.paper_white(img)
+    assert out[:30].mean() < 0.03 and np.abs(out[60:] - 1).max() < 1e-2
+
+
 def test_paper_white_makes_the_paper_white_and_leaves_full_colour_art():
     img = np.full((100, 100, 3), 0.8, np.float32); img[..., 0] = 0.75     # bluish-grey paper, BGR
     img[30:60, 30:60] = [0.1, 0.2, 0.7]                                    # a red block

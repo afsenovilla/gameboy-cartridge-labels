@@ -230,14 +230,21 @@ def write_avif(path, img):
 # top PAPER_TOP of the lightness among those), at least PAPER_MIN of the label; each channel scaled in linear light so
 # the paper at its PAPER_WHITE quantile of lightness becomes white: only the brightest of the paper clips (the user:
 # the paper's median made white, 5 % over, clipped far too much). A label with too little such paper isn't done.
+# Black point, likewise (the user: the printed solid black's texture crushed, that's the point): the ink is the
+# near-neutral pixels darker than INK_MAX lightness, at least INK_MIN of the label; the ink at its INK_BLACK quantile of
+# lightness becomes black (an offset per channel in linear light, so the black is neutral too), the darkest of it
+# clipped. A label with too little such ink keeps its blacks as they are.
 PAPER_CHROMA = 0.04
 PAPER_TOP = 0.5
 PAPER_MIN = 0.03
 PAPER_WHITE = 0.9
+INK_MAX = 0.4
+INK_MIN = 0.01
+INK_BLACK = 0.1
 
 
 def paper_white(bgr):
-    """(the paper's colour BGR 0..1, the image with paper white) or (None, None)."""
+    """(the paper's colour BGR 0..1, the image with paper white and, where there's ink enough, ink black) or (None, None)."""
     lab = to_oklab(bgr)
     neutral = np.hypot(lab[..., 1], lab[..., 2]) < PAPER_CHROMA
     if neutral.mean() < PAPER_MIN:
@@ -251,7 +258,13 @@ def paper_white(bgr):
     brightest = paper.copy()
     brightest[paper] = light >= np.quantile(light, PAPER_WHITE)
     white_lin = np.median(lin[brightest], axis=0)  # the colour of the paper's brightest tenth, so its hue stays even
-    out = np.clip(lin / np.maximum(white_lin, 1e-3), 0, 1)
+    ink = neutral & (lab[..., 0] < INK_MAX)
+    black_lin = np.zeros(3)
+    if ink.mean() >= INK_MIN:
+        dark = ink.copy()
+        dark[ink] = lab[..., 0][ink] <= np.quantile(lab[..., 0][ink], INK_BLACK)
+        black_lin = np.median(lin[dark], axis=0)
+    out = np.clip((lin - black_lin) / np.maximum(white_lin - black_lin, 1e-3), 0, 1)
     out = np.where(out <= 0.0031308, out * 12.92, 1.055 * np.power(out, 1 / 2.4) - 0.055)
     return np.median(bgr[paper], axis=0), out.astype(np.float32)
 
