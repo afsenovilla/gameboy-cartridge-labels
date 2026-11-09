@@ -40,13 +40,6 @@ def test_different_releases_are_different_prints():
     assert len(groups) == 2
 
 
-def test_different_serials_of_one_release_are_different_prints():
-    A = alike_matrix(4, 50)
-    groups, poor, _ = prints.split_family(list("abcd"), A, ["DMG-KY"] * 4, np.ones((4, 50), bool),
-                                          ["DMG-KY-SCN", "DMG-KY-SCN", "DMG-KY-USA", None])
-    assert sorted(map(sorted, groups)) == [[0, 1, 3], [2]] or sorted(map(sorted, groups)) == [[0, 1], [2, 3]]
-
-
 def test_a_poor_fit_is_judged_against_its_own_release_only():
     A = alike_matrix(4, 50, [({3}, slice(0, 40))])
     groups, poor, _ = prints.split_family(list("abcd"), A, ["r"] * 4, np.ones((4, 50), bool))

@@ -14,8 +14,7 @@
 # one family 34 %.
 # Per tile, the family's label photos group by being alike (connected): all alike, a shared area; one apart, a defect on
 # that sticker; two or more groups of at least two, a print difference. Label photos are one print where they agree on
-# every print difference (a defect doesn't count) and their serials (read-serials) don't differ (other text is
-# another plate: a different serial is a different print, even within one release, as DMG-KY-SCN and DMG-KY-USA). A print difference:
+# every print difference (a defect doesn't count) and their releases (read-serials) don't differ. A print difference:
 # a split on a tile textured in every member compared, recurring on MIN_DIFF_TILES tiles or more. A label photo alike
 # with the others of its release on under POOR_SHARE of tiles (two or more others) is a poor fit: a print of its own.
 # Done again when prints.json is older than this file, solve.json or serials.json.
@@ -92,11 +91,9 @@ def components(n, edges):
     return [root(i) for i in range(n)]
 
 
-def split_family(keys, A, releases, textured, serials=None):
+def split_family(keys, A, releases, textured):
     """A family's prints: [[member index...]], its poor fits (indices) and its print-difference tiles. A: n x n x
-    tiles booleans (alike); textured: n x tiles. Label photos of different serials are never one print; poor fits are
-    judged against the release (region variants share nearly every tile)."""
-    serials = serials or [None] * len(keys)
+    tiles booleans (alike); textured: n x tiles."""
     n = len(keys)
     share = np.array([[A[i, j].mean() if i != j else 1.0 for j in range(n)] for i in range(n)])
     # a poor fit: alike with the others of its release on under POOR_SHARE of tiles (two or more others needed:
@@ -129,8 +126,6 @@ def split_family(keys, A, releases, textured, serials=None):
             differs[ts] = True
     def compatible(a, b):
         if releases[a] and releases[b] and releases[a] != releases[b]:
-            return False
-        if serials[a] and serials[b] and serials[a] != serials[b]:
             return False
         both = differs & (group[a] >= 0) & (group[b] >= 0)
         return bool(np.all(group[a][both] == group[b][both]))
@@ -200,7 +195,7 @@ def main():
                 A[i, j] = A[j, i] = alike(views[i], views[j], colors[i], colors[j])
             A = A.reshape(n, n, -1)
             textured = np.stack([v[2].ravel() > TEXTURE for v in views])
-            groups, poor, differs = split_family(keys, A, releases, textured, [serial.get(k, {}).get("serial") for k in keys])
+            groups, poor, differs = split_family(keys, A, releases, textured)
             if differs.any():
                 differences[fam] = {"grid": list(views[0][2].shape), "tiles": np.flatnonzero(differs).tolist()}
             poor_fits += [keys[i] for i in poor]
