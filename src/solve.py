@@ -375,7 +375,9 @@ def solve(found, matches, edges_dir):
 def page(out_dir, chosen, result, sizes):
     lps = result["label_photos"]
     rel = os.path.relpath(".", out_dir)
-    order = sorted(lps.items(), key=lambda kv: (-(kv[1]["residual_mm"] or 0), np.mean(list(kv[1]["support"].values()))))
+    kinds = ["placed", "carried", "evidence"]
+    group = lambda r: next((k for k in kinds if r["start"].startswith(k)), "evidence")
+    by_kind = {k: sorted([(key, r) for key, r in lps.items() if group(r) == k], key=lambda kv: -kv[1]["support"]["face"]) for k in kinds}
 
     def figure(key, r):
         s = r["photo"]; w, h = sizes[s]
@@ -401,9 +403,9 @@ def page(out_dir, chosen, result, sizes):
 .ph{{position:relative;display:inline-block}} .ph img{{max-width:280px;max-height:280px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>solve</h1>
 <p>{len(lps)} label photos solved (started: {", ".join(f"{k} {v}" for k, v in starts.items())}), {len(result["unsolved"])} not. Sets: {", ".join(f'{len(si["keys"])} label photos, {si["links used"]} links used, {si["links dropped"]} dropped, residual {si["residual_mm"] and round(si["residual_mm"], 2)} mm' for si in result["sets"][:5])}.</p>
-<p>Blue: the cartridge's outline; orange: the recess; green: the label's cut (canonical size); red dot: the label's top left. Worst first (residual, then support).</p>
+<p>Blue: the cartridge's outline; orange: the recess; green: the label's cut (canonical size); red dot: the label's top left. Grouped by how the fit was started; within a group, most outline support first.</p>
 <h2>Not solved ({len(result["unsolved"])})</h2><ul>{unsolved}</ul>
-<h2>Solved</h2>{"".join(figure(k, r) for k, r in order)}
+{"".join(f'<h2>Started from: {k} ({len(by_kind[k])})</h2>' + "".join(figure(key, r) for key, r in by_kind[k]) for k in kinds)}
 """)
 
 
