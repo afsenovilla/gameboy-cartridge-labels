@@ -231,6 +231,8 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **edges** (the sample): OpenCV's LSD at most 2000 px across, segments of 10 px or more there; a median of 979 segments per photo, 16 s, 8 MB. On photos with an accepted main fit, the share of each side covered by segments along it (within 0.3 mm, parallel within 3°): the label's cut edges a median of 100 % (DMG, AGB) and 89 % (CGB), at least half covered on 93 / 88 / 74 % of sides; the recess 100 / 90 / 88 %, at least half on 81 / 67 / 71 %. (Main's fits were made from edges, so this favours photos whose edges show.)
 
+**solve, first version** (the sample): stage 1 snaps the canonical rectangle's sides to the best-supported LSD lines near a start; stage 2 aligns each linked set. 251 of 276 solved. Against main's accepted label fits (worst corner): started from the logo placement 1.5 mm at the median (1.16 before snapping: snapping made it worse), carried through a match 14.8 mm, from the evidence 11.4 mm. Stage 2 works: in the big set 826 links used, 542 dropped as too far off (other layouts), matched points agree to 0.51 mm (median). The weak part is stage 1: a label's art is full of straight lines and the recess edge runs about 0.75 mm outside the cut, so snapping to the best-supported line nearby picks wrong ones unless the start is within about a mm; carried starts came almost all from other releases (other layouts), and a wrong rectangle passes the support check.
+
 ## Next
 
-solve: the joint solve per linked set.
+A better stage 1 (to be decided).
