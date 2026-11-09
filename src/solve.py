@@ -1,8 +1,10 @@
 # solve: every label photo's homography from its photo into ink coordinates (mm on the label's print, one coordinate
 # system per shape, anchored by each linked set's median cut), into <generated>/solve/solve.json:
 #   {"label_photos": {key: {"photo_to_ink" (3 x 3), "cut_to_photo" (3 x 3: the sticker's cut outline, the canonical
-#                            label size, -> the photo), "plastic_to_photo" (3 x 3), "placement" (dx, dy mm, turn
-#                            degrees: the label's cut in the recess, from its nominal place), "offset" (dx, dy mm, turn
+#                            label size about the sticker's centre, -> the photo), "width_mm" (the sticker's own width;
+#                            its cut is cut_to_photo's rectangle that wide about its centre), "plastic_to_photo" (3 x 3),
+#                            "placement" (dx, dy mm, turn degrees: the label's cut in the recess, from its nominal place),
+#                            "offset" (dx, dy mm, turn
 #                            degrees: the sticker's cut -> ink), "start" (how it was started), "support" (the share of
 #                            the face, recess and label samples along segments), "fallback" (null, or why the pose is weak),
 #                            "error_mm" (the fit's leftover), "family" and "family_size" (label photos joined by
@@ -13,8 +15,11 @@
 # Two stages (label-detection.md):
 #   1. Each label photo on its own: three nested rectangles of known sizes and places fitted together to the photo's
 #      LSD segments (edges): the cartridge's outline, its recess and the label's cut (main's shape models,
-#      src/shape-models.json). Unknowns: a homography from the plastic's mm to the photo, and the label's shift and turn
-#      in the recess (the placement), softly held to about PLACEMENT_MM and PLACEMENT_DEG. Each model sample point is
+#      src/shape-models.json). Unknowns: a homography from the plastic's mm to the photo, the label's shift and turn
+#      in the recess (the placement), softly held to about PLACEMENT_MM and PLACEMENT_DEG, and its width (labels are cut
+#      a few tenths of a mm narrower or wider: main's fit_label), softly held to WIDTH_SPREAD about main's median and
+#      kept within main's range (WIDTHS); the height is the canonical one (main: heights vary much less). Ink
+#      coordinates stay true mm: cut_to_photo is the canonical size about the sticker's centre, its width apart. Each model sample point is
 #      matched to the nearest segment parallel to its edge (within ANGLE) inside a window shrinking through WINDOWS;
 #      the residual is the perpendicular distance in mm, robust (soft L1, ROBUST_MM). Starts, in order: the label
 #      placed by a fixed-place logo (find), kept if it passes; else main's outline quadrilaterals (src/outlines.py:
@@ -48,6 +53,11 @@ ROBUST_MM = 0.3       # the soft L1 loss's scale
 ON_MM = 0.5           # a sample point is along a segment within this, for the support
 PLACEMENT_MM = 1.0    # the label's shift in the recess, softly held to about this
 PLACEMENT_DEG = 2.0
+# Label widths, mm, from main's fit_label (hand-placed labels: DMG 41.7-42.5, median about 42.15; CGB 41.40-41.70,
+# median 41.45; AGB about 43, one measured), with its 0.1 mm to spare for the plastic fit's error in scale.
+WIDTHS = {"dmg": (41.6, 42.7), "cgb": (41.3, 41.8), "agb": (42.5, 43.4)}
+MEDIAN_WIDTHS = {"dmg": 42.15, "cgb": 41.45, "agb": 43.0}
+WIDTH_SPREAD = 0.3    # mm: the width softly held to about this from the median
 MIN_SUPPORT = 0.4     # the least share of the model's samples along segments for a fit to count
 MIN_FACE = 0.4        # and of the cartridge's outline: a label placed far off still finds label- and recess-like lines
 MODELS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "shape-models.json")))["shapes"]
@@ -71,11 +81,14 @@ def label_to_plastic(shape):
     return np.array([[1.0, 0, x0], [0, 1, y0], [0, 0, 1]])
 
 
-def placement_matrix(shape, dx, dy, turn_rad):
-    """plastic mm -> plastic mm: the label turned about its nominal centre and shifted."""
+def placement_matrix(shape, dx, dy, turn_rad, width=None):
+    """plastic mm -> plastic mm: the label made width mm wide (if given) about its nominal centre, turned about it and
+    shifted."""
     x0, y0, x1, y1 = MODELS[shape]["label"]
     c = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
     R = np.array([[np.cos(turn_rad), -np.sin(turn_rad)], [np.sin(turn_rad), np.cos(turn_rad)]])
+    if width is not None:
+        R = R @ np.diag([width / (x1 - x0), 1.0])
     t = c + [dx, dy] - R @ c
     return np.array([[R[0, 0], R[0, 1], t[0]], [R[1, 0], R[1, 1], t[1]], [0, 0, 1]])
 
@@ -98,7 +111,7 @@ def homography_from(params, H0):
 def projected(params, H0, shape, pts, nrm, kinds):
     """The model's sample points and their edge directions in the photo, the label's moved by the placement."""
     H = homography_from(params[:8], H0)
-    P = placement_matrix(shape, params[8], params[9], np.radians(params[10]))
+    P = placement_matrix(shape, params[8], params[9], np.radians(params[10]), MEDIAN_WIDTHS[shape] + params[11])
     is_label = kinds == "label"
     p = pts.copy()
     p[is_label] = project(P, pts[is_label])
@@ -134,9 +147,11 @@ def correspond(pp, dirs, segs, window_px):
 
 def fit_nested(H0_plastic, shape, segs):
     """The three rectangles fitted from a start (plastic mm -> photo): (plastic_to_photo, placement (dx, dy, turn
-    degrees), support {kind: share}, error: the median distance of the samples along segments from them, mm) or None."""
+    degrees, width mm), support {kind: share}, error: the median distance of the samples along segments from them, mm)
+    or None."""
     pts, nrm, kinds = model_samples(shape)
-    params = np.zeros(11)
+    params = np.zeros(12)
+    lo, hi = WIDTHS[shape]
     sd = segs[:, 2:] - segs[:, :2]
     su = sd / np.maximum(np.linalg.norm(sd, axis=1)[:, None], 1e-12)
     sn = np.stack([-su[:, 1], su[:, 0]], 1)
@@ -152,17 +167,19 @@ def fit_nested(H0_plastic, shape, segs):
             pp, _, H = projected(x, H0_plastic, shape, pts, nrm, kinds)
             j = corr[use]
             r = ((pp[use] - segs[j, :2]) * sn[j]).sum(1) / px_per_mm
-            prior = [x[8] / PLACEMENT_MM, x[9] / PLACEMENT_MM, x[10] / PLACEMENT_DEG]
+            prior = [x[8] / PLACEMENT_MM, x[9] / PLACEMENT_MM, x[10] / PLACEMENT_DEG, x[11] / WIDTH_SPREAD]
             return np.concatenate([r, prior])
 
         params = least_squares(residuals, params, loss="soft_l1", f_scale=ROBUST_MM, max_nfev=200).x
+        params[11] = np.clip(MEDIAN_WIDTHS[shape] + params[11], lo, hi) - MEDIAN_WIDTHS[shape]
     pp, dirs, H = projected(params, H0_plastic, shape, pts, nrm, kinds)
     px_per_mm = local_scale(H, MODELS[shape]["label"])
     corr = correspond(pp, dirs, segs, ON_MM * px_per_mm)
     support = {k: round(float((corr[kinds == k] >= 0).mean()), 2) for k in ("face", "recess", "label")}
     j = corr[corr >= 0]
     error = float(np.median(np.abs(((pp[corr >= 0] - segs[j, :2]) * sn[j]).sum(1)) / px_per_mm)) if len(j) else ON_MM
-    return H / H[2, 2], (float(params[8]), float(params[9]), float(params[10])), support, error
+    return (H / H[2, 2], (float(params[8]), float(params[9]), float(params[10]), float(MEDIAN_WIDTHS[shape] + params[11])),
+            support, error)
 
 
 def local_scale(H, rect):
@@ -337,7 +354,7 @@ def candidate(lp, H0_plastic, segs, start):
     cut = H @ placement_matrix(shape, placement[0], placement[1], np.radians(placement[2])) @ label_to_plastic(shape)
     if not usable(cut, shape):
         return None
-    return {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement, "support": support,
+    return {"cut_to_photo": cut / cut[2, 2], "width_mm": placement[3], "plastic_to_photo": H, "placement": placement[:3], "support": support,
             "error_mm": error, "start": start, "px_per_mm": local_scale(H, MODELS[shape]["label"]), "tilt": outlines.tilt(H)}
 
 
@@ -463,7 +480,7 @@ def fitting_version():
     h = hashlib.sha1()
     for name in FITTING:
         h.update(inspect.getsource(globals()[name]).encode())
-    for k in ("ANGLE", "WINDOWS", "ROBUST_MM", "ON_MM", "PLACEMENT_MM", "PLACEMENT_DEG", "MIN_SUPPORT", "MIN_FACE",
+    for k in ("ANGLE", "WINDOWS", "ROBUST_MM", "ON_MM", "PLACEMENT_MM", "PLACEMENT_DEG", "WIDTHS", "MEDIAN_WIDTHS", "WIDTH_SPREAD", "MIN_SUPPORT", "MIN_FACE",
               "MAP_SIDE", "DIRECTIONS", "SEARCH_TURNS", "SEARCH_SCALES", "SEARCH_RANGE", "SEARCH_STEP", "SEARCH_SIGMA", "SEARCH_REFINE"):
         h.update(repr(globals()[k]).encode())
     h.update(inspect.getsource(outlines).encode())
@@ -1045,6 +1062,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
         photo_to_ink = Cf @ C @ offset_matrix(o) @ np.linalg.inv(f["cut_to_photo"])
         out[k] = {"photo": lp["photo"], "shape": lp["shape"], "photo_to_ink": (photo_to_ink / photo_to_ink[2, 2]).tolist(),
                   "cut_to_photo": (f["cut_to_photo"] / f["cut_to_photo"][2, 2]).tolist(),
+                  "width_mm": round(float(f.get("width_mm", shapes.LABEL_MM[lp["shape"]][0])), 3),
                   "offset": [round(float(o[1]), 3), round(float(o[2]), 3), round(float(np.degrees(o[0])), 3)],
                   "plastic_to_photo": f["plastic_to_photo"].tolist(),
                   "placement": [round(v, 3) for v in f["placement"]],

@@ -12,7 +12,8 @@
 # the fitted cut ("found": false).
 # Measured on the sample (273 label photos): the found edges lie 0.05-0.1 mm outside the fitted cut at the median.
 # The highlight on a sticker's edge (light from above on its cut face) and the shadow under it spoil the outermost
-# pixels of a label photo: INSET mm inside the edges found are left out (each label photo's own, in restore; the crop's).
+# pixels of a label photo: INSET mm inside the edges found are left out (each label photo's own, in restore; the crop's;
+# the user: 0.3 mm to be safe).
 import cv2, numpy as np
 import shapes
 
@@ -21,14 +22,16 @@ RECESS_GAP = 0.2
 MIN_STRENGTH = 2.0       # the mean colour gradient across the line, summed over B, G, R (0..255) per pixel
 MAX_TURN = 1.5           # degrees
 TURN_STEP = 0.1
-INSET = 0.1
+INSET = 0.3
 SIDES = ("top", "right", "bottom", "left")
 
 
-def corners_in_ink(H, shape):
-    """The canonical label's corners (top left, top right, bottom right, bottom left) through H (label mm -> ink mm)."""
+def corners_in_ink(H, shape, width=None):
+    """The fitted label's corners (top left, top right, bottom right, bottom left) through H (label mm -> ink mm): the
+    canonical label, made width mm wide about its centre if given (solve's width_mm)."""
     lw, lh = shapes.LABEL_MM[shape]
-    return cv2.perspectiveTransform(np.float64([[[0, 0]], [[lw, 0]], [[lw, lh]], [[0, lh]]]), np.float64(H)).reshape(-1, 2)
+    a = (lw - (width or lw)) / 2
+    return cv2.perspectiveTransform(np.float64([[[a, 0]], [[lw - a, 0]], [[lw - a, lh]], [[a, lh]]]), np.float64(H)).reshape(-1, 2)
 
 
 def side_position(corners, side):

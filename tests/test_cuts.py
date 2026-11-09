@@ -50,9 +50,9 @@ def test_polygon_and_mask_are_inset():
     assert np.allclose(q, [[0.1, 0.1], [42.4, 0.1], [42.4, 36.9], [0.1, 36.9]])
     size, px_to_mm = straighten.canvas("dmg")
     m = cuts.mask(c, "dmg", size, px_to_mm)
-    # 0.1 mm = 2 px inside the label's first pixel at M * P
+    # INSET (0.3 mm = 6 px) inside the label's first pixel at M * P
     row = m[int(M * P) + 100]
-    assert not row[int(M * P) + 1] and row[int(M * P) + 3]
+    assert not row[int(M * P) + 5] and row[int(M * P) + 7]
 
 
 def test_a_turned_side_is_a_turned_line():
@@ -68,5 +68,5 @@ def test_the_crop_is_the_median_inset_in_whole_pixels():
                              for s, v in zip(("left", "top", "right", "bottom"), (l, t, r, b))}
     cs = [mk(-0.2, 0.0, 42.6, 37.1), mk(0.0, 0.1, 42.4, 37.0), mk(0.1, -0.1, 42.5, 36.9)]
     c = cuts.crop(cs, "dmg", P, M)
-    assert c["mm"] == [0.1, 0.1, 42.4, 36.9]
-    assert (c["x"], c["y"], c["w"], c["h"]) == (102, 102, 846, 736)
+    assert c["mm"] == [0.3, 0.3, 42.2, 36.7]
+    assert (c["x"], c["y"], c["w"], c["h"]) == (106, 106, 838, 728)

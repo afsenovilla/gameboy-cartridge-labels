@@ -57,7 +57,7 @@ def recess_in_ink(r):
 
 
 def find_cut(img, r):
-    fitted = cuts.corners_in_ink(np.float64(r["photo_to_ink"]) @ np.float64(r["cut_to_photo"]), r["shape"])
+    fitted = cuts.corners_in_ink(np.float64(r["photo_to_ink"]) @ np.float64(r["cut_to_photo"]), r["shape"], r.get("width_mm"))
     recess = recess_in_ink(r) if r.get("plastic_to_photo") is not None else None
     return cuts.find(img, r["shape"], fitted, recess, PX_PER_MM, MARGIN)
 
@@ -136,7 +136,7 @@ def cuts_page(out_dir, solved):
             continue
         (w, h), _ = canvas(r["shape"])
         lw, lh = shapes.LABEL_MM[r["shape"]]
-        fitted = cuts.corners_in_ink(np.float64(r["photo_to_ink"]) @ np.float64(r["cut_to_photo"]), r["shape"])
+        fitted = cuts.corners_in_ink(np.float64(r["photo_to_ink"]) @ np.float64(r["cut_to_photo"]), r["shape"], r.get("width_mm"))
         px = lambda q: (np.asarray(q) + C) * P
         poly = lambda q, colour, extra="": (f'<polygon points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in px(q))}" '
                                              f'fill="none" stroke="{colour}" stroke-width="1"{extra}/>')

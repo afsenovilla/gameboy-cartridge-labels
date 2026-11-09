@@ -41,7 +41,7 @@
 #   Each family's label photos split into prints by a tile comparison, into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
 #
 #   make restore
-#   An image of every print from its label photos (bands, the median), cropped 0.1 mm inside its family's cuts, paper white
+#   An image of every print from its label photos (bands, the median), cropped 0.3 mm inside its family's cuts, paper white
 #   where found, into generated/restore/; the page generated/restore/index.html. Needs make prints.
 #
 #   make publish

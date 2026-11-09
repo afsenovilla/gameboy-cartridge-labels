@@ -136,3 +136,19 @@ def test_fine_refinement_corrects_a_small_offset_at_full_resolution(tmp_path):
     C = out["c"][0]
     assert abs(solve.project(C, [[20.0, 18.0]])[0][0] - 19.7) < 0.03          # the 0.3 mm taken back
     assert out["a"][1] < 0.03
+
+
+def test_nested_fit_finds_the_label_own_width():
+    import edges
+    m = solve.MODELS["dmg"]
+    H_true = solve.similarity_to_H((700, 700), 3.0, 15.0, "dmg") @ np.linalg.inv(solve.label_to_plastic("dmg"))
+    img = drawn_cartridge(H_true)
+    x0, y0, x1, y1 = m["recess"]
+    cv2.fillPoly(img, [solve.project(H_true, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]).astype(np.int32)], (90, 90, 90))
+    lx0, ly0, lx1, ly1 = m["label"]
+    c, w = (lx0 + lx1) / 2, 41.8                     # a label cut 0.7 mm narrower than the canonical 42.5
+    cv2.fillPoly(img, [solve.project(H_true, [[c - w / 2, ly0], [c + w / 2, ly0], [c + w / 2, ly1], [c - w / 2, ly1]]).astype(np.int32)],
+                 (230, 230, 230))
+    segs = edges.segments(img)["segments"].astype(np.float64)
+    H, placement, support, error = solve.fit_nested(H_true, "dmg", segs)
+    assert abs(placement[3] - w) < 0.15
