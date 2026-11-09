@@ -97,6 +97,12 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     images are in final coordinates, and publishing crops whole pixels with no resampling. Every print of a set gets
     the same crop: prints may sit slightly differently against their cuts (the fixed-place logos spread about 0.3 mm),
     but any plausible position will do, none is more right. A set of one label photo is anchored by its own cut.
+- **To experiment with: links only through uniquely shared areas.** A match through common areas alone (the grey frame
+  of US and European DMG labels) links label photos of hundreds of games into one linked set with one anchor. Instead,
+  a match would link two label photos only if enough of its inliers lie outside the common areas (where a label photo's
+  keypoints match many label photos of many looks; the same idea as the details). Linked sets then become families of
+  nearly-same prints. Lost: the frame's help in aligning a label photo whose print is seen once; it's then a set of one,
+  from its own cut and recess edges and the details at fixed places (the template, used deliberately).
 - **Finding label photos** (proposed): the plastic isn't needed for it. Evidence adds up; no single piece is required.
   - Seeds: OCR of every photo (it worked well before). A serial-looking string is a candidate, the text line giving
     rough place, turn and size.
