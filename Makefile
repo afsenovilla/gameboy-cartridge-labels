@@ -25,13 +25,17 @@
 #   The label photos in every photo, from serials read and matches, into generated/find/label-photos.json; the page
 #   generated/find/index.html. Needs make read-text and make match.
 #
+#   make solve
+#   Every label photo's homography into ink coordinates (the sticker's cut fitted to the edges, the linked sets aligned
+#   by their matches) into generated/solve/solve.json; the page generated/solve/index.html. Needs make find and edges.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -71,3 +75,9 @@ edges:
 
 clean-edges:
 	rm -rf $(GENERATED)/edges
+
+solve:
+	$(PYTHON) src/solve.py $(SAMPLE_FLAG)
+
+clean-solve:
+	rm -rf $(GENERATED)/solve
