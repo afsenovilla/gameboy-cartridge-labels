@@ -14,14 +14,6 @@ def test_pyramid_collapses_back():
     assert np.abs(restore.collapse(levels) - img).max() < 1e-4
 
 
-def test_soft_median_ignores_an_outlier():
-    rng = np.random.default_rng(2)
-    good = 0.5 + 0.01 * rng.standard_normal((5, 10, 10, 3))
-    vals = np.concatenate([good, np.full((1, 10, 10, 3), 5.0)])   # one label photo with glare
-    est = restore.tukey(vals.astype(np.float32), np.ones((6, 10, 10), np.float32))
-    assert np.abs(est - 0.5).max() < 0.02
-
-
 def test_finest_band_by_resolution():
     assert restore.finest_band(20) == 0 and restore.finest_band(40) == 0
     assert restore.finest_band(10) == 1 and restore.finest_band(5) == 2
@@ -31,3 +23,14 @@ def test_evening_a_photo_to_itself_keeps_it():
     img = np.random.default_rng(3).random((40, 50, 3)).astype(np.float32)
     out = restore.even_to(img, img.copy(), np.ones((40, 50), bool))
     assert np.abs(out - img).max() < 1e-5
+
+
+def test_paper_white_makes_the_paper_white_and_leaves_full_colour_art():
+    img = np.full((100, 100, 3), 0.8, np.float32); img[..., 0] = 0.75     # bluish-grey paper, BGR
+    img[30:60, 30:60] = [0.1, 0.2, 0.7]                                    # a red block
+    paper, white = restore.paper_white(img)
+    assert white is not None and np.abs(white[0, 0] - 1).max() < 1e-3      # the paper white (clipped)
+    assert white[40, 40, 2] > white[40, 40, 0]                             # the red still red
+    art = np.random.default_rng(4).random((100, 100, 3)).astype(np.float32)
+    art[..., 2] = 0.9; art[..., 0] = 0.1                                   # all saturated: no paper
+    assert restore.paper_white(art) == (None, None)

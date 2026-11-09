@@ -1,18 +1,19 @@
 # restore: an image of every print from its label photos, into <generated>/restore/:
-#   <print>.avif: the restored print, cropped to its shape's canonical label size at its family's median cut (the
-#     origin of ink coordinates), at straighten's PX_PER_MM
-#   <print>-median.avif: the same by the plain median (prints of three or more label photos), to compare
+#   <print>.avif: the restored print, its colours the label photos' evened to their median, cropped to its shape's
+#     canonical label size at its family's median cut (the origin of ink coordinates), at straighten's PX_PER_MM
+#   <print>-paper.avif: the same, its colours scaled so its paper is white (see paper_white), if paper is found
 #   <print>.json: {"keys" (its label photos used), "pooled" (other prints' label photos used where alike), "single"
-#     (from one label photo), "bands" (how many label photos count in each band, finest first)}
+#     (from one label photo), "bands" (how many label photos count in each band, finest first), "paper" (the paper's
+#     colour found, or null)}
 # The label photos: the print's own (poor fits left out), and those of nearly-same prints of its family where their
 # pair image (prints) says the tiles are alike. Each straightened label photo's colours evened per channel to the
 # print's median (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
-# the image is under 8 px across). Per band and pixel, each label photo weighs by the band's local energy (blurred over
-# a radius larger than the details, as in focus stacking), not at all in bands finer than its own photo's resolution
-# (the fit's photo pixels per mm) or where its straightened image is empty (off the photo). Combined per band: one
-# label photo as it is; two averaged by weight; three or more by Tukey's biweight (a soft median: from the median,
-# values reweighted smoothly by their distance from the estimate; its scale the weighted spread), and by the plain
-# median for <print>-median.avif.
+# the image is under 8 px across). Per band and pixel, a label photo counts unless the band is finer than its own
+# photo's resolution (the fit's photo pixels per mm) or its straightened image is empty there (off the photo).
+# Combined per band: one label photo as it is; two averaged; three or more by the median.
+# (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
+# median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
+# leave out clearly blurred regions.)
 # Done again when an image is older than this file, prints.json or solve.json.
 # Usage: restore.py [--sample] [--workers N]
 import argparse, html, json, os, sys
@@ -23,9 +24,6 @@ import photos, steps, straighten, shapes, prints as prints_step
 
 QUALITY = 90
 MAX_PHOTOS = 30        # the sharpest kept, if a print has more
-ENERGY_BLUR = 4.0      # px at each band's own scale: the radius the band's energy is spread over
-TUKEY_C = 4.685
-TUKEY_ROUNDS = 5
 
 
 # sRGB <-> Oklab (Björn Ottosson's), on float images in 0..1 (BGR in and out, as OpenCV's)
@@ -66,24 +64,6 @@ def collapse(levels):
     for band in reversed(levels[:-1]):
         cur = cv2.pyrUp(cur, dstsize=(band.shape[1], band.shape[0])) + band
     return cur
-
-
-def tukey(values, weights, rounds=TUKEY_ROUNDS):
-    """A weighted soft median per pixel: values n x ... x c, weights n x ... (0 = leave out)."""
-    w0 = weights[..., None]
-    present = w0 > 0
-    v = np.where(present, values, np.nan)
-    est = np.nanmedian(v, axis=0)
-    est = np.nan_to_num(est)
-    for _ in range(rounds):
-        r = np.linalg.norm(values - est, axis=-1, keepdims=True)
-        mad = np.nanmedian(np.where(present, r, np.nan), axis=0)
-        scale = 1.4826 * np.nan_to_num(mad) + 1e-6
-        u = r / (TUKEY_C * scale)
-        wt = np.where(u < 1, (1 - u ** 2) ** 2, 0.0) * w0
-        total = wt.sum(0)
-        est = np.where(total > 1e-12, (wt * values).sum(0) / np.maximum(total, 1e-12), est)
-    return est
 
 
 def even_to(img, ref, valid):
@@ -145,12 +125,8 @@ def restore_print(job):
         for e, p in zip(entries, pyrs):
             valid = cv2.resize(e[1].astype(np.float32), (ww, hh), interpolation=cv2.INTER_AREA) > 0.99
             wgt = valid.astype(np.float32)
-            if lv < levels - 1:
-                if lv < finest_band(e[3]):
-                    wgt[:] = 0
-                else:
-                    energy = cv2.GaussianBlur((p[lv] ** 2).sum(2), (0, 0), ENERGY_BLUR)
-                    wgt *= energy + 1e-6
+            if lv < levels - 1 and lv < finest_band(e[3]):
+                wgt[:] = 0
             if e[2] is not None:
                 wgt *= cv2.resize(e[2], (ww, hh), interpolation=cv2.INTER_AREA)
             weights.append(wgt)
@@ -163,24 +139,55 @@ def restore_print(job):
         elif n == 2:
             est = (Wn[..., None] * vals).sum(0)
         else:
-            est = tukey(vals, Wn)
+            est = np.nan_to_num(np.nanmedian(np.where((W > 0)[..., None], vals, np.nan), axis=0))
         # where nothing counts in this band (finer than every photo): no detail
         est = np.where((total > 1e-12)[..., None], est, 0 if lv < levels - 1 else vals.mean(0))
         out_levels.append(est.astype(np.float32))
-        if n >= 3:
-            med = np.nanmedian(np.where((W > 0)[..., None], vals, np.nan), axis=0)
-            out_median.append(np.nan_to_num(med).astype(np.float32))
     result = np.clip(from_oklab(collapse(out_levels)), 0, 1)
-    tmp = out_base + ".tmp.avif"
-    cv2.imwrite(tmp, (result * 255).round().astype(np.uint8), [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
-    os.replace(tmp, out_base + ".avif")
-    if out_median:
-        med = np.clip(from_oklab(collapse(out_median)), 0, 1)
-        cv2.imwrite(tmp, (med * 255).round().astype(np.uint8), [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
-        os.replace(tmp, out_base + "-median.avif")
-    elif os.path.exists(out_base + "-median.avif"):
-        os.remove(out_base + "-median.avif")
-    return pid, {"keys": [k for k, _, _ in own], "pooled": [k for k, _, _ in pooled], "single": n == 1, "bands": counts}
+    write_avif(out_base + ".avif", result)
+    paper, white = paper_white(result)
+    if white is not None:
+        write_avif(out_base + "-paper.avif", white)
+    elif os.path.exists(out_base + "-paper.avif"):
+        os.remove(out_base + "-paper.avif")
+    for old in (out_base + "-median.avif",):
+        if os.path.exists(old):
+            os.remove(old)
+    return pid, {"keys": [k for k, _, _ in own], "pooled": [k for k, _, _ in pooled], "single": n == 1, "bands": counts,
+                 "paper": None if paper is None else [round(float(v), 3) for v in paper]}
+
+
+def write_avif(path, img):
+    tmp = path + ".tmp.avif"
+    cv2.imwrite(tmp, (np.clip(img, 0, 1) * 255).round().astype(np.uint8), [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
+    os.replace(tmp, path)
+
+
+# Paper white: the paper is the restored image's brightest near-neutral pixels (Oklab chroma under PAPER_CHROMA, in the
+# top PAPER_TOP of the lightness among those), at least PAPER_MIN of the label; each channel scaled in linear light so
+# the paper's median becomes white, PAPER_CLIP over, so the paper's own noise and dirt clip to white (main's choice:
+# clipping evens paper variations). A label with too little such paper (full-colour art) isn't done.
+PAPER_CHROMA = 0.04
+PAPER_TOP = 0.5
+PAPER_MIN = 0.03
+PAPER_CLIP = 1.05
+
+
+def paper_white(bgr):
+    """(the paper's colour BGR 0..1, the image with paper white) or (None, None)."""
+    lab = to_oklab(bgr)
+    neutral = np.hypot(lab[..., 1], lab[..., 2]) < PAPER_CHROMA
+    if neutral.mean() < PAPER_MIN:
+        return None, None
+    L = lab[..., 0][neutral]
+    paper = neutral & (lab[..., 0] >= np.quantile(L, 1 - PAPER_TOP))
+    if paper.mean() < PAPER_MIN or np.median(lab[..., 0][paper]) < 0.6:
+        return None, None
+    lin = np.where(bgr <= 0.04045, bgr / 12.92, ((bgr + 0.055) / 1.055) ** 2.4)
+    white_lin = np.median(lin[paper], axis=0)
+    out = np.clip(lin / np.maximum(white_lin, 1e-3) * PAPER_CLIP, 0, 1)
+    out = np.where(out <= 0.0031308, out * 12.92, 1.055 * np.power(out, 1 / 2.4) - 0.055)
+    return np.median(bgr[paper], axis=0), out.astype(np.float32)
 
 
 def main():
@@ -211,7 +218,7 @@ def main():
         by_family.setdefault(p["family"], []).append(p)
     jobs, wanted = [], set()
     for p in result["prints"]:
-        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", "-median.avif", ".json")}
+        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", "-paper.avif", ".json")}
         own = [(k, image(k), None) for k in p["keys"] if k not in poor] or [(k, image(k), None) for k in p["keys"]]
         pooled = []
         pair_dir = os.path.join(gen, "prints", straighten.file_name(p["id"])[:-5])
@@ -237,22 +244,36 @@ def main():
 
 
 def page(out_dir, result, gen):
+    """index.html: per print, the restored image (median colours, and paper white where found), and its label photos
+    straightened (the canonical label's area, the same crop)."""
+    P, M = straighten.PX_PER_MM, straighten.MARGIN
+    rel = os.path.relpath(os.path.join(gen, "straighten"), out_dir)
     figs = []
     for p in sorted(result["prints"], key=lambda p: -len(p["keys"])):
         b = straighten.file_name(p["id"])[:-5]
         if not os.path.exists(os.path.join(out_dir, b + ".avif")):
             continue
         desc = json.load(open(os.path.join(out_dir, b + ".json"))) if os.path.exists(os.path.join(out_dir, b + ".json")) else {}
-        median = f'<img loading="lazy" src="{b}-median.avif" title="plain median">' if os.path.exists(os.path.join(out_dir, b + "-median.avif")) else ""
-        figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif" title="soft median">{median}</div>'
+        lw, lh = shapes.LABEL_MM[p["shape"]]
+        (cw, ch), _ = straighten.canvas(p["shape"])
+        # a straightened label photo cropped to the canonical label by CSS: the image scaled so the label is 160 px wide
+        scale = 160 / (lw * P)
+        crop = lambda k: (f'<div class="src" style="width:{lw * P * scale:.0f}px;height:{lh * P * scale:.0f}px">'
+                          f'<img loading="lazy" src="{rel}/{straighten.file_name(k)}" style="width:{cw * scale:.0f}px;'
+                          f'margin:{-M * P * scale:.0f}px 0 0 {-M * P * scale:.0f}px"></div>')
+        sources = "".join(crop(k) for k in desc.get("keys", [])) + "".join(crop(k) for k in desc.get("pooled", []))
+        paper = f'<img loading="lazy" src="{b}-paper.avif" title="paper white">' if os.path.exists(os.path.join(out_dir, b + "-paper.avif")) else '<span class="none">no paper found</span>'
+        figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif" title="median colours">{paper}</div>'
                     f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos'
-                    f'{", " + str(len(desc.get("pooled", []))) + " pooled from nearly-same prints" if desc.get("pooled") else ""}'
-                    f'{" (one photo: as it is)" if desc.get("single") else ""}<br>label photos per band, finest first: {desc.get("bands")}</figcaption></figure>')
+                    f'{", " + str(len(desc.get("pooled", []))) + " pooled from nearly-same prints (last)" if desc.get("pooled") else ""}'
+                    f'{" (one photo: as it is)" if desc.get("single") else ""}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
+                    f'<div class="sources">{sources}</div></figure>')
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>restore</title>
-<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:8px;vertical-align:top}} .pair img{{width:340px;margin-right:4px}} figcaption{{font-size:12px;max-width:700px}}</style>
+<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:block;margin:12px 0 24px}} .pair img{{width:340px;margin-right:6px}} .none{{display:inline-block;width:340px;color:#999}}
+figcaption{{font-size:12px;margin:4px 0}} .src{{display:inline-block;overflow:hidden;margin:2px}} .src img{{display:block}}</style>
 <h1>restore</h1>
-<p>{len(figs)} restored prints, the most label photos first. Left: the soft median (Tukey's biweight, weighted per band); right, where there are three or more label photos: the plain median, to compare.</p>
+<p>{len(figs)} restored prints, the most label photos first. Left: the restored print (the median of its label photos per band, their colours evened to their median); right: the same with its paper made white (clipping a little), where paper is found. Below: its label photos straightened, the same crop.</p>
 {"".join(figs)}""")
 
 
