@@ -2,9 +2,6 @@
 #   <print>.avif: the restored print, cropped to its shape's canonical label size at its family's median cut (the
 #     origin of ink coordinates), at straighten's PX_PER_MM; its colours scaled so its paper is white (see paper_white)
 #     where paper is found, else the label photos' evened to their median (the user: one image per print)
-#   uncropped/<print>.png (with --full-top N, for the N prints with the most label photos): uncropped, over the whole
-#     straightened canvas (the label and 5 mm around), each label photo counting only inside its own sticker's cut;
-#     paper white where found; transparent where no label photo shows paper
 #   <print>.json: {"keys" (its label photos used), "pooled" (other prints' label photos used where alike), "single"
 #     (from one label photo), "bands" (how many label photos count in each band, finest first), "paper" (the paper's
 #     colour found, or null)}
@@ -155,44 +152,24 @@ def finest_band(photo_px_per_mm):
     return max(0, int(np.floor(np.log2(max(ratio, 1.0)))))
 
 
-def uncropped(out_base):
-    """Where a print's uncropped image goes: uncropped/ beside the cropped ones."""
-    return os.path.join(os.path.dirname(out_base), "uncropped", os.path.basename(out_base) + ".png")
-
-
 def restore_print(job):
-    """Restores one print: (print id, the result's description). With cuts ({key: the sticker's cut outline in the
-    straightened image's px}), uncropped: the whole straightened canvas, each label photo counting only inside its own
-    sticker's cut, into uncropped/<print>.png (transparent where no label photo shows paper)."""
-    pid, shape, own, pooled, px_per_mm, out_base = job[:6]
-    cuts = job[6] if len(job) > 6 else None
+    """Restores one print: (print id, the result's description)."""
+    pid, shape, own, pooled, px_per_mm, out_base = job
     P, M = straighten.PX_PER_MM, straighten.MARGIN
     lw, lh = shapes.LABEL_MM[shape]
     y0, x0 = int(round(M * P)), int(round(M * P))
     h, w = int(round(lh * P)), int(round(lw * P))
-    if cuts is not None:
-        (W, H), _ = straighten.canvas(shape)
     entries = []  # (image 0..1 BGR cropped, valid mask, extra weight map or None, px/mm)
     for key, path, mask in own + pooled:
         img = cv2.imread(path)
         if img is None:
             continue
         extra = None
-        if cuts is None:
-            img = img[y0:y0 + h, x0:x0 + w].astype(np.float32) / 255
-            valid = img.max(2) > 0.004   # straighten's border outside the photo is black
-            if mask is not None:  # another print's label photo: only its alike tiles, smoothed
-                extra = cv2.resize(mask, (w, h), interpolation=cv2.INTER_LINEAR)
-                extra = cv2.GaussianBlur(extra, (0, 0), P / 2)
-        else:
-            img = img.astype(np.float32) / 255
-            inside = np.zeros(img.shape[:2], np.uint8)
-            cv2.fillPoly(inside, [np.round(np.float32(cuts[key])).astype(np.int32)], 1)
-            inside = cv2.erode(inside, np.ones((5, 5), np.uint8))  # the cut's own edge left out
-            valid = (img.max(2) > 0.004) & (inside > 0)
-            if mask is not None:  # alike tiles cover the label only
-                extra = np.zeros(img.shape[:2], np.float32)
-                extra[y0:y0 + h, x0:x0 + w] = cv2.GaussianBlur(cv2.resize(mask, (w, h), interpolation=cv2.INTER_LINEAR), (0, 0), P / 2)
+        img = img[y0:y0 + h, x0:x0 + w].astype(np.float32) / 255
+        valid = img.max(2) > 0.004   # straighten's border outside the photo is black
+        if mask is not None:  # another print's label photo: only its alike tiles, smoothed
+            extra = cv2.resize(mask, (w, h), interpolation=cv2.INTER_LINEAR)
+            extra = cv2.GaussianBlur(extra, (0, 0), P / 2)
         entries.append((img, valid, extra, px_per_mm.get(key, P)))
     if not entries:
         return pid, None
@@ -228,19 +205,12 @@ def restore_print(job):
             est = (Wn[..., None] * vals).sum(0)
         else:
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore", RuntimeWarning)  # pixels no label photo covers (uncropped)
+                warnings.simplefilter("ignore", RuntimeWarning)  # pixels no label photo covers
                 est = np.nan_to_num(np.nanmedian(np.where((W > 0)[..., None], vals, np.nan), axis=0))
         # where nothing counts in this band (finer than every photo): no detail
         est = np.where((total > 1e-12)[..., None], est, 0 if lv < levels - 1 else vals.mean(0))
         out_levels.append(est.astype(np.float32))
     result = np.clip(from_oklab(collapse(out_levels)), 0, 1)
-    if cuts is not None:
-        covered = np.any(np.stack([e[1] for e in entries]), 0)
-        paper, white = paper_white(np.where(covered[..., None], result, 0))
-        img = white if white is not None else result
-        rgba = np.dstack([(np.clip(img, 0, 1) * 255).round().astype(np.uint8), (covered * 255).astype(np.uint8)])
-        cv2.imwrite(uncropped(out_base), rgba)
-        return pid, {"full": True, "keys": [k for k, _, _ in own], "paper": paper is not None}
     paper, white = paper_white(result)
     write_avif(out_base + ".avif", white if white is not None else result)
     for old in (out_base + "-median.avif", out_base + "-paper.avif"):
@@ -290,7 +260,6 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true")
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--full-top", type=int, default=0, help="also the uncropped prints of this many prints with the most label photos")
     args = ap.parse_args()
     gen = photos.generated(args.sample)
     prints_file, solve_file = os.path.join(gen, "prints", "prints.json"), os.path.join(gen, "solve", "solve.json")
@@ -313,7 +282,7 @@ def main():
     by_family = {}
     for p in result["prints"]:
         by_family.setdefault(p["family"], []).append(p)
-    jobs, all_jobs, wanted = [], [], set()
+    jobs, wanted = [], set()
     for p in result["prints"]:
         wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", ".json")}
         own = [(k, image(k), None) for k in p["keys"] if k not in poor] or [(k, image(k), None) for k in p["keys"]]
@@ -324,16 +293,11 @@ def main():
             if q is not p and os.path.exists(mask_file):
                 m = cv2.imread(mask_file, cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
                 pooled += [(k, image(k), m) for k in q["keys"] if k not in poor]
-        all_jobs.append((p["id"], p["shape"], own, pooled, px_per_mm, base(p["id"])))
         if not os.path.exists(base(p["id"]) + ".avif") or os.path.getmtime(base(p["id"]) + ".avif") < newest:
-            jobs.append(all_jobs[-1])
+            jobs.append((p["id"], p["shape"], own, pooled, px_per_mm, base(p["id"])))
     for f in os.listdir(out_dir):
-        if f not in wanted and f not in ("index.html", "uncropped"):
+        if f not in wanted and f != "index.html":
             os.remove(os.path.join(out_dir, f))
-    os.makedirs(os.path.join(out_dir, "uncropped"), exist_ok=True)
-    for f in os.listdir(os.path.join(out_dir, "uncropped")):  # those of prints no longer there
-        if f[:-4] + ".avif" not in wanted:
-            os.remove(os.path.join(out_dir, "uncropped", f))
     import multiprocessing
     with multiprocessing.Pool(args.workers) as pool:
         for n, (pid, desc) in enumerate(pool.imap_unordered(restore_print, jobs), 1):
@@ -341,27 +305,6 @@ def main():
                 steps.write_json(base(pid) + ".json", desc)
             if n % 20 == 0 or n == len(jobs):
                 print(f"restored {n} of {len(jobs)} prints", flush=True)
-    if args.full_top:
-        full_jobs = []
-        for p in sorted(result["prints"], key=lambda p: -len(p["keys"]))[:args.full_top]:
-            j = next((j for j in all_jobs if j[0] == p["id"]), None)
-            if j is None:
-                continue
-            cuts = {}
-            for k, _, _ in j[2] + j[3]:
-                r = solved[k]
-                lw, lh = shapes.LABEL_MM[r["shape"]]
-                corners = solve_step.project(np.array(r["cut_to_photo"]), [[0, 0], [lw, 0], [lw, lh], [0, lh]])
-                ink = solve_step.project(np.array(r["photo_to_ink"]), corners)
-                cuts[k] = (ink + straighten.MARGIN) * straighten.PX_PER_MM
-            full_jobs.append(j + (cuts,))
-        keep = {os.path.basename(uncropped(base(j[0]))) for j in full_jobs}
-        for f in os.listdir(os.path.join(out_dir, "uncropped")):  # those no longer among the top N (made from other label photos)
-            if f not in keep:
-                os.remove(os.path.join(out_dir, "uncropped", f))
-        with multiprocessing.Pool(args.workers) as pool:
-            for pid, desc in pool.imap_unordered(restore_print, full_jobs):
-                print(f"uncropped: {uncropped(base(pid))}", flush=True)
     page(out_dir, result, gen)
     print(f"page: {os.path.join(out_dir, 'index.html')}")
 
