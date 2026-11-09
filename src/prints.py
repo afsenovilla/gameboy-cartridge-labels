@@ -2,15 +2,16 @@
 # into <generated>/prints/:
 #   prints.json: {"prints": [{"id" (its smallest key), "keys", "release", "serial", "shape", "family"}], "tile_mm": TILE_MM,
 #                 "differences": {family: {"grid": [rows, columns], "tiles": [index...]}} (the tiles telling its prints apart)}
-#   <print>/<other print>.png: one pixel per tile, white where the two prints are alike (for pairs alike on at least
+#   <print>/<other print>.png: one pixel per tile, white where the two prints match (for pairs matching on at least
 #     MIN_SHARED of the label)
 #   few-photos.json: [print ids] of prints with fewer than FEW label photos
 # Comparing, in each family's ink coordinates (straighten's images): the label, 1 mm in from its edges, in TILE_MM
-# tiles. Two label photos are alike at a tile: where both are textured (gray spread over TEXTURE), the lighting-evened
-# gray (minus the local mean, over the local spread, 0.25 mm blur) correlates over CORRELATION; where flat, their
-# colors (each label photo's evened per channel to the family's median) differ under COLOR_DIFF. Different at a tile:
-# textured in both and not alike. Different prints: different on MIN_DIFF_TILES tiles or more. Only the pixels decide:
-# serials and releases are only the prints' labels. Measured on the full set at 1 mm tiles (pairs within a family, by
+# tiles. Two label photos match at a tile: where both are textured (gray spread over TEXTURE), the lighting-evened
+# gray (minus the local mean, over the local spread, 0.25 mm blur) correlates over CORRELATION; where both are flat,
+# their colors (each label photo's evened per channel to the family's median) differ under COLOR_DIFF; textured in one
+# and flat in the other, never. Different (conflicting) at a tile: textured in both and not correlating. Different
+# prints: different on MIN_DIFF_TILES tiles or more. Only the pixels decide: serials and releases are only the prints'
+# labels. Measured on the full set at 1 mm tiles (pairs within a family, by
 # their serials read): 3 or more different tiles on 10 % of same-serial pairs (dirt, misfits: split, then pooled
 # back), 86 % of one release's region variants (many of the rest misread serials of one print: IPN for JPN, a cut-off
 # serial) and 95 % of different releases. At 2 mm tiles a region code hardly showed (one tile, often still correlating).
@@ -65,17 +66,22 @@ def even_colors(colors, ref):
     return out
 
 
-def alike(va, vb, ca, cb):
-    """Per tile, whether two label photos are alike there, and whether they're different (textured in both and not
-    alike; the outermost ring of tiles left out: the cut wanders up to about 1 mm past them)."""
+def matching_and_conflicting_tiles(va, vb, ca, cb):
+    """Per tile, two booleans for two label photos (their tile_views, and their tile colors evened):
+    matching: textured in both with their lighting-evened gray correlating over CORRELATION, or flat in both with
+      their evened colors differing under COLOR_DIFF. A tile textured in one and flat in the other never matches: the
+      color test can't see small text on paper (a region variant's text was pooled into another print).
+    conflicting: textured in both and not correlating (the outermost ring of tiles left out: the cut wanders up to
+      about 1 mm past them). Textured in one only isn't conflicting: blur or glare in one photo does that."""
     textured = (va[2] > TEXTURE) & (vb[2] > TEXTURE)
+    flat = (va[2] <= TEXTURE) & (vb[2] <= TEXTURE)
     za = va[0] - va[0].mean(2, keepdims=True)
     zb = vb[0] - vb[0].mean(2, keepdims=True)
     corr = (za * zb).sum(2) / np.sqrt((za ** 2).sum(2) * (zb ** 2).sum(2) + 1e-9)
-    a = np.where(textured, corr > CORRELATION, np.abs(ca - cb).mean(2) < COLOR_DIFF)
-    d = textured & ~a
-    d[0, :] = d[-1, :] = d[:, 0] = d[:, -1] = False
-    return a, d
+    matching = (textured & (corr > CORRELATION)) | (flat & (np.abs(ca - cb).mean(2) < COLOR_DIFF))
+    conflicting = textured & ~(corr > CORRELATION)
+    conflicting[0, :] = conflicting[-1, :] = conflicting[:, 0] = conflicting[:, -1] = False
+    return matching, conflicting
 
 
 def components(n, edges):
@@ -92,7 +98,7 @@ def components(n, edges):
 
 def split_family(A, D):
     """A family's prints: [[member index...]], and the tiles that tell its prints apart. A: n x n x tiles booleans
-    (alike); D: n x n x tiles booleans (different: textured in both and not correlating). Two label photos are
+    (matching); D: n x n x tiles booleans (conflicting: textured in both and not correlating). Two label photos are
     different prints where they differ on MIN_DIFF_TILES tiles or more (dirt or glare rarely does; other text does).
     Prints are merged, the pairs with the fewest differing tiles first, where most cross pairs aren't different."""
     n = A.shape[0]
@@ -117,8 +123,8 @@ def split_family(A, D):
 
 
 def pair_masks(groups, A):
-    """{(p, q): tiles alike} for the pairs of a family's prints (groups: their member indices; A: n x n x tiles) worth
-    a pair image: alike where most cross pairs are, on at least MIN_SHARED of the label. (Tiles shared by most of a
+    """{(p, q): tiles matching} for the pairs of a family's prints (groups: their member indices; A: n x n x tiles) worth
+    a pair image: matching where most cross pairs match, on at least MIN_SHARED of the label. (Tiles shared by most of a
     family's prints, a frame, were once left out: that dropped the region variants of one release, alike nearly
     everywhere, from each other's pooling.)"""
     masks = {}
@@ -160,7 +166,7 @@ def main():
             A = np.ones((n, n) + views[0][2].shape, bool)
             D = np.zeros_like(A)
             for i, j in itertools.combinations(range(n), 2):
-                a, d = alike(views[i], views[j], colors[i], colors[j])
+                a, d = matching_and_conflicting_tiles(views[i], views[j], colors[i], colors[j])
                 A[i, j] = A[j, i] = a
                 D[i, j] = D[j, i] = d
             groups, differs = split_family(A.reshape(n, n, -1), D.reshape(n, n, -1))
@@ -168,7 +174,7 @@ def main():
             if differs.any():
                 differences[fam] = {"grid": list(views[0][2].shape), "tiles": np.flatnonzero(differs).tolist()}
             fam_prints = [{"keys": [keys[i] for i in g], "family": fam, "_idx": g} for g in groups]
-            # pooling masks between this family's prints: alike where most cross pairs are
+            # pooling masks between this family's prints: matching where most cross pairs match
             if len(fam_prints) > 1:
                 grid = views[0][2].shape
                 for (p, q), m in pair_masks([fp["_idx"] for fp in fam_prints], A).items():
