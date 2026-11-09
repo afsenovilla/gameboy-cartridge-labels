@@ -1,9 +1,9 @@
-# edges: every straight line segment in every photo, nothing specific to labels (which are a cut or a recess is
-# decided later), into <generated>/edges/<sha1>.npz:
+# edges: every straight line segment and outline quadrilateral in every photo, nothing specific to labels (which are
+# a cut, a recess or the body is decided later), into <generated>/edges/<sha1>.npz:
 #   size (w, h of the photo), scale (the photo's pixels per pixel LSD saw),
 #   segments (n x 4: x1, y1, x2, y2 in the photo's pixels, its EXIF turn applied; the darker side on the right as it
 #   runs, with y down), widths (in the photo's pixels), strength (-log10 of LSD's number of false alarms: higher is
-#   surer).
+#   surer), quads (m x 4 x 2: outline quadrilaterals, src/outlines.py, ported from main).
 # OpenCV's LSD (line segment detector, refined), on the photo at most MAX_SIDE px on its long side (as features);
 # segments shorter than MIN_LENGTH px there are left out.
 # A photo is done again when its file is missing or older than this file. Files of photos no longer there are removed.
@@ -13,7 +13,7 @@ import argparse, os, sys
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps
+import photos, steps, outlines
 
 MAX_SIDE = 2000
 MIN_LENGTH = 10
@@ -44,7 +44,11 @@ def empty(size=(0, 0), scale=1.0):
 def do_photo(job):
     sha1, path, out = job
     image = photos.load(path)
-    steps.write_npz(out, **(segments(image) if image is not None else empty()))
+    if image is None:
+        steps.write_npz(out, **empty(), quads=np.zeros((0, 4, 2), np.float32))
+        return sha1
+    quads = outlines.outline_quads(image)
+    steps.write_npz(out, **segments(image), quads=np.float32(quads).reshape(-1, 4, 2))
     return sha1
 
 

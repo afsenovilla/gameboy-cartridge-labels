@@ -15,13 +15,15 @@
 #      src/shape-models.json). Unknowns: a homography from the plastic's mm to the photo, and the label's shift and turn
 #      in the recess (the placement), softly held to about PLACEMENT_MM and PLACEMENT_DEG. Each model sample point is
 #      matched to the nearest segment parallel to its edge (within ANGLE) inside a window shrinking through WINDOWS;
-#      the residual is the perpendicular distance in mm, robust (soft L1, ROBUST_MM). Starts: the label placed by a
-#      fixed-place logo (find); else the pose search: thousands of poses of the model near the evidence scored by how
-#      close its sample points land to segments of their own direction (edge_maps, search_poses), the best few fitted,
-#      the best supported kept. Its turn is the direction most of the label's text reads (along the label on 193 of
-#      194 label photos of the sample), its scale the details' and the serial line's. (Carrying a fitted label photo's
-#      pose through a match was tried as a start: 37 % of those fits under 5 mm from main's, against the search's 84 %;
-#      dropped.) A fit is dropped when less than MIN_SUPPORT of the model's sample points end up along segments
+#      the residual is the perpendicular distance in mm, robust (soft L1, ROBUST_MM). Starts, in order: the label
+#      placed by a fixed-place logo (find), kept if it passes; else main's outline quadrilaterals (src/outlines.py:
+#      each four-sided outline in the photo taken for the label, the recess or the body), all of the photo's, the best
+#      supported kept (on the evaluation set: 97 % under 5 mm from the hand fits, 100 % where main's fitter had
+#      failed); else the pose search: poses of the model near the evidence scored against direction-binned distance
+#      maps of the segments (edge_maps, search_poses), the best few fitted, its turn the direction most of the label's
+#      text reads (along the label on 193 of 194 of the sample's). (Carrying a fitted pose through a match was tried:
+#      37 % under 5 mm; main's text starts: 42 %; both dropped.) A fit is dropped when less than MIN_SUPPORT of the
+#      model's sample points end up along segments
 #      (within ON_MM), or less than MIN_FACE of the cartridge's outline (a label placed far off still finds label- and
 #      recess-like lines: on the sample, 0.4 kept 69 of 70 fits within 2 mm of main's and dropped 87 of 109 farther off).
 #   2. Each linked set: matched points (match's inliers, assigned to label photo pairs) map into each sticker's
@@ -35,7 +37,8 @@ import cv2, numpy as np
 from scipy.optimize import least_squares
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, match, shapes, find
+import photos, steps, match, shapes, find, outlines
+from multiprocessing import Pool
 
 ANGLE = 8.0           # degrees: a segment counts for a sample point if this parallel to its edge
 WINDOWS = (6.0, 3.0, 1.5, 0.8)  # mm: how far a sample point looks for a segment, per round
@@ -306,59 +309,69 @@ def rigid_fit(a, b):
     return np.degrees(theta), cb - R @ ca
 
 
-def stage1(lps, edges_dir, pairs):
-    """The cut outlines: key -> {"cut_to_photo", "support", "start"}; key -> why for those that failed."""
-    by_key = {lp["key"]: lp for lp in lps}
-    segs = {}
-    get_segs = lambda s: segs.setdefault(s, np.load(os.path.join(edges_dir, s + ".npz"))["segments"].astype(np.float64))
+def candidate(lp, H0_plastic, segs, start):
+    """A start (plastic mm -> photo) refined by the nested fit: the fit, or None if it fails the support checks."""
+    shape = lp["shape"]
+    result = fit_nested(H0_plastic, shape, segs)
+    if result is None:
+        return None
+    H, placement, support = result
+    if not np.all(np.isfinite(H)) or abs(np.linalg.det(H)) < 1e-12:
+        return None
+    if np.mean(list(support.values())) < MIN_SUPPORT or support["face"] < MIN_FACE:
+        return None
+    cut = H @ placement_matrix(shape, placement[0], placement[1], np.radians(placement[2])) @ label_to_plastic(shape)
+    return {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement, "support": support, "start": start}
+
+
+def fit_label_photo(job):
+    """Stage 1 for one label photo: (key, fit or None, why)."""
+    lp, edges_dir, text_dir = job
+    if not lp["shape"]:
+        return lp["key"], None, "no shape"
+    shape = lp["shape"]
+    e = np.load(os.path.join(edges_dir, lp["photo"] + ".npz"))
+    segs, size = e["segments"].astype(np.float64), tuple(int(v) for v in e["size"])
+    mean_support = lambda f: np.mean(list(f["support"].values()))
+    # placed by a logo: kept if it passes
+    if lp.get("placed_by") and len(lp["outline"]) == 4:
+        mm = corners_mm(shape)
+        Hl = cv2.getPerspectiveTransform(mm.astype(np.float32), np.float32(lp["outline"])).astype(np.float64)
+        f = candidate(lp, Hl @ np.linalg.inv(label_to_plastic(shape)), segs, "placed by " + lp["placed_by"])
+        if f is not None:
+            return lp["key"], f, None
+    # outline starts, all of the photo's, the best supported: keeping only those near the label photo (its circle)
+    # dropped right ones (evaluation set: 94 % under 5 mm against 96 %, 87 against 98 % where main's fitter had
+    # failed); with several cartridges in a photo, one may take another's outline
+    found = []
+    for H0, i, what in outlines.outline_starts(e["quads"], shape, size):
+        f = candidate(lp, H0, segs, f"outline ({what})")
+        if f is not None:
+            found.append(f)
+    if found:
+        return lp["key"], max(found, key=mean_support), None
+    # the pose search, as a fallback
+    lines = json.load(open(os.path.join(text_dir, lp["photo"] + ".json")))["lines"]
+    maps, map_scale = edge_maps(segs, size)
+    for score, Hp in search_poses(lp, shape, maps, map_scale, lines):
+        f = candidate(lp, Hp, segs, f"search ({score:.2f})")
+        if f is not None:
+            found.append(f)
+    if found:
+        return lp["key"], max(found, key=mean_support), None
+    return lp["key"], None, "no outline found"
+
+
+def stage1(lps, edges_dir, pairs, workers=8):
+    """The fits, in parallel: key -> fit; key -> why for those that failed."""
+    text_dir = os.path.join(os.path.dirname(edges_dir), "read-text")
     fits, failed = {}, {}
-
-    texts = {}
-    get_lines = lambda s: texts.setdefault(s, json.load(open(os.path.join(os.path.dirname(edges_dir), "read-text", s + ".json")))["lines"])
-
-    def attempt(lp, H0, start):
-        """H0: a start for the label (label mm -> photo)."""
-        if H0 is None:
-            return False
-        shape = lp["shape"]
-        result = fit_nested(H0 @ np.linalg.inv(label_to_plastic(shape)), shape, get_segs(lp["photo"]))
-        if result is None:
-            return False
-        H, placement, support = result
-        pts, _, kinds = model_samples(shape)
-        share = float(np.mean([support[k] for k in support]))
-        if share < MIN_SUPPORT or support["face"] < MIN_FACE:
-            return False
-        cut = H @ placement_matrix(shape, placement[0], placement[1], np.radians(placement[2])) @ label_to_plastic(shape)
-        fits[lp["key"]] = {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement,
-                           "support": support, "start": start}
-        return True
-
-    todo = [lp for lp in lps if lp["shape"]]
-    for lp in lps:
-        if not lp["shape"]:
-            failed[lp["key"]] = "no shape"
-    # placed by a logo
-    for lp in todo:
-        if lp.get("placed_by") and len(lp["outline"]) == 4:
-            mm = corners_mm(lp["shape"])
-            attempt(lp, cv2.getPerspectiveTransform(mm.astype(np.float32), np.float32(lp["outline"])).astype(np.float64), "placed by " + lp["placed_by"])
-    # the pose search
-    for lp in todo:
-        if lp["key"] in fits:
-            continue
-        e = np.load(os.path.join(edges_dir, lp["photo"] + ".npz"))
-        maps, map_scale = edge_maps(get_segs(lp["photo"]), tuple(e["size"]))
-        best = None
-        for score, Hp in search_poses(lp, lp["shape"], maps, map_scale, get_lines(lp["photo"])):
-            if attempt(lp, Hp @ label_to_plastic(lp["shape"]), f"search ({score:.2f})"):
-                f = fits.pop(lp["key"])
-                if best is None or np.mean(list(f["support"].values())) > np.mean(list(best["support"].values())):
-                    best = f
-        if best is not None:
-            fits[lp["key"]] = best
-        else:
-            failed[lp["key"]] = "no outline found"
+    with Pool(workers) as pool:
+        for key, f, why in pool.imap_unordered(fit_label_photo, [(lp, edges_dir, text_dir) for lp in lps]):
+            if f is None:
+                failed[key] = why
+            else:
+                fits[key] = f
     return fits, failed
 
 
@@ -453,7 +466,7 @@ def solve(found, matches, edges_dir):
 def page(out_dir, chosen, result, sizes):
     lps = result["label_photos"]
     rel = os.path.relpath(".", out_dir)
-    kinds = ["placed", "carried", "search"]
+    kinds = ["placed", "outline", "search"]
     group = lambda r: next((k for k in kinds if r["start"].startswith(k)), "search")
     by_kind = {k: sorted([(key, r) for key, r in lps.items() if group(r) == k], key=lambda kv: -kv[1]["support"]["face"]) for k in kinds}
 
