@@ -1,4 +1,4 @@
-import numpy as np
+import cv2, numpy as np
 import restore
 
 
@@ -56,3 +56,21 @@ def test_registering_lines_up_a_shifted_and_slightly_bent_copy():
     before = np.abs(moved - base)[50:-50, 50:-50].mean()
     after = np.abs(out[2][0] - out[0][0])[50:-50, 50:-50].mean()
     assert after < before / 2
+
+
+def test_a_blurred_label_photo_is_left_out_of_the_fine_band_where_its_blurred():
+    rng = np.random.default_rng(0)
+    sharp = rng.normal(0, 1, (60, 80)).astype(np.float32)
+    blurred = cv2.GaussianBlur(sharp, (0, 0), 3)                       # its fine band nearly empty
+    half = sharp.copy(); half[:, 40:] = blurred[:, 40:]                 # out of focus on the right only
+    L = np.stack([sharp, sharp * 1.1, blurred, half])
+    ok = restore.sharp_enough(L, np.ones(L.shape, bool), 0)
+    assert ok[0].all() and ok[1].all() and not ok[2, 10:50, 10:70].any()
+    assert ok[3, 10:50, 5:30].all() and not ok[3, 10:50, 55:75].any()
+
+
+def test_dirt_on_one_label_photo_doesnt_push_the_others_out():
+    rng = np.random.default_rng(1)
+    L = np.stack([rng.normal(0, 1, (60, 80)).astype(np.float32) for _ in range(3)])
+    L[0, 20:40, 20:40] *= 10                                           # a dirty patch: lots of "detail"
+    assert restore.sharp_enough(L, np.ones(L.shape, bool), 0)[1:].all()

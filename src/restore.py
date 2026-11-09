@@ -102,15 +102,21 @@ def evened_gray(img, valid):
     return np.where(valid, (g - m) / s, 0).astype(np.float32)
 
 
-def warp(img, M, flow=None, nearest=False):
+WARP_INTERPOLATION = cv2.INTER_LANCZOS4
+
+
+def warp(img, M, flow=None, nearest=False, interpolation=None):
+    """img resampled once: out(x) = img(M (x + flow(x))) (M: out px -> img px). One resampling, with a sharp kernel:
+    a homography and then the flow, each bilinear, had softened every label photo (DMG-KYJ's sharpest: 0.57 -> 0.38 of
+    its detail measure) and so every restored print."""
     h, w = img.shape[:2]
-    out = cv2.warpPerspective(img, M, (w, h), flags=(cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR) | cv2.WARP_INVERSE_MAP,
-                              borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
     if flow is not None:
-        gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
-        out = cv2.remap(out, gx + flow[..., 0], gy + flow[..., 1], cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR,
-                        borderMode=cv2.BORDER_CONSTANT, borderValue=0)
-    return out
+        gx, gy = gx + flow[..., 0], gy + flow[..., 1]
+    pts = cv2.perspectiveTransform(np.dstack([gx, gy]).reshape(-1, 1, 2).astype(np.float64), np.float64(M)).reshape(h, w, 2)
+    inter = cv2.INTER_NEAREST if nearest else (interpolation if interpolation is not None else WARP_INTERPOLATION)
+    return cv2.remap(img, pts[..., 0].astype(np.float32), pts[..., 1].astype(np.float32), inter,
+                     borderMode=cv2.BORDER_CONSTANT, borderValue=0)
 
 
 def register(entries):
@@ -150,6 +156,27 @@ def finest_band(photo_px_per_mm):
     detail about 2^k pixels of straighten's across, which needs about as many of the photo's per mm."""
     ratio = straighten.PX_PER_MM / max(photo_px_per_mm, 1e-6)
     return max(0, int(np.floor(np.log2(max(ratio, 1.0)))))
+
+
+# Local sharpness: a label photo blurred in places (out of focus, motion, a soft lens corner) has little detail there in
+# the fine bands, and the median of crisp and blurred photos is soft (DMG-KYJ: six label photos of 16-44 px/mm, all
+# counting in the finest band by their resolution, two of them clearly soft). Per band and pixel, a label photo's
+# local detail is its band's lightness magnitude averaged over SHARP_MM; it counts only where that is at least
+# SHARP_SHARE of the second most detailed label photo's there (the second: dirt or noise on one photo has detail too,
+# and mustn't push the others out). Only to leave out what's clearly blurred, never to favour the most detailed (the
+# energy-weighted median favoured noise and dirt). Needs three or more label photos: with two, which is blurred and
+# which is dirty can't be told.
+SHARP_MM = 1.0
+SHARP_SHARE = 0.5
+
+
+def sharp_enough(L, counts, lv):
+    """n x H x W: whether each label photo is sharp enough at each pixel of band lv (L: the band's lightness; counts:
+    where each label photo counts at all)."""
+    sigma = max(1.0, SHARP_MM * straighten.PX_PER_MM / 2 ** lv)
+    detail = np.stack([cv2.GaussianBlur(np.abs(l).astype(np.float32), (0, 0), sigma) for l in L]) * counts
+    second = np.sort(detail, axis=0)[-2] if len(L) >= 2 else detail[0]
+    return detail >= SHARP_SHARE * second
 
 
 def restore_print(job):
@@ -196,6 +223,8 @@ def restore_print(job):
                 wgt *= cv2.resize(e[2], (ww, hh), interpolation=cv2.INTER_AREA)
             weights.append(wgt)
         W = np.stack(weights)
+        if n >= 3 and lv < levels - 1:
+            W *= sharp_enough(vals[..., 0], W > 0, lv)
         total = W.sum(0)
         Wn = W / np.maximum(total, 1e-12)
         counts.append(int(np.median((W > 0).sum(0))))
