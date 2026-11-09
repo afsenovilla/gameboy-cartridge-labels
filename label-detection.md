@@ -219,6 +219,10 @@ Both read one on 213 photos, agreeing on 208; RapidOCR alone on 38, Vision alone
 
 **match** (the sample): candidates from one index of every photo's 1500 strongest keypoints, Lowe's ratio test within each other photo, RANSAC repeated per pair. 1749 matches between 1611 pairs, 11 s. Pairs of photos with the same old name matched: 435 of 437. Matches across different old names: 1299 (watermarks and backgrounds of one source, templates, embossing: for find to sort out). Learned on the way: a photo's own keypoints come first among its neighbours (skip them); keeping only the nearest neighbour per photo loses repeated patterns, keeping all of them drowns RANSAC; the ratio test within each other photo works.
 
+**find**, first version (the sample): 275 label photos on 275 of 276 photos (found by: exact serial 251, near serial 4, unknown string and match 11, match alone 9), 1.4 s. Against the old names (totals only): shape right on 273 of 275; the release right for 249 of 251 exact serials and 4 of 4 near ones. The unknown strings with a match are mostly misreads (DMG-BON for DMG-BQIJ, DMG-FBJR for DMG-FBJ) and serials the database lacks (AGB-B64E-USA, DMG-602-CHN), for read-serials' vote. The serial's line box is about 2.2 mm tall on DMG labels (1.8 AGB, 2.1 CGB, measured against main's fits) and sits anywhere on the label, so a label photo found only by its serial gets a circle of a label's diagonal (28 line heights) as its rough area; with matches, the outline is the hull of the matched points in it. Spreading's carried-over circles land off-centre, so label photos of one photo whose outlines mostly overlap are merged (3 duplicates before). The largest linked set holds 259 of 275 (templates link everything: the "uniquely shared areas" experiment).
+
+Not yet in find: details as seeds, the ink's extent from agreeing pixels and cut edges (edges isn't built), links only through uniquely shared areas.
+
 ## Next
 
-find: label photos from the evidence.
+edges, then solve.
