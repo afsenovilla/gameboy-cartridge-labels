@@ -355,6 +355,10 @@ def main():
                 ink = solve_step.project(np.array(r["photo_to_ink"]), corners)
                 cuts[k] = (ink + straighten.MARGIN) * straighten.PX_PER_MM
             full_jobs.append(j + (cuts,))
+        keep = {os.path.basename(uncropped(base(j[0]))) for j in full_jobs}
+        for f in os.listdir(os.path.join(out_dir, "uncropped")):  # those no longer among the top N (made from other label photos)
+            if f not in keep:
+                os.remove(os.path.join(out_dir, "uncropped", f))
         with multiprocessing.Pool(args.workers) as pool:
             for pid, desc in pool.imap_unordered(restore_print, full_jobs):
                 print(f"uncropped: {uncropped(base(pid))}", flush=True)
