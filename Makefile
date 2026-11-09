@@ -41,13 +41,17 @@
 #   Each family's label photos split into prints by a tile comparison, the pooling masks between nearly-same prints,
 #   into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
 #
+#   make restore
+#   An image of every print from its label photos (bands, focus-stacking weights, a soft median), cropped to the
+#   canonical label, into generated/restore/; the page generated/restore/index.html. Needs make prints.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -111,3 +115,9 @@ prints:
 
 clean-prints:
 	rm -rf $(GENERATED)/prints
+
+restore:
+	$(PYTHON) src/restore.py $(SAMPLE_FLAG)
+
+clean-restore:
+	rm -rf $(GENERATED)/restore

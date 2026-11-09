@@ -46,3 +46,17 @@ def test_a_poor_fit_is_judged_against_its_own_release_only():
     assert poor == [3]
     groups, poor, _ = prints.split_family(list("abcd"), A, ["r1", "r2", "r3", "r4"], np.ones((4, 50), bool))
     assert poor == []
+
+
+def test_two_prints_of_a_family_get_a_pair_image():
+    # prints 0 (members 0, 1) and 1 (members 2, 3) alike on the first 30 of 50 tiles: worth pooling
+    A = alike_matrix(4, 50, [({2, 3}, slice(30, 50))])
+    masks = prints.pair_masks([[0, 1], [2, 3]], A)
+    assert list(masks) == [(0, 1)] and masks[(0, 1)][:30].all() and not masks[(0, 1)][30:].any()
+
+
+def test_with_three_prints_tiles_all_of_them_share_dont_count():
+    # three prints alike only on a frame (the first 10 tiles): no pair worth an image
+    A = alike_matrix(6, 50, [({2, 3}, slice(10, 50)), ({4, 5}, slice(10, 50))])
+    A[0:2, 4:6, 10:] = A[4:6, 0:2, 10:] = False
+    assert prints.pair_masks([[0, 1], [2, 3], [4, 5]], A) == {}

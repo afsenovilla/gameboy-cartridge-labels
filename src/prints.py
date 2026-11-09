@@ -64,7 +64,7 @@ def even_colors(colors, ref):
         A = np.c_[x, np.ones_like(x)]
         coef = np.linalg.lstsq(A, y, rcond=None)[0]
         r = np.abs(A @ coef - y)
-        ok = r < np.percentile(r, 80)
+        ok = r <= np.percentile(r, 80)  # <=: with residuals all zero (one label photo, its own reference), < kept none
         coef = np.linalg.lstsq(A[ok], y[ok], rcond=None)[0]
         out[..., c] = colors[..., c] * coef[0] + coef[1]
     return out
@@ -145,6 +145,20 @@ def split_family(keys, A, releases, textured):
     return [p for p in prints if p] + [[i] for i in sorted(poor)], sorted(poor), differs
 
 
+def pair_masks(groups, A):
+    """{(p, q): tiles alike} for the pairs of a family's prints (groups: their member indices; A: n x n x tiles) worth
+    a pair image: alike where most cross pairs are; kept where what they share beyond the family's common tiles (alike
+    between COMMON of its print pairs: a frame) is at least MIN_SHARED of the label. Common tiles only mean something
+    with three or more prints: with one pair every shared tile would be common, and nothing pooled."""
+    masks = {}
+    for p, q in itertools.combinations(range(len(groups)), 2):
+        masks[(p, q)] = np.mean([A[i, j] for i in groups[p] for j in groups[q]], 0) > 0.5
+    if not masks:
+        return {}
+    common = np.mean(list(masks.values()), 0) >= COMMON if len(groups) >= 3 else np.zeros_like(next(iter(masks.values())))
+    return {pq: m for pq, m in masks.items() if (m & ~common).mean() >= MIN_SHARED}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true")
@@ -189,14 +203,8 @@ def main():
             # pooling masks between this family's prints: alike where most cross pairs are
             if len(fam_prints) > 1:
                 grid = views[0][2].shape
-                masks = {}
-                for p, q in itertools.combinations(range(len(fam_prints)), 2):
-                    cross = [A[i, j] for i in fam_prints[p]["_idx"] for j in fam_prints[q]["_idx"]]
-                    masks[(p, q)] = np.mean(cross, 0) > 0.5
-                common = np.mean(list(masks.values()), 0) >= COMMON
-                for (p, q), m in masks.items():
-                    if (m & ~common).mean() >= MIN_SHARED:
-                        pair_images[(id(fam_prints[p]), id(fam_prints[q]))] = (fam_prints[p], fam_prints[q], m.reshape(grid))
+                for (p, q), m in pair_masks([fp["_idx"] for fp in fam_prints], A).items():
+                    pair_images[(id(fam_prints[p]), id(fam_prints[q]))] = (fam_prints[p], fam_prints[q], m.reshape(grid))
             all_prints += fam_prints
         for p in all_prints:
             p.pop("_idx", None)
