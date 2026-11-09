@@ -1,7 +1,7 @@
 # restore: an image of every print from its label photos, into <generated>/restore/:
-#   <print>.avif: the restored print, its colours the label photos' evened to their median, cropped to its shape's
-#     canonical label size at its family's median cut (the origin of ink coordinates), at straighten's PX_PER_MM
-#   <print>-paper.avif: the same, its colours scaled so its paper is white (see paper_white), if paper is found
+#   <print>.avif: the restored print, cropped to its shape's canonical label size at its family's median cut (the
+#     origin of ink coordinates), at straighten's PX_PER_MM; its colours scaled so its paper is white (see paper_white)
+#     where paper is found, else the label photos' evened to their median (the user: one image per print)
 #   <print>-full.png (with --full-top N, for the N prints with the most label photos): uncropped, over the whole
 #     straightened canvas (the label and 5 mm around), each label photo counting only inside its own sticker's cut;
 #     paper white where found; transparent where no label photo shows paper
@@ -236,13 +236,9 @@ def restore_print(job):
         rgba = np.dstack([(np.clip(img, 0, 1) * 255).round().astype(np.uint8), (covered * 255).astype(np.uint8)])
         cv2.imwrite(out_base + "-full.png", rgba)
         return pid, {"full": True, "keys": [k for k, _, _ in own], "paper": paper is not None}
-    write_avif(out_base + ".avif", result)
     paper, white = paper_white(result)
-    if white is not None:
-        write_avif(out_base + "-paper.avif", white)
-    elif os.path.exists(out_base + "-paper.avif"):
-        os.remove(out_base + "-paper.avif")
-    for old in (out_base + "-median.avif",):
+    write_avif(out_base + ".avif", white if white is not None else result)
+    for old in (out_base + "-median.avif", out_base + "-paper.avif"):
         if os.path.exists(old):
             os.remove(old)
     return pid, {"keys": [k for k, _, _ in own], "pooled": [k for k, _, _ in pooled], "single": n == 1, "bands": counts,
@@ -314,7 +310,7 @@ def main():
         by_family.setdefault(p["family"], []).append(p)
     jobs, all_jobs, wanted = [], [], set()
     for p in result["prints"]:
-        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", "-paper.avif", ".json", "-full.png")}
+        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", ".json", "-full.png")}
         own = [(k, image(k), None) for k in p["keys"] if k not in poor] or [(k, image(k), None) for k in p["keys"]]
         pooled = []
         pair_dir = os.path.join(gen, "prints", straighten.file_name(p["id"])[:-5])
@@ -358,7 +354,7 @@ def main():
 
 
 def page(out_dir, result, gen):
-    """index.html: per print, the restored image (median colours, and paper white where found), and its label photos
+    """index.html: per print, the restored image (paper white where found, else median colours), and its label photos
     straightened (the canonical label's area, the same crop)."""
     P, M = straighten.PX_PER_MM, straighten.MARGIN
     rel = os.path.relpath(os.path.join(gen, "straighten"), out_dir)
@@ -376,18 +372,17 @@ def page(out_dir, result, gen):
                           f'<img loading="lazy" src="{rel}/{straighten.file_name(k)}" style="width:{cw * scale:.0f}px;'
                           f'margin:{-M * P * scale:.0f}px 0 0 {-M * P * scale:.0f}px"></div>')
         sources = "".join(crop(k) for k in desc.get("keys", [])) + "".join(crop(k) for k in desc.get("pooled", []))
-        paper = f'<img loading="lazy" src="{b}-paper.avif" title="paper white">' if os.path.exists(os.path.join(out_dir, b + "-paper.avif")) else '<span class="none">no paper found</span>'
-        figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif" title="median colours">{paper}</div>'
+        figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif"></div>'
                     f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos'
                     f'{", " + str(len(desc.get("pooled", []))) + " pooled from nearly-same prints (last)" if desc.get("pooled") else ""}'
-                    f'{" (one photo: as it is)" if desc.get("single") else ""}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
+                    f'{" (one photo: as it is)" if desc.get("single") else ""}{"" if desc.get("paper") else "; no paper found: median colours"}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
                     f'<div class="sources">{sources}</div></figure>')
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>restore</title>
-<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:block;margin:12px 0 24px}} .pair img{{width:340px;margin-right:6px}} .none{{display:inline-block;width:340px;color:#999}}
+<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:block;margin:12px 0 24px}} .pair img{{width:340px;margin-right:6px}}
 figcaption{{font-size:12px;margin:4px 0}} .src{{display:inline-block;overflow:hidden;margin:2px}} .src img{{display:block}}</style>
 <h1>restore</h1>
-<p>{len(figs)} restored prints, the most label photos first. Left: the restored print (the median of its label photos per band, their colours evened to their median); right: the same with its paper made white (clipping a little), where paper is found. Below: its label photos straightened, the same crop.</p>
+<p>{len(figs)} restored prints, the most label photos first. The restored print: the median of its label photos per band, their colours evened to their median, then its paper made white (clipping a little) where paper is found. Below: its label photos straightened, the same crop.</p>
 {"".join(figs)}""")
 
 
