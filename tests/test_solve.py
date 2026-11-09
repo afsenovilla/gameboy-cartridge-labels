@@ -19,7 +19,7 @@ def test_nested_fit_finds_the_cartridge_from_a_start_a_few_mm_off():
     H_true = solve.similarity_to_H((700, 700), 7.0, 15.0, "dmg") @ np.linalg.inv(solve.label_to_plastic("dmg"))
     segs = edges.segments(drawn_cartridge(H_true))["segments"].astype(np.float64)
     H0 = solve.similarity_to_H((725, 680), 5.0, 15.6, "dmg") @ np.linalg.inv(solve.label_to_plastic("dmg"))  # ~2 mm, 2 deg off
-    H, placement, support = solve.fit_nested(H0, "dmg", segs)
+    H, placement, support, error = solve.fit_nested(H0, "dmg", segs)
     # the label and the recess (the drawn body is a plain box, the model's has bevels and steps at the bottom)
     for r in (solve.MODELS["dmg"]["label"], solve.MODELS["dmg"]["recess"]):
         corners = [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]]
@@ -53,3 +53,22 @@ def test_a_link_too_far_off_is_dropped():
     fits = {k: {"cut_to_photo": np.eye(3)} for k in "ab"}
     offsets, info, _ = solve.stage2([], fits, {("a", "b"): (pts, pts + [10.0, 0])}, [["a", "b"]])
     assert info[0]["links used"] == 0 and info[0]["links dropped"] == 1
+
+
+def test_the_choice_learns_which_feature_tells_right_from_wrong():
+    rng = np.random.default_rng(3)
+    n = len(solve.FEATURES)
+    right = rng.normal(0, 1, (200, n)); right[:, 7] += 2.0   # the agreeing share higher when right
+    wrong = rng.normal(0, 1, (200, n))
+    model = solve.train_choice(list(right) + list(wrong), [1] * 200 + [0] * 200)
+    assert int(np.argmax(model[2])) == 7
+    assert solve.predict(model, right).mean() > solve.predict(model, wrong).mean() + 0.3
+
+
+def test_confident_needs_two_kinds_of_start_agreeing():
+    c = lambda start: {"start": start}
+    apart = np.array([[0, 0.2, 0.3], [0.2, 0, 0.1], [0.3, 0.1, 0]])
+    assert solve.confident([c("outline (label)"), c("outline (recess)"), c("outline (label)")], apart, 0)
+    assert not solve.confident([c("outline (label)"), c("outline (label)"), c("outline (label)")], apart, 0)
+    far = np.array([[0, 5.0], [5.0, 0]])
+    assert not solve.confident([c("placed by X"), c("outline (body)")], far, 0)

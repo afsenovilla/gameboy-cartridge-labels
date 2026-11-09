@@ -132,7 +132,7 @@ def correspond(pp, dirs, segs, window_px):
 
 def fit_nested(H0_plastic, shape, segs):
     """The three rectangles fitted from a start (plastic mm -> photo): (plastic_to_photo, placement (dx, dy, turn
-    degrees), support {kind: share}) or None."""
+    degrees), support {kind: share}, error: the median distance of the samples along segments from them, mm) or None."""
     pts, nrm, kinds = model_samples(shape)
     params = np.zeros(11)
     sd = segs[:, 2:] - segs[:, :2]
@@ -158,7 +158,9 @@ def fit_nested(H0_plastic, shape, segs):
     px_per_mm = local_scale(H, MODELS[shape]["label"])
     corr = correspond(pp, dirs, segs, ON_MM * px_per_mm)
     support = {k: round(float((corr[kinds == k] >= 0).mean()), 2) for k in ("face", "recess", "label")}
-    return H / H[2, 2], (float(params[8]), float(params[9]), float(params[10])), support
+    j = corr[corr >= 0]
+    error = float(np.median(np.abs(((pp[corr >= 0] - segs[j, :2]) * sn[j]).sum(1)) / px_per_mm)) if len(j) else ON_MM
+    return H / H[2, 2], (float(params[8]), float(params[9]), float(params[10])), support, error
 
 
 def local_scale(H, rect):
@@ -315,64 +317,158 @@ def candidate(lp, H0_plastic, segs, start):
     result = fit_nested(H0_plastic, shape, segs)
     if result is None:
         return None
-    H, placement, support = result
+    H, placement, support, error = result
     if not np.all(np.isfinite(H)) or abs(np.linalg.det(H)) < 1e-12:
         return None
     if np.mean(list(support.values())) < MIN_SUPPORT or support["face"] < MIN_FACE:
         return None
     cut = H @ placement_matrix(shape, placement[0], placement[1], np.radians(placement[2])) @ label_to_plastic(shape)
-    return {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement, "support": support, "start": start}
+    return {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement, "support": support,
+            "error_mm": error, "start": start, "px_per_mm": local_scale(H, MODELS[shape]["label"]), "tilt": outlines.tilt(H)}
 
 
 def fit_label_photo(job):
-    """Stage 1 for one label photo: (key, fit or None, why)."""
+    """Stage 1's round 1 for one label photo: (key, candidates, why none): every start refined by the nested fit and
+    passing the support checks: the logo placement, every outline start, and the pose search if none of those passed;
+    each with the scale its evidence suggests (base_estimate) for the choice."""
     lp, edges_dir, text_dir = job
     if not lp["shape"]:
-        return lp["key"], None, "no shape"
+        return lp["key"], [], "no shape"
     shape = lp["shape"]
     e = np.load(os.path.join(edges_dir, lp["photo"] + ".npz"))
     segs, size = e["segments"].astype(np.float64), tuple(int(v) for v in e["size"])
-    mean_support = lambda f: np.mean(list(f["support"].values()))
-    # placed by a logo: kept if it passes
+    lines = json.load(open(os.path.join(text_dir, lp["photo"] + ".json")))["lines"]
+    found = []
     if lp.get("placed_by") and len(lp["outline"]) == 4:
         mm = corners_mm(shape)
         Hl = cv2.getPerspectiveTransform(mm.astype(np.float32), np.float32(lp["outline"])).astype(np.float64)
-        f = candidate(lp, Hl @ np.linalg.inv(label_to_plastic(shape)), segs, "placed by " + lp["placed_by"])
-        if f is not None:
-            return lp["key"], f, None
-    # outline starts, all of the photo's, the best supported: keeping only those near the label photo (its circle)
-    # dropped right ones (evaluation set: 94 % under 5 mm against 96 %, 87 against 98 % where main's fitter had
-    # failed); with several cartridges in a photo, one may take another's outline
-    found = []
+        found.append(candidate(lp, Hl @ np.linalg.inv(label_to_plastic(shape)), segs, "placed by " + lp["placed_by"]))
+    # every outline start of the photo: keeping only those near the label photo (find's circle) dropped right ones
+    # (evaluation set: 94 % under 5 mm against 96 %, 87 against 98 % where main's fitter had failed); with several
+    # cartridges in a photo, one may take another's outline
     for H0, i, what in outlines.outline_starts(e["quads"], shape, size):
-        f = candidate(lp, H0, segs, f"outline ({what})")
-        if f is not None:
-            found.append(f)
-    if found:
-        return lp["key"], max(found, key=mean_support), None
-    # the pose search, as a fallback
-    lines = json.load(open(os.path.join(text_dir, lp["photo"] + ".json")))["lines"]
-    maps, map_scale = edge_maps(segs, size)
-    for score, Hp in search_poses(lp, shape, maps, map_scale, lines):
-        f = candidate(lp, Hp, segs, f"search ({score:.2f})")
-        if f is not None:
-            found.append(f)
-    if found:
-        return lp["key"], max(found, key=mean_support), None
-    return lp["key"], None, "no outline found"
+        found.append(candidate(lp, H0, segs, f"outline ({what})"))
+    found = [f for f in found if f is not None]
+    if not found:  # the pose search, as a fallback
+        maps, map_scale = edge_maps(segs, size)
+        found = [f for score, Hp in search_poses(lp, shape, maps, map_scale, lines)
+                 if (f := candidate(lp, Hp, segs, f"search ({score:.2f})")) is not None]
+    expected = base_estimate(lp, lines)[1]
+    for f in found:
+        f["expected_px_per_mm"] = expected
+    return lp["key"], found, None if found else "no outline found"
+
+
+# The choice among a label photo's candidates, learned from the first round (label-detection.md: the right
+# candidate is among them far more often than the best supported one is right). Round 1 chooses the logo placement if
+# it passed, else the best mean support. Confident label photos: candidates from at least two kinds of start agree
+# within AGREE_MM with round 1's choice (or the logo placement does). Their candidates are examples: within AGREE_MM of
+# it right, over WRONG_MM wrong. A logistic regression on plain features (FEATURES) then chooses for every label photo.
+AGREE_MM = 0.5
+WRONG_MM = 3.0
+KINDS = ["placed", "outline (label)", "outline (recess)", "outline (body)", "search"]
+FEATURES = ["face support", "recess support", "label support", "mean support", "placement shift", "placement turn",
+            "scale against the evidence", "agreeing share", "agreeing count", "error", "tilt"] + ["start: " + k for k in KINDS]
+
+
+def kind_of(start):
+    return next((k for k in KINDS if start.startswith(k)), "search")
+
+
+def apart_mm(a, b, shape):
+    """The worst corner of b's label cut in a's label mm."""
+    mm = corners_mm(shape)
+    m = project(np.linalg.inv(a["cut_to_photo"]), project(b["cut_to_photo"], mm))
+    return float(np.max(np.linalg.norm(m - mm, axis=1)))
+
+
+def features(cands, shape):
+    """Each candidate's features (FEATURES), and the matrix of their distances apart."""
+    n = len(cands)
+    apart = np.array([[apart_mm(a, b, shape) if a is not b else 0.0 for b in cands] for a in cands]) if n else np.zeros((0, 0))
+    rows = []
+    for i, c in enumerate(cands):
+        agree = (apart[i] < AGREE_MM).sum() - 1
+        s = c["support"]
+        row = [s["face"], s["recess"], s["label"], np.mean(list(s.values())), np.hypot(*c["placement"][:2]),
+               abs(c["placement"][2]), abs(np.log(c["px_per_mm"] / max(c["expected_px_per_mm"], 1e-9))),
+               agree / max(n - 1, 1), min(agree, 10) / 10, c["error_mm"], abs(c["tilt"]) / 50]
+        row += [float(kind_of(c["start"]) == k) for k in KINDS]
+        rows.append(row)
+    return np.array(rows, np.float64).reshape(n, len(FEATURES)), apart
+
+
+def round1(cands):
+    placed = [i for i, c in enumerate(cands) if c["start"].startswith("placed")]
+    if placed:
+        return placed[0]
+    return int(np.argmax([np.mean(list(c["support"].values())) for c in cands]))
+
+
+def confident(cands, apart, chosen):
+    """Whether round 1's choice is confirmed: candidates from at least two kinds of start agree with it within
+    AGREE_MM, or it's the logo placement and another candidate agrees."""
+    agreeing = [i for i in range(len(cands)) if apart[chosen, i] < AGREE_MM]
+    kinds = {kind_of(cands[i]["start"]).split(" ")[0] if not cands[i]["start"].startswith("outline") else kind_of(cands[i]["start"]) for i in agreeing}
+    return len(kinds) >= 2
+
+
+def train_choice(examples, labels, steps=3000, rate=0.1, l2=1e-3):
+    """A logistic regression (standardized features, L2): (mean, scale, weights, bias)."""
+    X = np.array(examples); y = np.array(labels, np.float64)
+    mean, scale = X.mean(0), X.std(0) + 1e-9
+    Z = (X - mean) / scale
+    w, b = np.zeros(Z.shape[1]), 0.0
+    for _ in range(steps):
+        p = 1 / (1 + np.exp(-(Z @ w + b)))
+        g = p - y
+        w -= rate * (Z.T @ g / len(y) + l2 * w)
+        b -= rate * g.mean()
+    return mean, scale, w, b
+
+
+def predict(model, X):
+    mean, scale, w, b = model
+    return 1 / (1 + np.exp(-(((X - mean) / scale) @ w + b)))
 
 
 def stage1(lps, edges_dir, pairs, workers=8):
-    """The fits, in parallel: key -> fit; key -> why for those that failed."""
+    """The fits: round 1 (every candidate, in parallel), then the choice learned from its confident label photos:
+    key -> fit; key -> why for those that failed; the choice model's description."""
     text_dir = os.path.join(os.path.dirname(edges_dir), "read-text")
-    fits, failed = {}, {}
+    shape_of = {lp["key"]: lp["shape"] for lp in lps}
+    all_cands, failed = {}, {}
     with Pool(workers) as pool:
-        for key, f, why in pool.imap_unordered(fit_label_photo, [(lp, edges_dir, text_dir) for lp in lps]):
-            if f is None:
-                failed[key] = why
+        for key, cands, why in pool.imap_unordered(fit_label_photo, [(lp, edges_dir, text_dir) for lp in lps]):
+            if cands:
+                all_cands[key] = cands
             else:
-                fits[key] = f
-    return fits, failed
+                failed[key] = why
+    feats, examples, labels, first, sure = {}, [], [], {}, 0
+    for key, cands in all_cands.items():
+        X, apart = features(cands, shape_of[key])
+        feats[key] = X
+        first[key] = round1(cands)
+        if confident(cands, apart, first[key]):
+            sure += 1
+            for i in range(len(cands)):
+                if apart[first[key], i] < AGREE_MM:
+                    examples.append(X[i]); labels.append(1)
+                elif apart[first[key], i] > WRONG_MM:
+                    examples.append(X[i]); labels.append(0)
+    model = train_choice(examples, labels) if len(set(labels)) == 2 else None
+    fits = {}
+    for key, cands in all_cands.items():
+        if model is None:
+            k, p = first[key], None
+        else:
+            probs = predict(model, feats[key])
+            k, p = int(np.argmax(probs)), float(probs.max())
+        fits[key] = dict(cands[k], candidates=len(cands), probability=p, round1_same=bool(k == first[key]))
+    description = None if model is None else {
+        "confident label photos": sure, "examples": len(labels), "right": int(sum(labels)),
+        "weights": {f: round(float(w), 3) for f, w in zip(FEATURES, model[2])}}
+    return fits, failed, description
 
 
 def stage2(lps, fits, pairs, sets):
@@ -442,7 +538,7 @@ def solve(found, matches, edges_dir):
     for lp in lps:
         lp["centre"] = np.float64(lp["centre"])
     pairs = link_points(lps, matches)
-    fits, failed = stage1(lps, edges_dir, pairs)
+    fits, failed, choice = stage1(lps, edges_dir, pairs)
     offsets, set_info, residual = stage2(lps, fits, pairs, found["sets"])
     out = {}
     for lp in lps:
@@ -457,10 +553,12 @@ def solve(found, matches, edges_dir):
                   "offset": [round(float(o[1]), 3), round(float(o[2]), 3), round(float(np.degrees(o[0])), 3)],
                   "plastic_to_photo": f["plastic_to_photo"].tolist(),
                   "placement": [round(v, 3) for v in f["placement"]],
-                  "start": f["start"], "support": f["support"],
+                  "start": f["start"], "support": f["support"], "error_mm": round(f["error_mm"], 3),
+                  "candidates": f["candidates"], "probability": f["probability"] and round(f["probability"], 3),
+                  "changed_by_choice": not f["round1_same"],
                   "fallback": None if not f["start"].startswith("search") else "found by the pose search",
                   "residual_mm": None if residual.get(k) is None else round(residual[k], 3)}
-    return {"label_photos": out, "sets": set_info, "unsolved": failed}
+    return {"label_photos": out, "sets": set_info, "unsolved": failed, "choice": choice}
 
 
 def page(out_dir, chosen, result, sizes):
