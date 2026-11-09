@@ -1,7 +1,7 @@
 # publish: the outputs collected into <generated>/publish/:
 #   prints/<print>.avif: each restored print, restore's image as it is (paper white where found, else median colours)
-#   label-photos/<key>.avif: each label photo straightened, cut from its straightened image to its shape's canonical
-#     label (the same crop as the prints): whole pixels, no resampling. Poor fits (solve's "a poor" fallbacks) get no
+#   label-photos/<key>.avif: each label photo straightened, cut from its straightened image to its print's crop
+#     (restore's, its family's: the same as the print's): whole pixels, no resampling. Poor fits (solve's "a poor" fallbacks) get no
 #     image, as restore leaves them out; they're listed in index.json with poor_fit true.
 #   index.json: {"prints": {id: {serial, release, shape, image, paper, label_photos}}, "label_photos": {key: {print,
 #     serial, source, page_url, image_url, image, poor_fit}}}. Ids and keys hold within a run only.
@@ -23,15 +23,17 @@ QUALITY = straighten.QUALITY
 LISTS = [("read-serials", "missing.json"), ("read-serials", "unknown-serials.json"), ("prints", "few-photos.json")]
 
 
-def crop_box(shape):
-    """The canonical label in a straightened image: x, y, w, h in whole pixels."""
+def crop_box(shape, crop=None):
+    """The crop in a straightened image: x, y, w, h in whole pixels (restore's crop, else the canonical label)."""
+    if crop:
+        return crop["x"], crop["y"], crop["w"], crop["h"]
     lw, lh = shapes.LABEL_MM[shape]
     m = round(straighten.MARGIN * straighten.PX_PER_MM)
     return m, m, round(lw * straighten.PX_PER_MM), round(lh * straighten.PX_PER_MM)
 
 
-def cut(img, shape):
-    x, y, w, h = crop_box(shape)
+def cut(img, shape, crop=None):
+    x, y, w, h = crop_box(shape, crop)
     return img[y:y + h, x:x + w]
 
 
@@ -55,10 +57,10 @@ def newer(out, *ins):
 
 
 def crop_one(job):
-    src, out, shape = job
+    src, out, shape, crop, _ = job
     img = cv2.imread(src)
     tmp = out + ".tmp.avif"
-    cv2.imwrite(tmp, cut(img, shape), [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
+    cv2.imwrite(tmp, cut(img, shape, crop), [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
     os.replace(tmp, out)
 
 
@@ -103,7 +105,7 @@ def main():
             straightened = os.path.join(gen, "straighten", straighten.file_name(k))
             if k not in poor and os.path.exists(straightened):
                 img = "label-photos/" + straighten.file_name(k)
-                crops.append((straightened, os.path.join(out_dir, img), p["shape"]))
+                crops.append((straightened, os.path.join(out_dir, img), p["shape"], desc.get("crop"), desc_file))
             index["label_photos"][k] = {"print": p["id"], "serial": (serials.get(k) or {}).get("serial"),
                                         "source": s.get("source"), "page_url": s.get("page_url"),
                                         "image_url": s.get("image_url"), "image": img, "poor_fit": k in poor}
@@ -117,7 +119,8 @@ def main():
         if not newer(b, a):
             shutil.copyfile(a, b + ".tmp")
             os.replace(b + ".tmp", b)
-    steps.run(crop_one, [c for c in crops if not newer(c[1], c[0], __file__)], args.workers, what="cut")
+    steps.run(crop_one, [c for c in crops if not newer(c[1], c[0], __file__, *([c[4]] if os.path.exists(c[4]) else []))],
+              args.workers, what="cut")
     for step, f in LISTS:
         if os.path.exists(os.path.join(gen, step, f)):
             shutil.copyfile(os.path.join(gen, step, f), os.path.join(out_dir, f))

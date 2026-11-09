@@ -1,29 +1,35 @@
 # restore: an image of every print from its label photos, into <generated>/restore/:
-#   <print>.avif: the restored print, cropped to its shape's canonical label size at its family's median cut (the
-#     origin of ink coordinates), at straighten's PX_PER_MM; its colours scaled so its paper is white (see paper_white)
-#     where paper is found, else the label photos' evened to their median (the user: one image per print)
-#   <print>.json: {"keys" (its label photos used), "pooled" (other prints' label photos used, see pooling),
+#   <print>.avif: the restored print at straighten's PX_PER_MM, cropped to its family's cut (cuts.crop: the median of
+#     each side of the stickers' cuts found by straighten, INSET mm inward, whole pixels; the same for every print of
+#     the family); its colours scaled so its paper is white (see paper_white) where paper is found, else the label
+#     photos' evened to their median (the user: one image per print)
+#   <print>.json: {"crop" (cuts.crop's: x, y, w, h px in the straightened images, mm), "keys" (its label photos used),
+#     "pooled" (other prints' label photos used, see pooling),
 #     "pooled_share" ({key: the share of the label where it counts}), "single" (from one label photo), "bands" (how
 #     many label photos count in each band, finest first), "paper" (the paper's colour found, or null)}
 # The label photos: the print's own (poor fits left out), and those of the other prints of its family where they show
 # what the print's own show (pooling, below). Each straightened label photo's colours evened per channel to the
 # median of the print's own (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
 # the image is under 8 px across). Per band and pixel, a label photo counts unless the band is finer than its own
-# photo's resolution (the fit's photo pixels per mm), its straightened image is empty there (off the photo) or, for
+# photo's resolution (the fit's photo pixels per mm), its straightened image is empty there (off the photo), it lies
+# outside its own sticker's cut moved cuts.INSET mm inward (plastic, and the highlight or shadow on the cut's edge) or, for
 # another print's label photo, it doesn't match the print's own there; in coarser bands, only where the whole pixel
-# counts. Before combining, the print's own label photos are registered finely at full resolution (register), the
+# counts. Outside where it counts, each is filled from its nearest pixel that counts before it's split into bands (so
+# neither black nor plastic leaks into the coarse bands). Before combining, the print's own label photos are registered finely at full resolution (register), the
 # other prints' to their median (register_to_own_photos). Combined per band: one
 # label photo as it is; two averaged; three or more by the median.
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
 # leave out clearly blurred regions.)
-# Done again when an image is older than this file, prints.json or solve.json.
+# Done again when an image is older than this file, cuts.py, prints.json, solve.json or its family's straightened
+# images and cuts.
 # Usage: restore.py [--sample] [--workers N]
 import argparse, html, json, os, sys, warnings
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, straighten, shapes, prints as prints_step
+import photos, steps, straighten, shapes, cuts, prints as prints_step
+from scipy import ndimage
 
 QUALITY = 90
 MAX_PHOTOS = 30        # the sharpest kept, if a print has more
@@ -239,20 +245,31 @@ def sharp_enough(L, counts, lv):
     return detail >= SHARP_SHARE * second
 
 
+def filled(img, where):
+    """img with the pixels outside where set to their nearest pixel inside (img as it is if where is empty)."""
+    if where.all() or not where.any():
+        return img
+    idx = ndimage.distance_transform_edt(~where, return_distances=False, return_indices=True)
+    return img[idx[0], idx[1]]
+
+
 def restore_print(job):
     """Restores one print: (print id, the result's description)."""
-    pid, shape, own, others, px_per_mm, out_base = job
-    P, M = straighten.PX_PER_MM, straighten.MARGIN
-    lw, lh = shapes.LABEL_MM[shape]
-    y0, x0 = int(round(M * P)), int(round(M * P))
-    h, w = int(round(lh * P)), int(round(lw * P))
+    pid, shape, own, others, px_per_mm, crop, out_base = job
+    P = straighten.PX_PER_MM
+    x0, y0, w, h = crop["x"], crop["y"], crop["w"], crop["h"]
+    size, px_to_mm = straighten.canvas(shape)
 
     def load(key, path):  # (image 0..1 BGR cropped, valid mask, px/mm) or None
         img = cv2.imread(path)
         if img is None:
             return None
+        valid = img.max(2) > 1    # straighten's border outside the photo is black
+        cut = straighten.load_cut(os.path.dirname(os.path.dirname(path)), key)
+        if cut is not None:
+            valid &= cuts.mask(cut, shape, size, px_to_mm)
         img = img[y0:y0 + h, x0:x0 + w].astype(np.float32) / 255
-        return img, img.max(2) > 0.004, px_per_mm.get(key, P)   # straighten's border outside the photo is black
+        return img, valid[y0:y0 + h, x0:x0 + w], px_per_mm.get(key, P)
 
     loaded = [(k, load(k, path)) for k, path in own]
     loaded = [(k, e) for k, e in loaded if e is not None]
@@ -268,6 +285,7 @@ def restore_print(job):
     evened = [even_to(e[0], ref, e[1]) for e in entries]
     own_ref = np.median(np.stack([evened_gray(e[0], e[1]) for e in entries]), 0)
     own_photos = list(zip(evened, [e[1] for e in entries]))
+    valids = [e[1] for e in entries]
     pooled_share = {}
     for key, path in others:
         e = load(key, path)
@@ -279,9 +297,10 @@ def restore_print(job):
         if counts.mean() >= POOL_MIN_SHARE:
             entries.append((img, counts, ppm))
             evened.append(img)
+            valids.append(valid)
             pooled_share[key] = round(float(counts.mean()), 3)
     n = len(entries)
-    pyrs = [pyramid(to_oklab(img)) for img in evened]
+    pyrs = [pyramid(to_oklab(filled(img, v))) for img, v in zip(evened, valids)]
     levels = len(pyrs[0])
     out_levels, out_median, counts = [], [], []
     for lv in range(levels):
@@ -318,9 +337,17 @@ def restore_print(job):
     for old in (out_base + "-median.avif", out_base + "-paper.avif"):
         if os.path.exists(old):
             os.remove(old)
-    return pid, {"keys": own_keys, "pooled": list(pooled_share), "pooled_share": pooled_share, "single": n == 1,
+    return pid, {"crop": crop, "keys": own_keys, "pooled": list(pooled_share), "pooled_share": pooled_share, "single": n == 1,
                  "bands": counts,
                  "paper": None if paper is None else [round(float(v), 3) for v in paper]}
+
+
+def canonical_crop(shape):
+    """The canonical label at ink coordinates' origin, as cuts.crop gives a crop (when no cut was found at all)."""
+    P, M = straighten.PX_PER_MM, straighten.MARGIN
+    lw, lh = shapes.LABEL_MM[shape]
+    x, y = int(round(M * P)), int(round(M * P))
+    return {"x": x, "y": y, "w": int(round(lw * P)), "h": int(round(lh * P)), "mm": [0.0, 0.0, lw, lh]}
 
 
 def write_avif(path, img):
@@ -394,17 +421,25 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     image = lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
     base = lambda pid: os.path.join(out_dir, straighten.file_name(pid)[:-5])
-    newest = max(os.path.getmtime(p) for p in (prints_file, solve_file, __file__))
+    newest = max(os.path.getmtime(p) for p in (prints_file, solve_file, __file__, cuts.__file__))
     by_family = {}
     for p in result["prints"]:
         by_family.setdefault(p["family"], []).append(p)
+    crops = {}
+    for fam, ps in by_family.items():
+        keys = [k for p in ps for k in p["keys"] if k not in poor] or [k for p in ps for k in p["keys"]]
+        found = [c for c in (straighten.load_cut(gen, k) for k in keys) if c is not None]
+        crops[fam] = (cuts.crop(found, ps[0]["shape"], straighten.PX_PER_MM, straighten.MARGIN) if found
+                      else canonical_crop(ps[0]["shape"]))
+    mtime = lambda f: os.path.getmtime(f) if os.path.exists(f) else 0
     jobs, wanted = [], set()
     for p in result["prints"]:
         wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", ".json")}
         own = [(k, image(k)) for k in p["keys"] if k not in poor] or [(k, image(k)) for k in p["keys"]]
         others = [(k, image(k)) for q in by_family[p["family"]] if q is not p for k in q["keys"] if k not in poor]
-        if not os.path.exists(base(p["id"]) + ".avif") or os.path.getmtime(base(p["id"]) + ".avif") < newest:
-            jobs.append((p["id"], p["shape"], own, others, px_per_mm, base(p["id"])))
+        inputs = max([newest] + [max(mtime(f), mtime(straighten.cut_file(f))) for _, f in own + others])
+        if not os.path.exists(base(p["id"]) + ".avif") or os.path.getmtime(base(p["id"]) + ".avif") < inputs:
+            jobs.append((p["id"], p["shape"], own, others, px_per_mm, crops[p["family"]], base(p["id"])))
     for f in os.listdir(out_dir):
         if f not in wanted and f != "index.html":
             os.remove(os.path.join(out_dir, f))
@@ -421,7 +456,7 @@ def main():
 
 def page(out_dir, result, gen):
     """index.html: per print, the restored image (paper white where found, else median colours), and its label photos
-    straightened (the canonical label's area, the same crop)."""
+    straightened (the same crop)."""
     P, M = straighten.PX_PER_MM, straighten.MARGIN
     rel = os.path.relpath(os.path.join(gen, "straighten"), out_dir)
     figs = []
@@ -430,13 +465,13 @@ def page(out_dir, result, gen):
         if not os.path.exists(os.path.join(out_dir, b + ".avif")):
             continue
         desc = json.load(open(os.path.join(out_dir, b + ".json"))) if os.path.exists(os.path.join(out_dir, b + ".json")) else {}
-        lw, lh = shapes.LABEL_MM[p["shape"]]
+        c = desc.get("crop") or canonical_crop(p["shape"])
         (cw, ch), _ = straighten.canvas(p["shape"])
-        # a straightened label photo cropped to the canonical label by CSS: the image scaled so the label is 160 px wide
-        scale = 160 / (lw * P)
-        crop = lambda k: (f'<div class="src" style="width:{lw * P * scale:.0f}px;height:{lh * P * scale:.0f}px">'
+        # a straightened label photo cropped by CSS: the image scaled so the crop is 160 px wide
+        scale = 160 / c["w"]
+        crop = lambda k: (f'<div class="src" style="width:{c["w"] * scale:.0f}px;height:{c["h"] * scale:.0f}px">'
                           f'<img loading="lazy" src="{rel}/{straighten.file_name(k)}" style="width:{cw * scale:.0f}px;'
-                          f'margin:{-M * P * scale:.0f}px 0 0 {-M * P * scale:.0f}px"></div>')
+                          f'margin:{-c["y"] * scale:.0f}px 0 0 {-c["x"] * scale:.0f}px"></div>')
         sources = "".join(crop(k) for k in desc.get("keys", [])) + "".join(crop(k) for k in desc.get("pooled", []))
         figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif"></div>'
                     f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos'

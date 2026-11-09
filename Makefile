@@ -30,8 +30,8 @@
 #   by their matches) into generated/solve/solve.json; the page generated/solve/index.html. Needs make find and edges.
 #
 #   make straighten
-#   Every solved label photo in ink coordinates (20 px/mm, 5 mm around the label) into generated/straighten/; the page
-#   generated/straighten/index.html. Needs make solve.
+#   Every solved label photo in ink coordinates (20 px/mm, 5 mm around the label) and its sticker's cut edges found in
+#   it, into generated/straighten/; the pages generated/straighten/index.html and cuts.html. Needs make solve.
 #
 #   make read-serials
 #   Every label photo's serial (OCR of the straightened label photos, settled within its family), the database's
@@ -41,7 +41,7 @@
 #   Each family's label photos split into prints by a tile comparison, into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
 #
 #   make restore
-#   An image of every print from its label photos (bands, the median), cropped to the canonical label, paper white
+#   An image of every print from its label photos (bands, the median), cropped 0.1 mm inside its family's cuts, paper white
 #   where found, into generated/restore/; the page generated/restore/index.html. Needs make prints.
 #
 #   make publish
