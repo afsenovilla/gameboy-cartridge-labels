@@ -629,19 +629,44 @@ def view_job(job):
     return k, (compare_view(img, cut, shape) if img is not None else None)
 
 
-_VIEWS = {}  # set before forking stage 2's link workers, who share it
+# Stage 2's link workers load the drawn views from files (<generated>/solve/views/), each keeping the latest in
+# memory: forking workers that share them deadlocked on the full set (macOS: a fork after other pools and OpenCV's
+# threads can leave the children waiting on a lock forever).
+_VIEW_DIR = None
+_VIEWS = {}
+
+
+def view_file(view_dir, key):
+    return os.path.join(view_dir, key.replace("@", "_").replace(",", "_") + ".npy")
+
+
+def init_link_worker(view_dir):
+    global _VIEW_DIR
+    _VIEW_DIR = view_dir
+
+
+def get_view(key):
+    if key not in _VIEWS:
+        if len(_VIEWS) > 3000:
+            _VIEWS.clear()
+        p = view_file(_VIEW_DIR, key) if _VIEW_DIR else None
+        _VIEWS[key] = np.load(p) if p and os.path.exists(p) else None
+    return _VIEWS[key]
 
 
 def judge_link(job):
     """(index, fit leftover mm, turn, shift, pixel share, textured tiles) of one link candidate."""
     i, a, b, ma, mb, shape = job
-    va, vb = _VIEWS.get(a), _VIEWS.get(b)
+    va, vb = get_view(a), get_view(b)
     theta, t = rigid_fit(mb, ma)  # b's frame -> a's
     th = np.radians(theta)
     R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
     leftover = float(np.median(np.linalg.norm(mb @ R.T + t - ma, axis=1)))
     share, textured = pixel_agreement(va, vb, theta, t, shape) if va is not None and vb is not None else (0.0, 0)
     return i, leftover, theta, t, share, textured
+
+
+_GEN_DIR = None  # set by solve(): where stage 2 writes its drawn views
 
 
 def stage2(lps, fits, candidates, photo_paths, workers=8):
@@ -662,14 +687,21 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
             mb = project(np.linalg.inv(fits[b]["cut_to_photo"]), pb)
             jobs.append((i, a, b, ma, mb, shape_of[a]))
     judged = {}
-    global _VIEWS
-    _VIEWS = views
-    import multiprocessing
-    with multiprocessing.get_context("fork").Pool(workers) as pool:
+    view_dir = os.path.join(_GEN_DIR, "solve", "views") if _GEN_DIR else os.path.join("generated", "solve", "views")
+    os.makedirs(view_dir, exist_ok=True)
+    for f in os.listdir(view_dir):
+        os.remove(os.path.join(view_dir, f))
+    for k, v in views.items():
+        if v is not None:
+            np.save(view_file(view_dir, k), v)
+    with Pool(workers, initializer=init_link_worker, initargs=(view_dir,)) as pool:
         for n, (i, leftover, theta, t, share, textured) in enumerate(pool.imap_unordered(judge_link, jobs, chunksize=8), 1):
             judged[i] = (leftover, theta, t, share, textured)
             if n % 2000 == 0 or n == len(jobs):
                 print(f"stage 2: compared {n} of {len(jobs)} link candidates", flush=True)
+    for f in os.listdir(view_dir):  # the drawn views are only for the comparison
+        os.remove(os.path.join(view_dir, f))
+    os.rmdir(view_dir)
     pixel_ok = lambda j: j[3] >= AGREE_SHARE and j[4] >= MIN_TEXTURED_TILES
     # poor fits: most of a label photo's pixel-agreeing links fail the fit test
     tally = {}
@@ -821,6 +853,8 @@ def solve(found, matches, edges_dir, photo_paths=None):
     lps = found["label_photos"]
     for lp in lps:
         lp["centre"] = np.float64(lp["centre"])
+    global _GEN_DIR
+    _GEN_DIR = os.path.dirname(edges_dir)
     fits, failed, choice = stage1(lps, edges_dir, None)
     offsets, family_of, poor, links_info, corrections = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
     out = {}
