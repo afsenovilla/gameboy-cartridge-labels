@@ -29,3 +29,8 @@ def test_the_title_settles_several_own_reads():
     title = lambda rid: {"dmg-apsj": 0.9, "dmg-apbj": 0.1}.get(rid, 0)
     serial, release, how = read_serials.decide([r("DMG-APSJ-JPN"), r("DMG-APBJ-JPN")], Counter({"dmg-apbj": 3}), DATABASE, 3, title)
     assert release == "dmg-apsj"
+
+
+def test_a_cut_off_read_gives_way_to_the_whole_one():
+    db = {"DMG-VF": {"id": "dmg-vf"}, "DMG-VFJ": {"id": "dmg-vfj"}}
+    assert read_serials.decide([r("DMG-VF"), r("DMG-VFJ")], Counter({"dmg-vf": 2}), db, 2)[1] == "dmg-vfj"

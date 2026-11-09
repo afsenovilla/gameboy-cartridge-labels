@@ -165,12 +165,12 @@ def write_avif(path, img):
 
 # Paper white: the paper is the restored image's brightest near-neutral pixels (Oklab chroma under PAPER_CHROMA, in the
 # top PAPER_TOP of the lightness among those), at least PAPER_MIN of the label; each channel scaled in linear light so
-# the paper's median becomes white, PAPER_CLIP over, so the paper's own noise and dirt clip to white (main's choice:
-# clipping evens paper variations). A label with too little such paper (full-colour art) isn't done.
+# the paper at its PAPER_WHITE quantile of lightness becomes white: only the brightest of the paper clips (the user:
+# the paper's median made white, 5 % over, clipped far too much). A label with too little such paper isn't done.
 PAPER_CHROMA = 0.04
 PAPER_TOP = 0.5
 PAPER_MIN = 0.03
-PAPER_CLIP = 1.05
+PAPER_WHITE = 0.9
 
 
 def paper_white(bgr):
@@ -184,8 +184,11 @@ def paper_white(bgr):
     if paper.mean() < PAPER_MIN or np.median(lab[..., 0][paper]) < 0.6:
         return None, None
     lin = np.where(bgr <= 0.04045, bgr / 12.92, ((bgr + 0.055) / 1.055) ** 2.4)
-    white_lin = np.median(lin[paper], axis=0)
-    out = np.clip(lin / np.maximum(white_lin, 1e-3) * PAPER_CLIP, 0, 1)
+    light = lab[..., 0][paper]
+    brightest = paper.copy()
+    brightest[paper] = light >= np.quantile(light, PAPER_WHITE)
+    white_lin = np.median(lin[brightest], axis=0)  # the colour of the paper's brightest tenth, so its hue stays even
+    out = np.clip(lin / np.maximum(white_lin, 1e-3), 0, 1)
     out = np.where(out <= 0.0031308, out * 12.92, 1.055 * np.power(out, 1 / 2.4) - 0.055)
     return np.median(bgr[paper], axis=0), out.astype(np.float32)
 

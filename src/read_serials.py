@@ -16,6 +16,7 @@
 #   (a release found by title alone is only a guess, "title_guess": on the full set 4 of 8 were right. Template words,
 #     GAME BOY COLOR and the like, are left out of the comparison: they matched titles like "Game Boy Color".)
 #   unknown: else (a serial-looking string the database doesn't know is kept, as a possible new release).
+#   corrected by hand: serial-corrections.json ({label photo key: serial}, hand-edited) has the last word.
 # Every label photo also gets "title_score" (how much of its release's title the label's text holds; low on many
 # right ones: logos, stylised titles, Japanese against romanised titles) and, without a release, "title_guess".
 # The family (solve: label photos joined by links whose points and pixels agree) only settles a label photo's own
@@ -24,12 +25,15 @@
 # straightened label photo is cached in <generated>/read-serials/ocr/<file>.json (redone when older than its image).
 # The page, <generated>/read-serials/index.html.
 # Usage: read_serials.py [--sample] [--workers N]
-import argparse, html, json, os, sys
+import argparse, html, json, os, re, sys
 from collections import Counter
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, serials, steps, read_text, straighten
+
+
+CORRECTIONS = "serial-corrections.json"
 
 
 def ocr_job(job):
@@ -40,8 +44,12 @@ def ocr_job(job):
     return out
 
 
-def own_reads(lines, strings, release_of, regions):
-    """A label photo's reads: the straightened image's lines and find's strings from the photo."""
+PLATFORMS = {"dmg": ("DMG", "CGB"), "cgb": ("CGB",), "agb": ("AGB",)}  # the serial prefixes a shape's labels carry
+
+
+def own_reads(lines, strings, release_of, regions, shape=None):
+    """A label photo's reads: the straightened image's lines and find's strings from the photo. A near serial must be
+    of the shape's platforms (a garbled AGB-ATUJ-JPN isn't near DMG-ATVJ-JPN)."""
     reads = []
     for source, texts in (("straightened", [l["text"] for l in lines]), ("photo", [t["text"] for t in strings])):
         for text in texts:
@@ -49,7 +57,8 @@ def own_reads(lines, strings, release_of, regions):
             if exact:
                 reads.append({"text": text, "serial": exact[0], "kind": "exact", "from": source})
                 continue
-            near = serials.near(text, regions)
+            near = [n for n in serials.near(text, regions)
+                    if shape is None or n[0].replace("DIS-", "").startswith(PLATFORMS.get(shape, ("DMG", "CGB", "AGB")))]
             if near:
                 reads.append({"text": text, "serial": near[0][0], "kind": "near", "from": source})
                 continue
@@ -67,6 +76,10 @@ def decide(reads, family_reads, release_of, family_readers=0, title=None, by_tit
     title = title or (lambda rid: 0.0)
     rel = lambda s: serials.release(s, release_of)["id"]
     exact = [r for r in reads if r["kind"] == "exact"]
+    # an exact read that's the start of another (a cut-off read: DMG-VF of DMG-VFJ, DMG-BQ of DMG-BQIJ) gives way to it
+    codes = lambda s: s[:-4] if serials.region_of(s) else s  # the region dropped only if it is one (not DMG-VFJ's code)
+    exact = [r for r in exact if not any(o is not r and codes(o["serial"]) != codes(r["serial"]) and
+                                         codes(o["serial"]).startswith(codes(r["serial"])) for o in exact)] or exact
     if exact:
         by_release = Counter(rel(r["serial"]) for r in exact)
         if len(by_release) == 1:
@@ -172,7 +185,8 @@ def main():
     threads = max(1, (os.cpu_count() or 4) // args.workers)
     steps.run(ocr_job, jobs, args.workers, read_text.init_worker, (threads,), "straightened label photos read:")
     out = os.path.join(out_dir, "serials.json")
-    newest = max(os.path.getmtime(p) for p in [solve_file, find_file, __file__] + list(ocr_out.values()))
+    newest = max(os.path.getmtime(p) for p in [solve_file, find_file, __file__] + list(ocr_out.values()) +
+                 ([CORRECTIONS] if os.path.exists(CORRECTIONS) else []))
     release_of = serials.load_database()
     if not os.path.exists(out) or os.path.getmtime(out) < newest:
         regions = serials.by_region(release_of)
@@ -181,7 +195,7 @@ def main():
         for r_ in release_of.values():
             by_id.setdefault(r_["id"], r_)
         ocr = {k: json.load(open(ocr_out[k])) for k in solved}
-        reads = {k: own_reads(ocr[k], found.get(k, {}).get("strings", []), release_of, regions) for k in solved}
+        reads = {k: own_reads(ocr[k], found.get(k, {}).get("strings", []), release_of, regions, solved[k]["shape"]) for k in solved}
         photo_lines = {}
         def label_text(k):
             lp = found.get(k)
@@ -213,6 +227,11 @@ def main():
             result[k] = {"reads": reads[k], "serial": serial, "release": release, "decided_by": how, "family": family_of[k],
                          "title_score": round(title(release), 2) if release else None,
                          "title_guess": (by_title[1] if by_title else game) if not release else None}
+        corrections = json.load(open(CORRECTIONS)).get("corrections", {}) if os.path.exists(CORRECTIONS) else {}
+        for k, serial in corrections.items():
+            if k in result:
+                r_ = serials.release(serial, release_of)
+                result[k].update(serial=serial, release=r_["id"] if r_ else None, decided_by="corrected by hand")
         steps.write_json(out, result)
         covered = {v["release"] for v in result.values() if v["release"]}
         everything = sorted({r["id"] for r in json.load(open(serials.DATABASE))})

@@ -29,7 +29,7 @@ def test_paper_white_makes_the_paper_white_and_leaves_full_colour_art():
     img = np.full((100, 100, 3), 0.8, np.float32); img[..., 0] = 0.75     # bluish-grey paper, BGR
     img[30:60, 30:60] = [0.1, 0.2, 0.7]                                    # a red block
     paper, white = restore.paper_white(img)
-    assert white is not None and np.abs(white[0, 0] - 1).max() < 1e-3      # the paper white (clipped)
+    assert white is not None and np.abs(white[0, 0] - 1).max() < 1e-2      # the paper white
     assert white[40, 40, 2] > white[40, 40, 0]                             # the red still red
     art = np.random.default_rng(4).random((100, 100, 3)).astype(np.float32)
     art[..., 2] = 0.9; art[..., 0] = 0.1                                   # all saturated: no paper
