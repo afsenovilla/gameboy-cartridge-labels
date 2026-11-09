@@ -31,8 +31,8 @@ architecture, data structures, steps. Each section says whether it's settled.
 ### Output
 
 - **Restored prints:** at least every print a human has judged visually distinct (judged on the straightened label
-  photos): a restored image, reconstructed from all its label photos, in mm, with its serial. Cropped at the median cut position of its label photos (labels are printed with overflow and cut
-  sloppily; the whole print is detected first, then cropped).
+  photos): a restored image, reconstructed from all its label photos, in mm, with its serial. Cropped at the median cut of its linked set's label photos (labels are printed with overflow and
+  cut sloppily; the whole print is detected first, then cropped).
 - **Label photos:** each one straightened in its print's frame, the same crop, with the photo's source and original
   URL.
 - **Database entries with no label photo:** a list, for tools that search for more photos (getting photos is part of
@@ -80,7 +80,7 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     straightened label photos are drawn in them, at a fixed px/mm.
   - **plastic coordinates:** on the cartridge, as main's shape models; the recess is there.
   - The paper isn't a coordinate system: each sticker's cut outline is a shape in ink coordinates, different for every
-    sticker; their median is the crop.
+    sticker; the median over a linked set anchors ink coordinates and is the crop.
 - **Each label photo has two unknowns,** solved jointly over all label photos:
   - **photo → ink,** a homography (8 numbers), from SIFT matches between label photos of different photos. Not only of
     the same print: nearly-same prints and shared templates (the grey frame and logo bar of US and European DMG labels)
@@ -91,9 +91,12 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     the label lying below the face, seen at an angle).
   - The cut edges are close to straight (bowing about 0.1 mm on the long side, from the cutting) and help the
     perspective; their position only gives the crop.
-  - **Anchoring:** for each set of prints linked by shared areas, the median placement over their label photos is the
-    nominal label place (DMG: main's 42.5 × 37 mm rectangle, 7.25 mm from the cartridge's left edge, 19 mm from its
-    top). A print linked to no other is anchored by its own label photos.
+  - **Anchoring:** for each linked set, ink coordinates are anchored by the median cut outline of all its label photos
+    (position and turn): the median cut is the nominal label place (DMG: main's 42.5 × 37 mm rectangle, at 0, 0 in ink
+    coordinates). Ink coordinates are then the restored labels' coordinates: the crop is axis-aligned, the straightened
+    images are in final coordinates, and publishing crops whole pixels with no resampling. Every print of a set gets
+    the same crop: prints may sit slightly differently against their cuts (the fixed-place logos spread about 0.3 mm),
+    but any plausible position will do, none is more right. A set of one label photo is anchored by its own cut.
 - **Finding label photos** (proposed): the plastic isn't needed for it. Evidence adds up; no single piece is required.
   - Seeds: OCR of every photo (it worked well before). A serial-looking string is a candidate, the text line giving
     rough place, turn and size.
@@ -198,8 +201,8 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
     bands' own noise. The plain median is made too; the user judges which is better.
   - To try: the lowest bands de-emphasized to even the lighting (like the iPhone's "Brilliance"); not sound, may look
     fine. Dropped if complex.
-  - Crop: position and turn from the median of the label photos' cut outlines; size main's canonical label sizes (DMG
-    42.5 x 37 mm, CGB 41.5 x 37, AGB 43 x 22).
+  - Crop: the linked set's median cut (the anchor of ink coordinates: axis-aligned, the same for every print of the
+    set); size main's canonical label sizes (DMG 42.5 x 37 mm, CGB 41.5 x 37, AGB 43 x 22).
   - Colors: to be experimented with (paper white with clipping as in main, which was noticeable as it had to be
     strong; the median of the label photos; others). Pooling in bands should leave less noise in the paper.
 - **After the solve:** prints told apart by the aligned pixels (a difference shared consistently by a subset is a
@@ -313,8 +316,8 @@ match and find are separate so that the rule for a label photo can be tried in v
 | straighten | straighten/<key>.avif | 20 px/mm, the nominal label plus 5 mm around it, uncropped (the crop is decided by restore, and restoration pools the overflow past the cut) |
 | read-serials | read-serials/serials.json, missing.json, unknown-serials.json | per key: reads, serial (voted or null), in_database; database entries with no label photo; serials not in the database |
 | prints | prints/prints.json, prints/<print>/<other>.png, few-photos.json | per print: id, keys, serial, shape. Optional pair images, one pixel per tile, white where the two look alike; only for pairs whose shared area, less the tiles many prints of the set share (the grey frame), is above a limit (tuned on the sample) |
-| restore | restore/<print>.avif, restore/<print>.json | the image (cropped); label photos used, how many count in each band, single-photo flag, crop (position, turn, size) |
-| publish | publish/ | prints/<print>.avif; label-photos/<key>.avif (each drawn straight from its photo through photo_to_ink and its print's crop: one resampling); index.json (per label photo: print, serial, source, URL; per print: label photos, serial); the lists collected |
+| restore | restore/<print>.avif, restore/<print>.json | the image (cropped); label photos used, how many count in each band, single-photo flag |
+| publish | publish/ | prints/<print>.avif; label-photos/<key>.avif (cut from its straightened image: whole pixels, no resampling); index.json (per label photo: print, serial, source, URL; per print: label photos, serial); the lists collected |
 
 designs.json (hand-edited): `{"<key>": "<design name>"}`; a label photo not listed has no design yet.
 
