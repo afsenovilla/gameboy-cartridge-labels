@@ -259,6 +259,8 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **The choice learned from round 1** (no main data, no judgements): every candidate kept; round 1 chooses the logo placement if it passed, else the best mean support; confident label photos are those where candidates from at least two kinds of start agree within 0.5 mm with round 1's choice; their candidates are examples (within 0.5 mm right, over 3 mm wrong) for a logistic regression on plain features, which then chooses for every label photo. Evaluation set: 98 % under 5 mm, 89 % under 1 mm (before 96 %, 84 %; the oracle 98 %, 94 %); 217 confident of 298, 1539 examples. Weighs most: how many candidates agree, then a small placement and high support. The sample: 169 of 193 within 1 mm of main's (161 before).
 
+**straighten** (the sample): 273 label photos in ink coordinates, 5.7 s, 56 MB. AVIF against lossless PNG on 40 of them, measured as prints will (1 mm tiles, 0.25 mm blur): at quality 90 a tile changes by 0.10 of 255 at the median, 0.62 at 99 %, the file 14 % of PNG's (209 KB); 70: 0.22 / 1.39, 7 %; 95: 0.08 / 0.57, 20 %. Quality 90 kept (about 1.2 GB for the full set).
+
 ## Next
 
-More from the first round (the logos' places and the label's scale from this branch's own fits, starts carried within a print), or straighten.
+read-serials: OCR of the straightened label photos, voted per linked set; near serials there too.
