@@ -38,8 +38,7 @@
 #   entries with no label photo and the serials it doesn't know, into generated/read-serials/. Needs make straighten.
 #
 #   make prints
-#   Each family's label photos split into prints by a tile comparison, the pooling masks between nearly-same prints,
-#   into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
+#   Each family's label photos split into prints by a tile comparison, into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
 #
 #   make restore
 #   An image of every print from its label photos (bands, the median), cropped to the canonical label, paper white

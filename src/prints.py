@@ -1,20 +1,17 @@
-# prints: the label photos of each family (solve) split into prints, and the pooling masks between nearly-same prints,
-# into <generated>/prints/:
+# prints: the label photos of each family (solve) split into prints, into <generated>/prints/:
 #   prints.json: {"prints": [{"id" (its smallest key), "keys", "release", "serial", "shape", "family"}], "tile_mm": TILE_MM,
 #                 "differences": {family: {"grid": [rows, columns], "tiles": [index...]}} (the tiles telling its prints apart)}
-#   <print>/<other print>.png: one pixel per tile, white where the two prints match (for pairs matching on at least
-#     MIN_SHARED of the label)
 #   few-photos.json: [print ids] of prints with fewer than FEW label photos
 # Comparing, in each family's ink coordinates (straighten's images): the label, 1 mm in from its edges, in TILE_MM
-# tiles. Two label photos match at a tile: where both are textured (gray spread over TEXTURE), the lighting-evened
-# gray (minus the local mean, over the local spread, 0.25 mm blur) correlates over CORRELATION; where both are flat,
-# their colors (each label photo's evened per channel to the family's median) differ under COLOR_DIFF; textured in one
-# and flat in the other, never. Different (conflicting) at a tile: textured in both and not correlating. Different
-# prints: different on MIN_DIFF_TILES tiles or more. Only the pixels decide: serials and releases are only the prints'
-# labels. Measured on the full set at 1 mm tiles (pairs within a family, by
-# their serials read): 3 or more different tiles on 10 % of same-serial pairs (dirt, misfits: split, then pooled
-# back), 86 % of one release's region variants (many of the rest misread serials of one print: IPN for JPN, a cut-off
-# serial) and 95 % of different releases. At 2 mm tiles a region code hardly showed (one tile, often still correlating).
+# tiles (the outermost millimetre left out: the cut wanders about 1 mm). Two label photos differ at a tile where both
+# are textured (gray spread over TEXTURE) and their lighting-evened gray (minus the local mean, over the local spread,
+# 0.25 mm blur) doesn't correlate over CORRELATION. Only that counts as evidence of a print difference: a tile textured
+# in one photo only is blur, glare or dirt as often as other text. Different prints: different on MIN_DIFF_TILES tiles
+# or more. Only the pixels decide: serials and releases are only the prints' labels. (Where another print's label
+# photos may be used in a restored print is restore's own comparison, not this one.) Measured on the full set at 1 mm
+# tiles (pairs within a family, by their serials read): 3 or more different tiles on 10 % of same-serial pairs (dirt,
+# misfits: split, then pooled back), 86 % of one release's region variants (many of the rest misread serials of one
+# print: IPN for JPN, a cut-off serial) and 95 % of different releases. At 2 mm tiles a region code hardly showed (one tile, often still correlating).
 # Done again when prints.json is older than this file, solve.json or serials.json.
 # Usage: prints.py [--sample]
 import argparse, html, itertools, json, os, sys
@@ -27,14 +24,12 @@ import photos, steps, straighten, shapes
 TILE_MM = 1
 TEXTURE = 6.0
 CORRELATION = 0.0
-COLOR_DIFF = 15.0
-MIN_SHARED = 0.15
 FEW = 3
 MIN_DIFF_TILES = 3
 
 
 def tile_views(image_path, shape):
-    """A straightened label photo's tiles: (lighting-evened gray per tile, flattened; mean color; gray spread)."""
+    """A straightened label photo's tiles: (lighting-evened gray per tile, flattened; gray spread per tile)."""
     P, M = straighten.PX_PER_MM, straighten.MARGIN
     img = cv2.imread(image_path).astype(np.float32)
     lw, lh = shapes.LABEL_MM[shape]
@@ -43,45 +38,25 @@ def tile_views(image_path, shape):
     mean = cv2.GaussianBlur(g, (0, 0), P)
     spread = np.sqrt(cv2.GaussianBlur((g - mean) ** 2, (0, 0), P)) + 2
     hp = ((g - mean) / spread)[y0:y1, x0:x1]
-    col = cv2.GaussianBlur(img, (0, 0), 0.25 * P)[y0:y1, x0:x1]
     g = g[y0:y1, x0:x1]
     t = TILE_MM * P
     h, w = hp.shape[0] // t, hp.shape[1] // t
     cut = lambda a: a[:h * t, :w * t]
     return (cut(hp).reshape(h, t, w, t).transpose(0, 2, 1, 3).reshape(h, w, -1),
-            cut(col).reshape(h, t, w, t, 3).mean((1, 3)), cut(g).reshape(h, t, w, t).std((1, 3)))
+            cut(g).reshape(h, t, w, t).std((1, 3)))
 
 
-def even_colors(colors, ref):
-    """Tile colors evened per channel to ref: a scale and offset, fitted on the best 80 %."""
-    out = colors.copy()
-    for c in range(3):
-        x, y = colors[..., c].ravel(), ref[..., c].ravel()
-        A = np.c_[x, np.ones_like(x)]
-        coef = np.linalg.lstsq(A, y, rcond=None)[0]
-        r = np.abs(A @ coef - y)
-        ok = r <= np.percentile(r, 80)  # <=: with residuals all zero (one label photo, its own reference), < kept none
-        coef = np.linalg.lstsq(A[ok], y[ok], rcond=None)[0]
-        out[..., c] = colors[..., c] * coef[0] + coef[1]
-    return out
-
-
-def matching_and_conflicting_tiles(va, vb, ca, cb):
-    """Per tile, two booleans for two label photos (their tile_views, and their tile colors evened):
-    matching: textured in both with their lighting-evened gray correlating over CORRELATION, or flat in both with
-      their evened colors differing under COLOR_DIFF. A tile textured in one and flat in the other never matches: the
-      color test can't see small text on paper (a region variant's text was pooled into another print).
-    conflicting: textured in both and not correlating (the outermost ring of tiles left out: the cut wanders up to
-      about 1 mm past them). Textured in one only isn't conflicting: blur or glare in one photo does that."""
-    textured = (va[2] > TEXTURE) & (vb[2] > TEXTURE)
-    flat = (va[2] <= TEXTURE) & (vb[2] <= TEXTURE)
+def tiles_textured_in_both_and_not_correlating(va, vb):
+    """Per tile, whether two label photos (their tile_views) show different detail there: textured in both (gray
+    spread over TEXTURE) and their lighting-evened gray not correlating over CORRELATION. The outermost ring of tiles
+    left out: the cut wanders up to about 1 mm past them."""
+    textured = (va[1] > TEXTURE) & (vb[1] > TEXTURE)
     za = va[0] - va[0].mean(2, keepdims=True)
     zb = vb[0] - vb[0].mean(2, keepdims=True)
     corr = (za * zb).sum(2) / np.sqrt((za ** 2).sum(2) * (zb ** 2).sum(2) + 1e-9)
-    matching = (textured & (corr > CORRELATION)) | (flat & (np.abs(ca - cb).mean(2) < COLOR_DIFF))
-    conflicting = textured & ~(corr > CORRELATION)
-    conflicting[0, :] = conflicting[-1, :] = conflicting[:, 0] = conflicting[:, -1] = False
-    return matching, conflicting
+    differing = textured & ~(corr > CORRELATION)
+    differing[0, :] = differing[-1, :] = differing[:, 0] = differing[:, -1] = False
+    return differing
 
 
 def components(n, edges):
@@ -96,17 +71,17 @@ def components(n, edges):
     return [root(i) for i in range(n)]
 
 
-def split_family(A, D):
-    """A family's prints: [[member index...]], and the tiles that tell its prints apart. A: n x n x tiles booleans
-    (matching); D: n x n x tiles booleans (conflicting: textured in both and not correlating). Two label photos are
-    different prints where they differ on MIN_DIFF_TILES tiles or more (dirt or glare rarely does; other text does).
-    Prints are merged, the pairs with the fewest differing tiles first, where most cross pairs aren't different."""
-    n = A.shape[0]
+def split_family(D):
+    """A family's prints: [[member index...]], and the tiles that tell its prints apart. D: n x n x tiles booleans
+    (tiles_textured_in_both_and_not_correlating). Two label photos are different prints where they differ on
+    MIN_DIFF_TILES tiles or more (dirt or glare rarely does; other text does). Prints are merged, the pairs with the
+    fewest differing tiles first, where most cross pairs aren't different."""
+    n = D.shape[0]
     count = D.sum(2)
     same = count < MIN_DIFF_TILES
     prints = [[i] for i in range(n)]
     where = list(range(n))
-    for a, b in sorted(itertools.combinations(range(n), 2), key=lambda p: (count[p], -A[p].mean())):
+    for a, b in sorted(itertools.combinations(range(n), 2), key=lambda p: count[p]):
         pa, pb = where[a], where[b]
         if pa == pb or not same[a, b]:
             continue
@@ -116,21 +91,10 @@ def split_family(A, D):
                 where[i] = pa
             prints[pb] = []
     prints = [p for p in prints if p]
-    differs = np.zeros(A.shape[2], bool)   # tiles where most cross pairs of some two prints differ
+    differs = np.zeros(D.shape[2], bool)   # tiles where most cross pairs of some two prints differ
     for p, q in itertools.combinations(prints, 2):
         differs |= np.mean([D[i, j] for i in p for j in q], 0) > 0.5
     return prints, differs
-
-
-def pair_masks(groups, A):
-    """{(p, q): tiles matching} for the pairs of a family's prints (groups: their member indices; A: n x n x tiles) worth
-    a pair image: matching where most cross pairs match, on at least MIN_SHARED of the label. (Tiles shared by most of a
-    family's prints, a frame, were once left out: that dropped the region variants of one release, alike nearly
-    everywhere, from each other's pooling.)"""
-    masks = {}
-    for p, q in itertools.combinations(range(len(groups)), 2):
-        masks[(p, q)] = np.mean([A[i, j] for i in groups[p] for j in groups[q]], 0) > 0.5
-    return {pq: m for pq, m in masks.items() if m.mean() >= MIN_SHARED}
 
 
 def main():
@@ -152,7 +116,7 @@ def main():
         families = {}
         for k, r in solved.items():
             families.setdefault(r["family"], []).append(k)
-        all_prints, pair_images, differences = [], {}, {}
+        all_prints, differences = [], {}
         for fam, keys in sorted(families.items()):
             keys = sorted(keys)
             shape = solved[keys[0]]["shape"]
@@ -160,45 +124,26 @@ def main():
                 all_prints.append({"keys": keys, "family": fam})
                 continue
             views = [tile_views(os.path.join(gen, "straighten", straighten.file_name(k)), shape) for k in keys]
-            ref = np.median(np.stack([v[1] for v in views]), 0)
-            colors = [even_colors(v[1], ref) for v in views]
             n = len(keys)
-            A = np.ones((n, n) + views[0][2].shape, bool)
-            D = np.zeros_like(A)
+            D = np.zeros((n, n) + views[0][1].shape, bool)
             for i, j in itertools.combinations(range(n), 2):
-                a, d = matching_and_conflicting_tiles(views[i], views[j], colors[i], colors[j])
-                A[i, j] = A[j, i] = a
-                D[i, j] = D[j, i] = d
-            groups, differs = split_family(A.reshape(n, n, -1), D.reshape(n, n, -1))
-            A = A.reshape(n, n, -1)
+                D[i, j] = D[j, i] = tiles_textured_in_both_and_not_correlating(views[i], views[j])
+            groups, differs = split_family(D.reshape(n, n, -1))
             if differs.any():
-                differences[fam] = {"grid": list(views[0][2].shape), "tiles": np.flatnonzero(differs).tolist()}
-            fam_prints = [{"keys": [keys[i] for i in g], "family": fam, "_idx": g} for g in groups]
-            # pooling masks between this family's prints: matching where most cross pairs match
-            if len(fam_prints) > 1:
-                grid = views[0][2].shape
-                for (p, q), m in pair_masks([fp["_idx"] for fp in fam_prints], A).items():
-                    pair_images[(id(fam_prints[p]), id(fam_prints[q]))] = (fam_prints[p], fam_prints[q], m.reshape(grid))
-            all_prints += fam_prints
+                differences[fam] = {"grid": list(views[0][1].shape), "tiles": np.flatnonzero(differs).tolist()}
+            all_prints += [{"keys": [keys[i] for i in g], "family": fam} for g in groups]
         for p in all_prints:
-            p.pop("_idx", None)
             p["id"] = min(p["keys"])
             rel = Counter(serial.get(k, {}).get("release") for k in p["keys"] if serial.get(k, {}).get("release"))
             p["release"] = rel.most_common(1)[0][0] if rel else None
             ser = Counter(serial.get(k, {}).get("serial") for k in p["keys"] if serial.get(k, {}).get("serial"))
             p["serial"] = ser.most_common(1)[0][0] if ser else None
             p["shape"] = solved[p["keys"][0]]["shape"]
-        # pair images
-        for d in os.listdir(out_dir):
+        for d in os.listdir(out_dir):  # pair images (pooling masks) of earlier versions
             if os.path.isdir(os.path.join(out_dir, d)):
                 for f in os.listdir(os.path.join(out_dir, d)):
                     os.remove(os.path.join(out_dir, d, f))
                 os.rmdir(os.path.join(out_dir, d))
-        for p, q, m in pair_images.values():
-            for a, b in ((p, q), (q, p)):
-                d = os.path.join(out_dir, straighten.file_name(a["id"])[:-5])
-                os.makedirs(d, exist_ok=True)
-                cv2.imwrite(os.path.join(d, straighten.file_name(b["id"])[:-5] + ".png"), (m * 255).astype(np.uint8))
         steps.write_json(out, {"prints": sorted(all_prints, key=lambda p: p["id"]), "tile_mm": TILE_MM,
                                "differences": differences})
         steps.write_json(os.path.join(out_dir, "few-photos.json"), sorted(p["id"] for p in all_prints if len(p["keys"]) < FEW))

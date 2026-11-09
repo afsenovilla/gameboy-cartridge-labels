@@ -100,13 +100,12 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
   2. Compared in tiles (1 mm to start; 5 mm may do as well) after a blur of about 0.25 mm, so sub-pixel misalignment and sharpness don't count. Tile size and blur are set on the sample by the steps' own measures.
   3. Per tile, label photos grouped by how alike they look: all alike, a shared area; one different, a defect on that sticker (dirt, scratch, glare); two or more groups of at least two each, a print difference.
   4. Label photos agreeing on every tile with a print difference are one print.
-  5. Per print, which other prints share each tile: the pooling masks for restoration.
   - A difference seen in one label photo only counts as a defect: a revision seen once is missed until more photos of it turn up (it shows in the list of prints with few label photos).
   - Different serials, ratings or CE logos are different prints (different plates), so every one gets its own restored image; they're masked out only when pooling and judging designs.
   - Designs may be judged by hand before a print has more than one label photo, so designs group **label photos**, not prints (print groups change as photos are added; label photos don't). A print whose label photos are in different designs is a contradiction, flagged, never resolved silently.
   - Main's designs.json (designs of database entries) is converted once into designs of label photos, as soon as label photos have serials, and then dropped; if it doesn't convert easily, it's ignored and regrouped by hand.
 - **Restoration** (settled), per print, in ink coordinates at 20 px/mm (508 dpi: prints are commonly 600 dpi or less; one setting):
-  - Contributing to a pixel: the print's own label photos, plus other prints' wherever the pooling masks say the tile is shared.
+  - Contributing to a pixel: the print's own label photos, plus the label photos of the other prints of its family where restore's own comparison finds they show the same thing (per pixel, over 1 mm, after registering them to the print's own; textured in one and flat in the other never counts; a hard mask). Prints' tile comparison only tells prints apart: it ignores the outer millimetre and one-sided texture, which is right for splitting and was wrong for pooling (DMG-JU-FAH's "this side out" showed in DMG-JU-USA).
   - Each label photo, colors evened, split into frequency bands in Oklab: a Laplacian pyramid from 20 px/mm, halving until one pixel is left (about 10 bands). A label photo counts in a band only where it carries it, as in focus stacking: per band, a weight map from the band's local energy, blurred over a radius larger than the details, compared between the label photos at each pixel; bands finer than a photo's own resolution get no weight. A partly focused label photo then counts where it's sharp.
   - Per band, weighted by sharpness: one label photo as it is; two averaged (halving scratches and glare); three or more by a soft median, an M-estimator such as Tukey's biweight (starting from the median, values reweighted smoothly by their distance from the estimate: no ridges where gradients point different ways), its scale from the bands' own noise. The plain median is made too; the user judges which is better.
   - To try: the lowest bands de-emphasized to even the lighting (like the iPhone's "Brilliance"); not sound, may look fine. Dropped if complex.
@@ -162,7 +161,7 @@ The weakness: consistency can't show an error every label photo of a print share
 | solve | the joint solve per linked set; which segments are a cut or a recess decided against the shape model | homography into ink and placement, per label photo |
 | straighten | each label photo drawn in ink coordinates | images, for the next steps and the user's judging |
 | read-serials | OCR of the straightened label photos, voted per linked set | serials |
-| prints | the tile comparison | prints, pooling masks |
+| prints | the tile comparison | prints |
 | restore | bands, weights, combining, crop | restored prints |
 | publish | the outputs | label photo crops with source and URL, restored prints, the lists |
 
@@ -187,8 +186,8 @@ match and find are separate so that the rule for a label photo can be tried in v
 | solve | solve/solve.json | per label photo: photo_to_ink, placement (dx, dy mm, turn), fallback (null or "sift median"), leftover error; per set: recess spread, leftover errors |
 | straighten | straighten/<key>.avif | 20 px/mm, the nominal label plus 5 mm around it, uncropped (the crop is decided by restore, and restoration pools the overflow past the cut) |
 | read-serials | read-serials/serials.json, missing.json, unknown-serials.json | per key: reads, serial (voted or null), in_database; database entries with no label photo; serials not in the database |
-| prints | prints/prints.json, prints/<print>/<other>.png, few-photos.json | per print: id, keys, serial, shape. Optional pair images, one pixel per tile, white where the two look alike; only for pairs whose shared area, less the tiles many prints of the set share (the grey frame), is above a limit (tuned on the sample) |
-| restore | restore/<print>.avif, restore/<print>.json | the image (cropped); label photos used, how many count in each band, single-photo flag |
+| prints | prints/prints.json, few-photos.json | per print: id, keys, serial, shape, family; per family, the tiles telling its prints apart |
+| restore | restore/<print>.avif, restore/<print>.json | the image (cropped); label photos used (own, and other prints' pooled with the share of the label where each counts), how many count in each band, single-photo flag |
 | publish | publish/ | prints/<print>.avif (restore's image: paper white where found, else median colours); label-photos/<key>.avif (cut from its straightened image: whole pixels, no resampling; poor fits get none, as restore leaves them out, and are listed with poor_fit true); index.json (per label photo: print, serial, source (main's photos/ folder), page_url, image_url, image, poor_fit; per print: serial, release, shape, image, paper, label photos); missing.json, unknown-serials.json, few-photos.json copied |
 
 designs.json (hand-edited): `{"<key>": "<design name>"}`; a label photo not listed has no design yet.
