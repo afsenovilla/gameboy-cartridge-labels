@@ -1,4 +1,4 @@
-import json, os, struct, time
+import json, os, struct
 import cv2, numpy as np, pytest
 import photos, read_text
 
@@ -75,14 +75,3 @@ def test_unreadable_photo_gets_an_empty_result(tmp_path):
     p.write_bytes(b"not an image")
     read_text.read_photo(("broken", str(p), str(out)))
     assert json.load(open(out)) == {"size": None, "engine": json.load(open(out))["engine"], "lines": []}
-
-
-def test_stale_when_missing_or_older_than_code(tmp_path):
-    code, out = tmp_path / "code.py", tmp_path / "out.json"
-    code.write_text("")
-    assert read_text.stale(str(out), str(code))
-    out.write_text("{}")
-    os.utime(out, (time.time() + 10, time.time() + 10))
-    assert not read_text.stale(str(out), str(code))
-    os.utime(code, (time.time() + 20, time.time() + 20))
-    assert read_text.stale(str(out), str(code))

@@ -12,11 +12,10 @@
 # Usage: read_text.py [--sample] [--workers N]
 import argparse, html, json, os, sys
 from importlib.metadata import version
-from multiprocessing import Pool
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, serials
+import photos, serials, steps
 
 CLS_THRESHOLD = 0.9  # RapidOCR's own (Cls.cls_thresh): below it, a line isn't turned
 _engine = None
@@ -58,10 +57,6 @@ def read(image, eng=None):
             for t, c, b, (label, score) in zip(r.txts, r.scores, r.boxes, classes)]
 
 
-def stale(out, code=__file__):
-    return not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(code)
-
-
 def read_photo(job):
     sha1, path, out = job
     image = photos.load(path)
@@ -69,10 +64,7 @@ def read_photo(job):
     if image is not None:
         result["size"] = [image.shape[1], image.shape[0]]
         result["lines"] = read(image)
-    tmp = out + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(result, f, ensure_ascii=False)
-    os.replace(tmp, out)
+    steps.write_json(out, result)
     return sha1
 
 
@@ -120,17 +112,11 @@ def main():
     chosen = photos.chosen(args.sample)
     out_dir = os.path.join(photos.generated(args.sample), "read-text")
     os.makedirs(out_dir, exist_ok=True)
-    for f in os.listdir(out_dir):
-        if f.endswith(".json") and f[:-5] not in chosen:
-            os.remove(os.path.join(out_dir, f))
+    steps.remove_orphans(out_dir, chosen, ".json")
     jobs = [(s, p, os.path.join(out_dir, s + ".json")) for s, p in chosen.items()]
-    jobs = [j for j in jobs if stale(j[2])]
-    if jobs:
-        threads = max(1, (os.cpu_count() or 4) // args.workers)
-        with Pool(args.workers, initializer=init_worker, initargs=(threads,)) as pool:
-            for done, _ in enumerate(pool.imap_unordered(read_photo, jobs), 1):
-                if done % 50 == 0 or done == len(jobs):
-                    print(f"read {done} of {len(jobs)}", flush=True)
+    jobs = [j for j in jobs if steps.stale(j[2], __file__)]
+    threads = max(1, (os.cpu_count() or 4) // args.workers)
+    steps.run(read_photo, jobs, args.workers, init_worker, (threads,), "read")
     page(out_dir, chosen, serials.load_database())
     print(f"page: {os.path.join(out_dir, 'index.html')}")
 

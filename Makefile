@@ -11,13 +11,16 @@
 #   make read-text
 #   Reads the text on every photo (RapidOCR) into generated/read-text/<sha1>.json; the page generated/read-text/index.html.
 #
+#   make features
+#   SIFT keypoints of every photo into generated/features/<sha1>.npz; the page generated/features/index.html.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text
+.PHONY: help setup test read-text clean-read-text features clean-features
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -33,3 +36,9 @@ read-text:
 
 clean-read-text:
 	rm -rf $(GENERATED)/read-text
+
+features:
+	$(PYTHON) src/features.py $(SAMPLE_FLAG)
+
+clean-features:
+	rm -rf $(GENERATED)/features
