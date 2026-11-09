@@ -14,6 +14,9 @@
 #   make features
 #   SIFT keypoints of every photo into generated/features/<sha1>.npz; the page generated/features/index.html.
 #
+#   make edges
+#   Every straight line segment in every photo (LSD) into generated/edges/<sha1>.npz; the page generated/edges/index.html.
+#
 #   make match
 #   Pairs of photos showing something alike, with their homographies, into generated/match/; the page
 #   generated/match/index.html. Needs make features.
@@ -28,7 +31,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features match clean-match find clean-find
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -62,3 +65,9 @@ find:
 
 clean-find:
 	rm -rf $(GENERATED)/find
+
+edges:
+	$(PYTHON) src/edges.py $(SAMPLE_FLAG)
+
+clean-edges:
+	rm -rf $(GENERATED)/edges
