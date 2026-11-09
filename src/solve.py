@@ -15,13 +15,15 @@
 #      src/shape-models.json). Unknowns: a homography from the plastic's mm to the photo, and the label's shift and turn
 #      in the recess (the placement), softly held to about PLACEMENT_MM and PLACEMENT_DEG. Each model sample point is
 #      matched to the nearest segment parallel to its edge (within ANGLE) inside a window shrinking through WINDOWS;
-#      the residual is the perpendicular distance in mm, robust (soft L1, ROBUST_MM). Starts, best first: the label
-#      placed by a fixed-place logo (find); a fitted label photo's label carried through a match (one of the same
-#      release first, then the same game, then any: another layout can be off); a rectangle around the evidence,
-#      turned by its serial's reading direction and scaled by its height. A start is dropped when less than
-#      MIN_SUPPORT of the model's sample points end up along segments (within ON_MM), or less than MIN_FACE of the
-#      cartridge's outline (a label placed far off still finds label- and recess-like lines: on the sample, 0.4 kept
-#      69 of 70 fits within 2 mm of main's and dropped 87 of 109 farther off), and the next tried.
+#      the residual is the perpendicular distance in mm, robust (soft L1, ROBUST_MM). Starts: the label placed by a
+#      fixed-place logo (find); else the pose search: thousands of poses of the model near the evidence scored by how
+#      close its sample points land to segments of their own direction (edge_maps, search_poses), the best few fitted,
+#      the best supported kept. Its turn is the direction most of the label's text reads (along the label on 193 of
+#      194 label photos of the sample), its scale the details' and the serial line's. (Carrying a fitted label photo's
+#      pose through a match was tried as a start: 37 % of those fits under 5 mm from main's, against the search's 84 %;
+#      dropped.) A fit is dropped when less than MIN_SUPPORT of the model's sample points end up along segments
+#      (within ON_MM), or less than MIN_FACE of the cartridge's outline (a label placed far off still finds label- and
+#      recess-like lines: on the sample, 0.4 kept 69 of 70 fits within 2 mm of main's and dropped 87 of 109 farther off).
 #   2. Each linked set: matched points (match's inliers, assigned to label photo pairs) map into each sticker's
 #      frame; a link's shift and turn between the two frames counts if within MAX_SHIFT and MAX_TURN (else the two are
 #      likely other layouts sharing a template); one least-squares fit gives every label photo a shift and turn, the
@@ -162,6 +164,112 @@ def local_scale(H, rect):
     return np.sqrt(abs(cv2.contourArea(q.astype(np.float32))) / ((x1 - x0) * (y1 - y0)))
 
 
+# The pose search: where no good start is known, many poses of the cartridge model near the label photo's evidence
+# are scored cheaply against the photo's segments, and the best few refined by fit_nested.
+MAP_SIDE = 1000           # the edge maps' long side, px
+DIRECTIONS = 8            # edge direction bins over 180 degrees
+SEARCH_TURNS = (-10, -5, 0, 5, 10)   # degrees around each quarter turn of the base angle
+SEARCH_SCALES = (0.8, 0.87, 0.93, 1.0, 1.07, 1.15, 1.25)
+SEARCH_RANGE = 25.0       # mm: the label's centre searched within this of the evidence's centre
+SEARCH_STEP = 1.5         # mm
+SEARCH_SIGMA = 0.7        # mm: how fast a sample point's score falls with its distance from an edge
+SEARCH_REFINE = 6         # the best distinct poses refined
+
+
+def edge_maps(segs, size):
+    """Per edge direction bin, the distance (px of the map) to the nearest segment of about that direction, and the
+    map's scale (photo px per map px)."""
+    scale = max(1.0, max(size) / MAP_SIDE)
+    w, h = int(np.ceil(size[0] / scale)) + 1, int(np.ceil(size[1] / scale)) + 1
+    angle = np.degrees(np.arctan2(segs[:, 3] - segs[:, 1], segs[:, 2] - segs[:, 0])) % 180
+    b = np.round(angle / (180 / DIRECTIONS)).astype(int) % DIRECTIONS
+    maps = []
+    for k in range(DIRECTIONS):
+        img = np.full((h, w), 255, np.uint8)
+        for s_ in segs[(b == k) | (b == (k + 1) % DIRECTIONS) | (b == (k - 1) % DIRECTIONS)] / scale:
+            cv2.line(img, (int(round(s_[0])), int(round(s_[1]))), (int(round(s_[2])), int(round(s_[3]))), 0, 1)
+        maps.append(cv2.distanceTransform(img, cv2.DIST_L2, 3))
+    return np.stack(maps), scale
+
+
+def base_estimate(lp, lines=()):
+    """A label photo's rough turn (degrees; None if unknown) and scale (photo px per mm) from its evidence. The turn:
+    the direction most of the text read in its circle runs (weighted by length; RapidOCR's lines read in order): on
+    the sample, along the label on 193 of 194 label photos (a detail's turn was a quarter turn off on 17 of 152). The
+    scale: the median of its details' and its serial line's (about 2.2 mm tall), else its circle (a label's diagonal)."""
+    weight = {}
+    for line in lines:
+        c = np.float64(line["corners"])
+        if np.hypot(*(c.mean(0) - lp["centre"])) > lp["radius"]:
+            continue
+        v = c[1] - c[0]
+        a = np.degrees(np.arctan2(v[1], v[0]))
+        q = int(np.round(a / 90)) % 4
+        weight.setdefault(q, []).append((np.linalg.norm(v), a))
+    turn = None
+    if weight:
+        q = max(weight, key=lambda k: sum(w for w, _ in weight[k]))
+        ws = weight[q]
+        turn = float(np.degrees(np.arctan2(sum(w * np.sin(np.radians(a)) for w, a in ws), sum(w * np.cos(np.radians(a)) for w, a in ws))))
+    scales = [d["px_per_mm"] for d in lp.get("details", [])]
+    for t in lp["strings"][:1]:
+        c = np.float64(t["corners"])
+        scales.append((np.linalg.norm(c[3] - c[0]) + np.linalg.norm(c[2] - c[1])) / 2 / 2.2)
+    scale = float(np.median(scales)) if scales else float(lp["radius"] / find.LABEL_DIAGONAL)
+    return turn, scale
+
+
+def search_poses(lp, shape, maps, map_scale, lines=()):
+    """The best distinct poses (plastic mm -> photo, similarities) of the cartridge model near the label photo, by how
+    close the model's sample points land to segments of their own direction: [(score, H)]."""
+    pts, nrm, kinds = model_samples(shape)
+    x0, y0, x1, y1 = MODELS[shape]["label"]
+    centre_mm = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
+    rel = pts - centre_mm
+    tangent_angle = np.degrees(np.arctan2(nrm[:, 0], -nrm[:, 1])) % 180  # the edge's direction, perpendicular to its normal
+    base_angle, base_scale = base_estimate(lp, lines)
+    quarters = (0,) if base_angle is not None else (0, 90, 180, 270)
+    base_angle = base_angle or 0.0
+    centre = np.float64(lp["outline"]).mean(0) if len(lp["outline"]) >= 3 else np.float64(lp["centre"])
+    nd, mh, mw = maps.shape
+    results = []
+    for quarter in quarters:
+        for dt in SEARCH_TURNS:
+            th = np.radians(base_angle + quarter + dt)
+            R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+            bins = np.round(((tangent_angle + np.degrees(th)) % 180) / (180 / DIRECTIONS)).astype(int) % DIRECTIONS
+            for k in SEARCH_SCALES:
+                ppm = base_scale * k
+                offs = (rel @ R.T) * ppm / map_scale  # sample points around the label's centre, map px
+                step = SEARCH_STEP * ppm / map_scale
+                n = int(SEARCH_RANGE / SEARCH_STEP)
+                grid = np.arange(-n, n + 1) * step
+                cx = centre[0] / map_scale + grid
+                cy = centre[1] / map_scale + grid
+                X = cx[None, :, None] + offs[:, 0][:, None, None]   # samples x positions-x x 1
+                Y = cy[None, None, :] + offs[:, 1][:, None, None]   # samples x 1 x positions-y
+                xi = np.clip(np.round(X).astype(int), 0, mw - 1)
+                yi = np.clip(np.round(Y).astype(int), 0, mh - 1)
+                inside = (X >= 0) & (X < mw) & (Y >= 0) & (Y < mh)
+                d = maps[bins[:, None, None], yi, xi] * map_scale / ppm  # mm
+                score = (np.exp(-(d / SEARCH_SIGMA) ** 2) * inside).mean(0)  # positions-x x positions-y
+                i, j = np.unravel_index(np.argmax(score), score.shape)
+                for i, j in zip(*np.unravel_index(np.argsort(-score, axis=None)[:3], score.shape)):
+                    c = np.array([cx[i], cy[j]]) * map_scale
+                    A = ppm * R
+                    t = c - A @ centre_mm
+                    H = np.array([[A[0, 0], A[0, 1], t[0]], [A[1, 0], A[1, 1], t[1]], [0, 0, 1]])
+                    results.append((float(score[i, j]), H, c, base_angle + quarter + dt, ppm))
+    results.sort(key=lambda r: -r[0])
+    chosen = []
+    for r in results:  # distinct: centres over 3 mm apart, or turns over 5 degrees
+        if all(np.linalg.norm(r[2] - c[2]) > 3 * r[4] or abs((r[3] - c[3] + 180) % 360 - 180) > 5 for c in chosen):
+            chosen.append(r)
+        if len(chosen) >= SEARCH_REFINE:
+            break
+    return [(r[0], r[1]) for r in chosen]
+
+
 def similarity_to_H(centre, angle_deg, px_per_mm, shape):
     """label mm -> photo: the label's centre at centre, turned by angle, at px_per_mm."""
     w, h = shapes.LABEL_MM[shape]
@@ -169,27 +277,6 @@ def similarity_to_H(centre, angle_deg, px_per_mm, shape):
     R = px_per_mm * np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
     t = np.asarray(centre) - R @ [w / 2, h / 2]
     return np.vstack([np.hstack([R, t[:, None]]), [0, 0, 1]])
-
-
-def evidence_start(lp, shape):
-    """A rough start from a label photo's evidence: its outline's centre, its serial's reading direction (or the
-    first string's, or level), scaled by the line's height (the serial's line about 2.2 mm)."""
-    if not lp["strings"]:
-        return None
-    c = np.float64(lp["strings"][0]["corners"])
-    d = c[1] - c[0]
-    height = (np.linalg.norm(c[3] - c[0]) + np.linalg.norm(c[2] - c[1])) / 2
-    centre = np.float64(lp["outline"]).mean(0) if len(lp["outline"]) >= 3 else c.mean(0)
-    return similarity_to_H(centre, np.degrees(np.arctan2(d[1], d[0])), height / 2.2, shape)
-
-
-def release_of(lp):
-    return next((t["release"] for t in lp["strings"] if t.get("release")), None)
-
-
-def game_of(lp):
-    s = next((t["serial"] for t in lp["strings"] if t["kind"] != "unknown"), None)
-    return s.split("-")[1][:3] if s else None
 
 
 def link_points(lps, matches):
@@ -210,11 +297,6 @@ def link_points(lps, matches):
     return out
 
 
-def photo_homography(pa, pb):
-    H, mask = cv2.findHomography(np.float32(pa), np.float32(pb), cv2.USAC_MAGSAC, 3.0)
-    return H
-
-
 def rigid_fit(a, b):
     """b ~ R(theta) a + t, least squares: (theta degrees, t)."""
     ca, cb = a.mean(0), b.mean(0)
@@ -230,6 +312,9 @@ def stage1(lps, edges_dir, pairs):
     segs = {}
     get_segs = lambda s: segs.setdefault(s, np.load(os.path.join(edges_dir, s + ".npz"))["segments"].astype(np.float64))
     fits, failed = {}, {}
+
+    texts = {}
+    get_lines = lambda s: texts.setdefault(s, json.load(open(os.path.join(os.path.dirname(edges_dir), "read-text", s + ".json")))["lines"])
 
     def attempt(lp, H0, start):
         """H0: a start for the label (label mm -> photo)."""
@@ -258,28 +343,21 @@ def stage1(lps, edges_dir, pairs):
         if lp.get("placed_by") and len(lp["outline"]) == 4:
             mm = corners_mm(lp["shape"])
             attempt(lp, cv2.getPerspectiveTransform(mm.astype(np.float32), np.float32(lp["outline"])).astype(np.float64), "placed by " + lp["placed_by"])
-    # carried through matches from fitted ones, best related first, until nothing more is fitted
-    neighbours = {}
-    for (a, b), (pa, pb) in pairs.items():
-        neighbours.setdefault(a, []).append((b, pb, pa))  # (other key, points there, points here)
-        neighbours.setdefault(b, []).append((a, pa, pb))
-    changed = True
-    while changed:
-        changed = False
-        for lp in todo:
-            if lp["key"] in fits:
-                continue
-            cands = [(o, po, ph) for o, po, ph in neighbours.get(lp["key"], []) if o in fits and by_key[o]["shape"] == lp["shape"]]
-            rank = lambda c: (release_of(by_key[c[0]]) != release_of(lp) or release_of(lp) is None,
-                              game_of(by_key[c[0]]) != game_of(lp) or game_of(lp) is None, -len(c[1]))
-            for o, po, ph in sorted(cands, key=rank):
-                M = photo_homography(po, ph)  # other photo -> this photo
-                if M is not None and attempt(lp, M @ fits[o]["cut_to_photo"], "carried from " + o):
-                    changed = True
-                    break
-    # from the evidence
+    # the pose search
     for lp in todo:
-        if lp["key"] not in fits and not attempt(lp, evidence_start(lp, lp["shape"]), "evidence"):
+        if lp["key"] in fits:
+            continue
+        e = np.load(os.path.join(edges_dir, lp["photo"] + ".npz"))
+        maps, map_scale = edge_maps(get_segs(lp["photo"]), tuple(e["size"]))
+        best = None
+        for score, Hp in search_poses(lp, lp["shape"], maps, map_scale, get_lines(lp["photo"])):
+            if attempt(lp, Hp @ label_to_plastic(lp["shape"]), f"search ({score:.2f})"):
+                f = fits.pop(lp["key"])
+                if best is None or np.mean(list(f["support"].values())) > np.mean(list(best["support"].values())):
+                    best = f
+        if best is not None:
+            fits[lp["key"]] = best
+        else:
             failed[lp["key"]] = "no outline found"
     return fits, failed
 
@@ -367,7 +445,7 @@ def solve(found, matches, edges_dir):
                   "plastic_to_photo": f["plastic_to_photo"].tolist(),
                   "placement": [round(v, 3) for v in f["placement"]],
                   "start": f["start"], "support": f["support"],
-                  "fallback": None if not f["start"].startswith("evidence") else "started from the evidence only",
+                  "fallback": None if not f["start"].startswith("search") else "found by the pose search",
                   "residual_mm": None if residual.get(k) is None else round(residual[k], 3)}
     return {"label_photos": out, "sets": set_info, "unsolved": failed}
 
@@ -375,8 +453,8 @@ def solve(found, matches, edges_dir):
 def page(out_dir, chosen, result, sizes):
     lps = result["label_photos"]
     rel = os.path.relpath(".", out_dir)
-    kinds = ["placed", "carried", "evidence"]
-    group = lambda r: next((k for k in kinds if r["start"].startswith(k)), "evidence")
+    kinds = ["placed", "carried", "search"]
+    group = lambda r: next((k for k in kinds if r["start"].startswith(k)), "search")
     by_kind = {k: sorted([(key, r) for key, r in lps.items() if group(r) == k], key=lambda kv: -kv[1]["support"]["face"]) for k in kinds}
 
     def figure(key, r):
