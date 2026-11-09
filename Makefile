@@ -29,13 +29,17 @@
 #   Every label photo's homography into ink coordinates (the sticker's cut fitted to the edges, the linked sets aligned
 #   by their matches) into generated/solve/solve.json; the page generated/solve/index.html. Needs make find and edges.
 #
+#   make straighten
+#   Every solved label photo in ink coordinates (20 px/mm, 5 mm around the label) into generated/straighten/; the page
+#   generated/straighten/index.html. Needs make solve.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -81,3 +85,9 @@ solve:
 
 clean-solve:
 	rm -rf $(GENERATED)/solve
+
+straighten:
+	$(PYTHON) src/straighten.py $(SAMPLE_FLAG)
+
+clean-straighten:
+	rm -rf $(GENERATED)/straighten
