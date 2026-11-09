@@ -105,3 +105,20 @@ def test_refining_corrects_a_corner_off_by_a_millimetre():
     # label corners to where the distortion put them
     C = corrections["c"][0]
     assert np.abs(solve.project(C, mm) - off).max() < 0.25
+
+
+def test_release_groups_are_aligned_to_each_other_on_shared_tiles():
+    from test_match import textured
+    print_ = cv2.resize(textured(np.random.default_rng(7), 200, 234), None, fx=3, fy=3)  # coarse, as label art
+    px = 12
+    cut = np.array([[px, 0, 30.0], [0, px, 30.0], [0, 0, 1]])
+    shifted = cut @ np.array([[1, 0, 0.8], [0, 1, -0.5], [0, 0, 1.0]])   # group b's fits 0.8, -0.5 mm off
+    views = {"a1": solve.compare_view(print_, cut, "dmg"), "a2": solve.compare_view(print_, cut, "dmg"),
+             "b1": solve.compare_view(print_, shifted, "dmg")}
+    offsets = {k: np.zeros(3) for k in views}
+    corrections = {}
+    solve.align_groups([["a1", "a2"], ["b1"]], views, offsets, corrections, "dmg")
+    C = corrections["b1"][0]
+    # a print point at mm p lies at p - (0.8, -0.5) in b1's frame; corrected, it should be back at p
+    p = np.array([[10.0, 10.0], [30.0, 25.0]])
+    assert np.abs(solve.project(C, p - [0.8, -0.5]) - p).max() < 0.15

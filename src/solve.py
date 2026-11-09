@@ -783,11 +783,14 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
         for k in members:
             if not release_of.get(k) and largest is not members:
                 largest.append(k)
-        for group in (by_release.values() if by_release else [members]):
+        groups = [g for g in (by_release.values() if by_release else [members])]
+        for group in groups:
             if len(group) >= 2:
                 c, bad = refine_family(group, views, offsets, shape_of[group[0]])
                 corrections.update(c)
                 poor |= bad
+        if len(groups) > 1:  # the release groups aligned to each other on the tiles they share
+            align_groups(groups, views, offsets, corrections, shape_of[members[0]])
     info = {"link candidates": len(candidates), "judged": len(judged),
             "pixels agree": int(sum(pixel_ok(i, j) for i, j in judged.items())),
             "counting links": len(links), "poor fits": len(poor),
@@ -816,6 +819,69 @@ def ink_view(view, offset):
     S = mm_to_view_px()
     M = S @ offset_matrix(offset) @ np.linalg.inv(S)  # sticker px -> ink px
     return cv2.warpPerspective(view, M, (view.shape[1], view.shape[0]), flags=cv2.INTER_LINEAR, borderValue=np.nan)
+
+
+def corrected_view(k, views, offsets, corrections):
+    """A label photo's view in its corrected ink coordinates (NaN outside)."""
+    S = mm_to_view_px()
+    v = ink_view(views[k], offsets[k])
+    C = corrections.get(k, (np.eye(3), 0))[0]
+    M = S @ C @ np.linalg.inv(S)  # ink px -> corrected ink px
+    return cv2.warpPerspective(v, M, (v.shape[1], v.shape[0]), flags=cv2.INTER_LINEAR, borderValue=np.nan)
+
+
+def align_groups(groups, views, offsets, corrections, shape):
+    """Aligns a family's release groups to its largest by the pixels of the tiles they share (their median views
+    correlating over TILE_CORRELATION in COMPARE_TILE_MM tiles): nearly-same prints of different releases (Fire Red,
+    Leaf Green) refined per release were never aligned to each other. The alignment is composed onto the members'
+    corrections."""
+    S = mm_to_view_px()
+    corners = corners_mm(shape)
+    import warnings
+    medians = []
+    for g in groups:
+        vs = [corrected_view(k, views, offsets, corrections) for k in g if views.get(k) is not None]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            medians.append(np.nanmedian(np.stack(vs), 0) if vs else None)
+    main = max(range(len(groups)), key=lambda i: len(groups[i]))
+    ref = medians[main]
+    t = int(COMPARE_TILE_MM * COMPARE_PX_PER_MM)
+    blur = lambda v: cv2.GaussianBlur(np.nan_to_num(v).astype(np.float32), (0, 0), COMPARE_PX_PER_MM * 0.4)
+    for i, (g, med) in enumerate(zip(groups, medians)):
+        if i == main or med is None or ref is None:
+            continue
+        # a coarse shift first (phase correlation), then the shared tiles found on blurred views, aligned on sharp ones
+        (sx, sy), _ = cv2.phaseCorrelate(np.nan_to_num(ref).astype(np.float64), np.nan_to_num(med).astype(np.float64))
+        if np.hypot(sx, sy) > MAX_CORRECTION_MM * COMPARE_PX_PER_MM:
+            sx = sy = 0.0
+        T = np.array([[1, 0, sx], [0, 1, sy], [0, 0, 1]], np.float32)  # ref px -> med px
+        med_on_ref = cv2.warpPerspective(med, T, (med.shape[1], med.shape[0]), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=np.nan)
+        rb, mb = blur(ref), blur(med_on_ref)
+        mask = np.zeros(ref.shape, np.uint8)
+        for y in range(0, ref.shape[0] - t + 1, t):
+            for x in range(0, ref.shape[1] - t + 1, t):
+                if not (np.isfinite(ref[y:y + t, x:x + t]).all() and np.isfinite(med_on_ref[y:y + t, x:x + t]).all()):
+                    continue
+                a, b = rb[y:y + t, x:x + t].ravel(), mb[y:y + t, x:x + t].ravel()
+                if a.std() >= 0.2 and b.std() >= 0.2 and np.corrcoef(a, b)[0, 1] > TILE_CORRELATION:
+                    mask[y:y + t, x:x + t] = 1
+        if mask.mean() < 0.05:
+            continue
+        W = T.copy()
+        try:
+            _, W = cv2.findTransformECC(np.nan_to_num(ref).astype(np.float32), np.nan_to_num(med).astype(np.float32), W,
+                                        cv2.MOTION_HOMOGRAPHY, (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 100, 1e-5), mask, 3)
+        except cv2.error:
+            continue
+        G = np.linalg.inv(np.linalg.inv(S) @ W.astype(np.float64) @ S)  # the group's corrected mm -> the main group's
+        if np.max(np.linalg.norm(project(G, corners) - corners, axis=1)) > MAX_CORRECTION_MM:
+            continue
+        for k in g:
+            C, _ = corrections.get(k, (np.eye(3), 0))
+            C2 = G @ C
+            moved = float(np.max(np.linalg.norm(project(C2, corners) - corners, axis=1)))
+            corrections[k] = (C2 / C2[2, 2], moved)
 
 
 def refine_family(members, views, offsets, shape):
