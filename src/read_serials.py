@@ -6,12 +6,18 @@
 # The reads: OCR (read_text, RapidOCR) of the straightened label photo (straighten: upright, no perspective), and the
 # serials find read in the photo. Decided, in order:
 #   own: its own exact reads give one release;
-#   own, with its family: they give several, the one most of its family's own exact reads support;
-#   near: no exact read, a near serial (serials.near) its family supports, or its only one;
+#   own, with its title or family: they give several, the one whose title the label's text holds, else the one most
+#     of its family's own exact reads support;
+#   near: no exact read, a near serial (serials.near) its family supports or whose title is on the label, or its only
+#     one;
 #   family: no exact or near read of its own, and its family's own exact reads agree on one release, read by more
 #     than half its other members that read anything serial-like (one cut-off serial that's a real release, DMG-BQ,
 #     isn't passed on to the members reading DMG-BON for DMG-BQIJ);
+#   (a release found by title alone is only a guess, "title_guess": on the full set 4 of 8 were right. Template words,
+#     GAME BOY COLOR and the like, are left out of the comparison: they matched titles like "Game Boy Color".)
 #   unknown: else (a serial-looking string the database doesn't know is kept, as a possible new release).
+# Every label photo also gets "title_score" (how much of its release's title the label's text holds; low on many
+# right ones: logos, stylised titles, Japanese against romanised titles) and, without a release, "title_guess".
 # The family (solve: label photos joined by links whose points and pixels agree) only settles a label photo's own
 # doubt: families can hold a series' games sharing a layout, and nearly-same prints have serials of their own.
 # Done again when serials.json is older than this file, solve.json or find's label-photos.json; the OCR of a
@@ -53,9 +59,12 @@ def own_reads(lines, strings, release_of, regions):
     return reads
 
 
-def decide(reads, family_reads, release_of, family_readers=0):
+def decide(reads, family_reads, release_of, family_readers=0, title=None, by_title=None):
     """(serial, release id, decided_by) from a label photo's reads, its family's own exact reads (Counter of release
-    ids, its own left out: how many members read each) and how many of its other members read anything serial-like."""
+    ids, its own left out: how many members read each), how many of its other members read anything serial-like,
+    title(release id) -> how much of its title the label's text holds, and by_title: (release id, serial) found by
+    title alone, or None."""
+    title = title or (lambda rid: 0.0)
     rel = lambda s: serials.release(s, release_of)["id"]
     exact = [r for r in reads if r["kind"] == "exact"]
     if exact:
@@ -63,24 +72,57 @@ def decide(reads, family_reads, release_of, family_readers=0):
         if len(by_release) == 1:
             r = exact[0]
             return r["serial"], rel(r["serial"]), "own"
-        best = max(by_release, key=lambda k: (family_reads.get(k, 0), by_release[k]))
+        best = max(by_release, key=lambda k: (title(k) >= TITLE_SEEN, family_reads.get(k, 0), title(k), by_release[k]))
         r = next(r for r in exact if rel(r["serial"]) == best)
-        return r["serial"], best, "own, with its family"
+        return r["serial"], best, "own, with its title or family"
     near = [r for r in reads if r["kind"] == "near"]
     if near:
-        supported = [r for r in near if family_reads.get(rel(r["serial"]), 0) > 0]
+        supported = [r for r in near if family_reads.get(rel(r["serial"]), 0) > 0 or title(rel(r["serial"])) >= TITLE_SEEN]
         if supported or len({r["serial"] for r in near}) == 1:
-            r = (supported or near)[0]
+            r = max(supported or near, key=lambda r: title(rel(r["serial"])))
             return r["serial"], rel(r["serial"]), "near"
     if len(family_reads) == 1 and next(iter(family_reads.values())) > family_readers / 2:
         # more than half the members reading anything serial-like agree (a cut-off serial that's a real release, read
         # by one, isn't passed on to those reading something else: DMG-BQ for DMG-BQIJ)
         release = next(iter(family_reads))
         return None, release, "family"
+    if by_title:
+        return by_title[1], by_title[0], "title"
     unknown = [r for r in reads if r["kind"] == "unknown"]
     if unknown:
         return unknown[0]["serial"], None, "unknown"
     return None, None, "unknown"
+
+
+# Titles: the label's text (all of the straightened label photo's lines, and the photo's lines within the label
+# photo's circle) against the database's titles (serials.title_score). A title counts as seen at TITLE_SEEN. Found by
+# title alone (no exact or near serial): the best match at TITLE_FOUND or more, of a title of at least 5 characters,
+# among the shape's platforms; one release, or the one of the best's game whose region a serial-looking read gives;
+# else the game is recorded ("title_game"), not a release.
+TITLE_SEEN = 0.5
+TITLE_FOUND = 0.7
+SYSTEMS = {"dmg": {"dmg", "cgb"}, "cgb": {"cgb"}, "agb": {"agb"}}
+
+
+def find_by_title(text_plain, shape, reads, index, release_of):
+    """((release id, serial) or None, the best match's game or None)."""
+    found = index.search(text_plain, SYSTEMS.get(shape)) if text_plain else []
+    found = [(sc, r) for sc, r in found if sc >= TITLE_FOUND and len(serials.plain(r["title"])) >= 5]
+    if not found:
+        return None, None
+    top = found[0][0]
+    best = [r for sc, r in found if sc >= top - 0.05]
+    game = best[0]["gameId"][:7]
+    if len({r["id"] for r in best}) == 1:
+        r = best[0]
+    else:
+        regions = {serials.region_of(x["serial"]) for x in reads if x["serial"]}
+        pick = [r for r in best if any(s.endswith("-" + g) for s in r.get("cartridgeSerials", []) for g in regions if g)]
+        if len(pick) != 1:
+            return None, game
+        r = pick[0]
+    serial = (r.get("cartridgeSerials") or [r["id"]])[0]
+    return (r["id"], serial), game
 
 
 def page(out_dir, result, missing, unknown, gen):
@@ -134,7 +176,25 @@ def main():
     release_of = serials.load_database()
     if not os.path.exists(out) or os.path.getmtime(out) < newest:
         regions = serials.by_region(release_of)
-        reads = {k: own_reads(json.load(open(ocr_out[k])), found.get(k, {}).get("strings", []), release_of, regions) for k in solved}
+        index = serials.TitleIndex(json.load(open(serials.DATABASE)))
+        by_id = {}
+        for r_ in release_of.values():
+            by_id.setdefault(r_["id"], r_)
+        ocr = {k: json.load(open(ocr_out[k])) for k in solved}
+        reads = {k: own_reads(ocr[k], found.get(k, {}).get("strings", []), release_of, regions) for k in solved}
+        photo_lines = {}
+        def label_text(k):
+            lp = found.get(k)
+            lines = [l["text"] for l in ocr[k]]
+            if lp is not None:
+                if lp["photo"] not in photo_lines:
+                    photo_lines[lp["photo"]] = json.load(open(os.path.join(gen, "read-text", lp["photo"] + ".json")))["lines"]
+                c, rad = lp["centre"], lp["radius"]
+                for l in photo_lines[lp["photo"]]:
+                    m = [sum(p[0] for p in l["corners"]) / 4, sum(p[1] for p in l["corners"]) / 4]
+                    if (m[0] - c[0]) ** 2 + (m[1] - c[1]) ** 2 < rad ** 2:
+                        lines.append(l["text"])
+            return serials.plain(" ".join(lines))
         family_of = {k: v["family"] for k, v in solved.items()}
         own_release = {k: Counter(serials.release(r["serial"], release_of)["id"] for r in rs if r["kind"] == "exact") for k, rs in reads.items()}
         result = {}
@@ -144,8 +204,15 @@ def main():
                 if f == family_of[k] and o != k:
                     fam.update({rid: 1 for rid in own_release[o]})
                     readers += bool(reads[o])
-            serial, release, how = decide(reads[k], fam, release_of, readers)
-            result[k] = {"reads": reads[k], "serial": serial, "release": release, "decided_by": how, "family": family_of[k]}
+            text = label_text(k)
+            title = lambda rid, text=text: serials.title_score(by_id[rid], text) if rid in by_id else 0.0
+            has_serial = bool(reads[k]) or bool(fam)  # title search only where nothing serial-like is read: a clear
+            # serial the database lacks (AGB-ATUJ-JPN) is a possible new release, not to be replaced by another region's
+            by_title, game = (None, None) if has_serial else find_by_title(text, solved[k]["shape"], reads[k], index, release_of)
+            serial, release, how = decide(reads[k], fam, release_of, readers, title)
+            result[k] = {"reads": reads[k], "serial": serial, "release": release, "decided_by": how, "family": family_of[k],
+                         "title_score": round(title(release), 2) if release else None,
+                         "title_guess": (by_title[1] if by_title else game) if not release else None}
         steps.write_json(out, result)
         covered = {v["release"] for v in result.values() if v["release"]}
         everything = sorted({r["id"] for r in json.load(open(serials.DATABASE))})
