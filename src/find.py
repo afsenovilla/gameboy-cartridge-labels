@@ -15,7 +15,9 @@
 #   2. Its area. Placed, if it has a detail at one place on every label of its shape (details/places.json: the GAME BOY
 #      COLOR logos, KONAMI): the label's rectangle through the detail's homography is its outline, its circle just
 #      around it, and the detail gives the shape; not if a serial's shape contradicts it (the white-background GAME
-#      BOY COLOR logo is also on European CGB labels, elsewhere). Otherwise a circle of a label's diagonal around the seeds: RADIUS line heights of a string (the serial's line is
+#      BOY COLOR logo is also on European CGB labels, elsewhere). Else placed by a text at one place on its layout
+#      (src/texts.py, details/text-places.json: strip texts of US and European DMG labels, the GAME BOY COLOR logo's
+#      text), from the line's start, direction and scale, where the place's needs are met. Otherwise a circle of a label's diagonal around the seeds: RADIUS line heights of a string (the serial's line is
 #      about 2.2 mm tall on DMG labels and sits anywhere on the label), or LABEL_DIAGONAL mm at a detail's scale (its
 #      image is 20 px/mm, so its homography gives the photo's px/mm); the matched points inside it make the outline.
 #   3. Spreading: a match whose points in one photo lie mostly inside a label photo's circle makes a label photo where
@@ -29,14 +31,14 @@
 # The shape is the serial's platform (DMG-, CGB-, AGB-); a label photo found by matching takes its linked ones' (most).
 # Keys: <sha1>@<x>,<y>, the centre in whole percent of the photo's width and height.
 # Done again when label-photos.json is older than this file or than any of its inputs.
-# With --no-strings, the text isn't used at all (details and matches only), into <generated>/find-no-strings/: to
-# compare.
-# Usage: find.py [--sample] [--no-strings]
+# To compare, into <generated>/find-<variant>/: --no-strings, the text isn't used at all (details and matches only);
+# --no-serials, the texts at fixed places but no serials; --no-text-places, no texts at fixed places.
+# Usage: find.py [--sample] [--no-strings] [--no-serials] [--no-text-places]
 import argparse, html, json, os, re, sys
 import numpy as np, cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, serials, steps, match, details, shapes
+import photos, serials, steps, match, details, shapes, texts as text_places
 
 MERGE = 12          # line heights: strings closer than this are one label's
 RADIUS = 28         # line heights: a label's diagonal around its serial
@@ -46,6 +48,19 @@ PLACED_RADIUS = 1.15  # a placed label's circle: its half diagonal, and a little
 INSIDE = 0.5        # the share of a match's points that must lie in a label photo's circle for it to spread
 MIN_POINTS = 15
 MERGE_OVERLAP = 0.5  # label photos of one photo sharing this much of the smaller outline are one
+
+
+def text_seeds(lines, places):
+    """Lines reading a text at one place on a layout (details/text-places.json), as seeds."""
+    out = []
+    for line in lines:
+        for p in text_places.matching(line["text"], places)[:1]:
+            c = np.array(line["corners"], float)
+            ppm = text_places.scale(line["corners"], p)
+            out.append({"kind": "text", "text": line["text"], "place": p["name"], "corners": line["corners"],
+                        "centre": c.mean(0).tolist(), "px_per_mm": float(ppm),
+                        "reach": DETAIL_REACH * LABEL_DIAGONAL * ppm, "radius": LABEL_DIAGONAL * ppm})
+    return out
 
 
 def seeds(lines, release_of, regions):
@@ -107,7 +122,7 @@ def outline(lp):
     corners."""
     if lp.get("placed") is not None:
         return np.round(lp["placed"], 1).tolist()
-    pts = [np.asarray(p) for p in lp["points"]] + [np.array(t["corners"], float) for t in lp["strings"] + lp.get("details", [])]
+    pts = [np.asarray(p) for p in lp["points"]] + [np.array(t["corners"], float) for t in lp["strings"] + lp.get("details", []) + lp.get("texts", [])]
     pts = np.vstack(pts) if pts else lp["centre"].reshape(1, 2)
     return cv2.convexHull(pts.astype(np.float32)).reshape(-1, 2).round(1).tolist() if len(pts) >= 3 else pts.tolist()
 
@@ -122,7 +137,7 @@ def overlap(a, b):
     return float(area / smaller) if smaller > 0 else 0.0
 
 
-FOUND_BY = ["serial", "near serial", "detail", "string and match", "match"]
+FOUND_BY = ["serial", "near serial", "detail", "text", "string and match", "match"]
 
 
 def merge_overlapping(lps):
@@ -138,6 +153,7 @@ def merge_overlapping(lps):
         keep["strings"] = keep["strings"] + other["strings"]
         keep["points"] = keep["points"] + other["points"]
         keep["details"] = keep.get("details", []) + other.get("details", [])
+        keep["texts"] = keep.get("texts", []) + other.get("texts", [])
         if keep.get("placed") is None and other.get("placed") is not None:
             keep["placed"], keep["placed_by"] = other["placed"], other["placed_by"]
         keep["found_by"] = min(keep["found_by"], other["found_by"], key=FOUND_BY.index)
@@ -161,6 +177,7 @@ def place(lp, places, photo_seeds=()):
         return not shapes_seen or places[d["detail"]]["shape"] in shapes_seen
     best = max((d for d in lp.get("details", []) if d["detail"] in places and allowed(d)), key=lambda d: d["inliers"], default=None)
     if best is None:
+        place_by_text(lp, photo_seeds)
         return
     corners = details.placed_label(best, places, best["size"], shapes.LABEL_MM)
     lp["placed"], lp["placed_by"] = corners, best["detail"]
@@ -169,23 +186,65 @@ def place(lp, places, photo_seeds=()):
     lp["detail_shape"] = places[best["detail"]]["shape"]
 
 
-def find(chosen, texts, matches, release_of, detections=None, use_strings=True, places=None):
+TEXT_PRIORITY = ["GAME BOY COLOR (DMG)", "GAME BOY COLOR (CGB)", "THIS SIDE OUT", "MADE IN JAPAN on the strip", "serial on the strip"]
+_text_places = []
+
+
+def region_of(serial):
+    """A serial's region: its last part, if it has three (DMG-ASWP-EUR, not the old code of DMG-UJA) and it's one."""
+    parts = re.sub(r"^DIS-", "", serial or "").split("-")
+    return parts[2] if len(parts) >= 3 and parts[2] in serials.REGIONS else None
+
+
+def place_by_text(lp, photo_seeds=()):
+    """Places a label photo by a text at one place on its layout (details/text-places.json), if no detail did: the
+    texts read on it, and its serials on the strip; not against a serial's shape, and only where a place's needs are
+    met ("non-JPN serial": a serial of the label photo with a region other than JPN)."""
+    serial_seeds = [t for t in lp["strings"] if t["kind"] in ("exact", "near")]
+    shapes_seen = {shape_of(t["serial"]) for t in serial_seeds}
+    non_jpn = any(region_of(t["serial"]) not in (None, "JPN") for t in serial_seeds)
+    options = []
+    for p in _text_places:
+        if shapes_seen and p["shape"] not in shapes_seen or p["needs"] == "non-JPN serial" and not non_jpn:
+            continue
+        lines = [t for t in lp.get("texts", []) if t["place"] == p["name"]] if p["kind"] == "text" else \
+                [t for t in serial_seeds if region_of(t["serial"]) not in (None, "JPN")]
+        options += [(TEXT_PRIORITY.index(p["name"]), p, t) for t in lines]
+    if not options:
+        return
+    _, p, t = min(options, key=lambda o: o[0])
+    corners = text_places.placed_label(t["corners"], p, shapes.LABEL_MM)
+    lp["placed"], lp["placed_by"] = corners, "text: " + p["name"]
+    lp["centre"] = corners.mean(0)
+    lp["radius"] = PLACED_RADIUS * max(np.hypot(*(corners - lp["centre"]).T))
+    lp["detail_shape"] = p["shape"]
+
+
+def find(chosen, texts, matches, release_of, detections=None, use_strings=True, places=None, text_place_list=None,
+         use_serials=True):
     """The label photos, their sets and the rejected candidates, from the photos' texts (unless not use_strings), the
     details found in them (sha1 -> detections) and the matches."""
+    global _text_places
+    _text_places = text_place_list or []
     regions = serials.by_region(release_of)
     sizes = {s: texts[s]["size"] or [1, 1] for s in chosen}
     lps, rejected = [], []  # label photos: dicts with "photo", "centre" (array), "radius", "strings", "found_by"
     unknown = {}            # photo -> candidates with only unknown strings, decided after the matches are known
     for s in chosen:
-        found = (seeds(texts[s]["lines"], release_of, regions) if use_strings else []) + detail_seeds((detections or {}).get(s, []))
+        lines = texts[s]["lines"] if use_strings else []
+        found = (seeds(lines, release_of, regions) if use_serials else []) + text_seeds(lines, _text_places) + \
+            detail_seeds((detections or {}).get(s, []))
         for g in group(found):
             centre = np.mean([t["centre"] for t in g], 0)
             radius = max(t["radius"] for t in g)
             kinds = {t["kind"] for t in g}
-            strings = [{k: t[k] for k in ("text", "serial", "kind", "cost", "release", "corners")} for t in g if t["kind"] != "detail"]
+            strings = [{k: t[k] for k in ("text", "serial", "kind", "cost", "release", "corners")} for t in g if t["kind"] not in ("detail", "text")]
+            found_texts = [{k: t[k] for k in ("text", "place", "corners")} for t in g if t["kind"] == "text"]
             found_details = [{k: t[k] for k in ("detail", "size", "corners", "centre", "px_per_mm", "inliers")} for t in g if t["kind"] == "detail"]
-            cand = {"photo": s, "centre": centre, "radius": radius, "strings": strings, "details": found_details, "points": [],
-                    "found_by": "serial" if "exact" in kinds else "near serial" if "near" in kinds else "detail" if "detail" in kinds else None}
+            cand = {"photo": s, "centre": centre, "radius": radius, "strings": strings, "details": found_details,
+                    "texts": found_texts, "points": [],
+                    "found_by": "serial" if "exact" in kinds else "near serial" if "near" in kinds else "detail" if "detail" in kinds
+                    else "text" if "text" in kinds else None}
             place(cand, places or {}, found)
             if cand["found_by"]:
                 lps.append(cand)
@@ -276,6 +335,7 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
     out = [{"key": lp["key"], "photo": lp["photo"], "centre": np.round(lp["centre"], 1).tolist(),
             "radius": round(float(lp["radius"]), 1), "outline": lp["outline"], "shape": lp["shape"],
             "found_by": lp["found_by"], "placed_by": lp.get("placed_by"), "strings": lp["strings"], "details": lp.get("details", []),
+            "texts": lp.get("texts", []),
             "matches": [{"to": o["key"], "inliers": n} for o, n in lp.get("links", [])]} for lp in lps]
     return {"label_photos": out, "sets": sorted(sets.values(), key=len, reverse=True), "rejected": rejected}
 
@@ -294,7 +354,7 @@ def page(out_dir, chosen, result, texts):
     for lp in lps:
         shapes[lp["shape"]] = shapes.get(lp["shape"], 0) + 1
     rel = os.path.relpath(".", out_dir)
-    colours = {"serial": "#2a2", "near serial": "#6c2", "detail": "#a3c", "string and match": "#c80", "match": "#28c"}
+    colours = {"serial": "#2a2", "near serial": "#6c2", "detail": "#a3c", "text": "#c3a", "string and match": "#c80", "match": "#28c"}
 
     def figure(s):
         w, h = texts[s]["size"] or [1, 1]
@@ -328,10 +388,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true")
     ap.add_argument("--no-strings", action="store_true")
+    ap.add_argument("--no-serials", action="store_true")
+    ap.add_argument("--no-text-places", action="store_true")
     args = ap.parse_args()
     chosen = photos.chosen(args.sample)
     gen = photos.generated(args.sample)
-    out_dir = os.path.join(gen, "find-no-strings" if args.no_strings else "find")
+    variant = "-".join(n for n, on in (("no-strings", args.no_strings), ("no-serials", args.no_serials), ("no-text-places", args.no_text_places)) if on)
+    out_dir = os.path.join(gen, "find-" + variant if variant else "find")
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, "label-photos.json")
     text_files = {s: os.path.join(gen, "read-text", s + ".json") for s in chosen}
@@ -342,11 +405,12 @@ def main():
     found = details.detections(gen, chosen)
     detail_files = [os.path.join(gen, "details", s + ".json") for s in chosen]
     places_file = os.path.join(details.DETAILS, details.PLACES)
-    newest = max(os.path.getmtime(p) for p in list(text_files.values()) + match_files + detail_files + [places_file])
+    newest = max(os.path.getmtime(p) for p in list(text_files.values()) + match_files + detail_files + [places_file, text_places.PLACES])
     texts = {s: json.load(open(p)) for s, p in text_files.items()}
     if steps.stale(out, __file__) or os.path.getmtime(out) < newest:
         result = find(chosen, texts, match.read_matches(os.path.join(gen, "match"), list(chosen)), serials.load_database(),
-                      found, use_strings=not args.no_strings, places=details.load_places())
+                      found, use_strings=not args.no_strings, places=details.load_places(),
+                      text_place_list=[] if args.no_text_places else text_places.load(), use_serials=not args.no_serials)
         steps.write_json(out, result)
     result = json.load(open(out))
     page(out_dir, chosen, result, texts)

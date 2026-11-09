@@ -1,0 +1,10 @@
+{
+  "about": "Texts OCR reads at one place on labels of a layout: the line's reading start in mm from the label's top left (main's label model), the reading direction (turn: 0 = left to right, 90 = down, 270 = up), and its length (when it's always read whole) or height in mm, for the scale. Measured 2026-11-09 on the sample's RapidOCR lines against main's accepted label fits. 'needs': when it may place a label (non-JPN serial: its own serial, or one on the label photo, isn't Japanese).",
+  "texts": [
+    {"name": "serial on the strip", "kind": "serial", "shape": "dmg", "turn": 90, "start_mm": [3.4, 4.94], "length_mm": null, "height_mm": 2.33, "needs": "non-JPN serial"},
+    {"name": "MADE IN JAPAN on the strip", "kind": "text", "text": "MADEINJAPAN", "shape": "dmg", "turn": 90, "start_mm": [3.45, 20.82], "length_mm": null, "height_mm": 2.24, "needs": "non-JPN serial"},
+    {"name": "THIS SIDE OUT", "kind": "text", "text": "THISSIDEOUT", "shape": "dmg", "turn": 270, "start_mm": [39.24, 24.61], "length_mm": 12.9, "height_mm": 2.28, "needs": null},
+    {"name": "GAME BOY COLOR (DMG)", "kind": "text", "text": "GAMEBOYCOLOR", "shape": "dmg", "turn": 270, "start_mm": [0.92, 34.78], "length_mm": 32.36, "height_mm": 5.2, "needs": null},
+    {"name": "GAME BOY COLOR (CGB)", "kind": "text", "text": "GAMEBOYCOLOR", "shape": "cgb", "turn": 270, "start_mm": [0.58, 34.81], "length_mm": 32.59, "height_mm": 5.24, "needs": null}
+  ]
+}
