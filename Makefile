@@ -14,13 +14,17 @@
 #   make features
 #   SIFT keypoints of every photo into generated/features/<sha1>.npz; the page generated/features/index.html.
 #
+#   make match
+#   Pairs of photos showing something alike, with their homographies, into generated/match/; the page
+#   generated/match/index.html. Needs make features.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features
+.PHONY: help setup test read-text clean-read-text features clean-features match clean-match
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -42,3 +46,9 @@ features:
 
 clean-features:
 	rm -rf $(GENERATED)/features
+
+match:
+	$(PYTHON) src/match.py $(SAMPLE_FLAG)
+
+clean-match:
+	rm -rf $(GENERATED)/match
