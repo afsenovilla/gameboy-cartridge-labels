@@ -1,7 +1,8 @@
 # Details in photos: where each image of details/ (common details of the labels, 20 px/mm, named by hand) is found
 # in a photo, for find. Each photo's detections are cached in <generated>/details/<sha1>.json:
 #   [{"detail" (its file name), "corners" (the detail image's corners in the photo), "centre", "px_per_mm", "inliers"}]
-# A detail is matched against the photo's SIFT keypoints (features) with Lowe's ratio test, then a RANSAC homography:
+# A detail is matched against the photo's SIFT keypoints (features), each neighbour clearly nearer than the
+# (MAX_PER_PHOTO + 1)-th kept (the plain ratio test would reject a detail found twice), then a RANSAC homography:
 # kept with MIN_INLIERS or more, plausible, at 2 to 60 photo pixels per mm; repeated without its inliers (a detail on
 # several cartridges). A photo's cache is redone when it's missing, or older than this file or any detail image.
 # Seals and the CE have too few keypoints for this (18); they're found later, in straightened label photos.
@@ -44,7 +45,10 @@ def detect(features, details):
         return found
     bf = cv2.BFMatcher()
     for name, (w, h), dpts, ddes in details:
-        ms = [m for m, o in (p for p in bf.knnMatch(ddes, des, k=2) if len(p) == 2) if m.distance < RATIO * o.distance]
+        # a detail may be in a photo several times (cartridges of one layout), so the plain ratio test (nearest against
+        # second nearest) would reject every copy: each neighbour clearly nearer than the k-th is kept
+        k = MAX_PER_PHOTO + 1
+        ms = [m for ns in bf.knnMatch(ddes, des, k=k) if len(ns) == k for m in ns[:-1] if m.distance < RATIO * ns[-1].distance]
         if len(ms) < MIN_INLIERS:
             continue
         pa = np.float32([dpts[m.queryIdx] for m in ms])
