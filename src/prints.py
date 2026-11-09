@@ -1,22 +1,19 @@
 # prints: the label photos of each family (solve) split into prints, and the pooling masks between nearly-same prints,
 # into <generated>/prints/:
-#   prints.json: {"prints": [{"id" (its smallest key), "keys", "release", "serial", "shape", "family"}],
-#                 "poor_fits": [keys], "tile_mm": TILE_MM,
-#                 "differences": {family: {"grid": [rows, columns], "tiles": [index...]}} (its print differences)}
-#   <print>/<other print>.png: one pixel per tile, white where the two prints are alike (only for pairs sharing more
-#     than the tiles most of their family's prints share, and at least MIN_SHARED of the label)
+#   prints.json: {"prints": [{"id" (its smallest key), "keys", "release", "serial", "shape", "family"}], "tile_mm": TILE_MM,
+#                 "differences": {family: {"grid": [rows, columns], "tiles": [index...]}} (the tiles telling its prints apart)}
+#   <print>/<other print>.png: one pixel per tile, white where the two prints are alike (for pairs alike on at least
+#     MIN_SHARED of the label)
 #   few-photos.json: [print ids] of prints with fewer than FEW label photos
 # Comparing, in each family's ink coordinates (straighten's images): the label, 1 mm in from its edges, in TILE_MM
 # tiles. Two label photos are alike at a tile: where both are textured (gray spread over TEXTURE), the lighting-evened
 # gray (minus the local mean, over the local spread, 0.25 mm blur) correlates over CORRELATION; where flat, their
-# colors (each label photo's evened per channel to the family's median) differ under COLOR_DIFF. Measured on the
-# sample: pairs of one old name alike on 97 % of tiles at the median (textured 99 %, flat 93 %); different releases in
-# one family 34 %.
-# Per tile, the family's label photos group by being alike (connected): all alike, a shared area; one apart, a defect on
-# that sticker; two or more groups of at least two, a print difference. Label photos are one print where they agree on
-# every print difference (a defect doesn't count) and their releases (read-serials) don't differ. A print difference:
-# a split on a tile textured in every member compared, recurring on MIN_DIFF_TILES tiles or more. A label photo alike
-# with the others of its release on under POOR_SHARE of tiles (two or more others) is a poor fit: a print of its own.
+# colors (each label photo's evened per channel to the family's median) differ under COLOR_DIFF. Different at a tile:
+# textured in both and not alike. Different prints: different on MIN_DIFF_TILES tiles or more. Only the pixels decide:
+# serials and releases are only the prints' labels. Measured on the full set at 1 mm tiles (pairs within a family, by
+# their serials read): 3 or more different tiles on 10 % of same-serial pairs (dirt, misfits: split, then pooled
+# back), 86 % of one release's region variants (many of the rest misread serials of one print: IPN for JPN, a cut-off
+# serial) and 95 % of different releases. At 2 mm tiles a region code hardly showed (one tile, often still correlating).
 # Done again when prints.json is older than this file, solve.json or serials.json.
 # Usage: prints.py [--sample]
 import argparse, html, itertools, json, os, sys
@@ -26,13 +23,11 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, steps, straighten, shapes
 
-TILE_MM = 2
+TILE_MM = 1
 TEXTURE = 6.0
-CORRELATION = 0.5
+CORRELATION = 0.0
 COLOR_DIFF = 15.0
-POOR_SHARE = 0.6
 MIN_SHARED = 0.15
-COMMON = 0.75   # tiles alike between this share of a family's print pairs are common (a frame), left out of pair images
 FEW = 3
 MIN_DIFF_TILES = 3
 
@@ -71,12 +66,16 @@ def even_colors(colors, ref):
 
 
 def alike(va, vb, ca, cb):
-    """Per tile, whether two label photos are alike there."""
+    """Per tile, whether two label photos are alike there, and whether they're different (textured in both and not
+    alike; the outermost ring of tiles left out: the cut wanders up to about 1 mm past them)."""
     textured = (va[2] > TEXTURE) & (vb[2] > TEXTURE)
     za = va[0] - va[0].mean(2, keepdims=True)
     zb = vb[0] - vb[0].mean(2, keepdims=True)
     corr = (za * zb).sum(2) / np.sqrt((za ** 2).sum(2) * (zb ** 2).sum(2) + 1e-9)
-    return np.where(textured, corr > CORRELATION, np.abs(ca - cb).mean(2) < COLOR_DIFF)
+    a = np.where(textured, corr > CORRELATION, np.abs(ca - cb).mean(2) < COLOR_DIFF)
+    d = textured & ~a
+    d[0, :] = d[-1, :] = d[:, 0] = d[:, -1] = False
+    return a, d
 
 
 def components(n, edges):
@@ -91,72 +90,41 @@ def components(n, edges):
     return [root(i) for i in range(n)]
 
 
-def split_family(keys, A, releases, textured):
-    """A family's prints: [[member index...]], its poor fits (indices) and its print-difference tiles. A: n x n x
-    tiles booleans (alike); textured: n x tiles."""
-    n = len(keys)
-    share = np.array([[A[i, j].mean() if i != j else 1.0 for j in range(n)] for i in range(n)])
-    # a poor fit: alike with the others of its release on under POOR_SHARE of tiles (two or more others needed:
-    # different releases of a family, a series sharing a layout, agree only in part)
-    poor = set()
-    for i in range(n):
-        same = [j for j in range(n) if j != i and releases[i] and releases[j] == releases[i]]
-        if len(same) >= 2 and np.median([share[i, j] for j in same]) < POOR_SHARE:
-            poor.add(i)
-    good = [i for i in range(n) if i not in poor]
-    tiles = A.shape[2]
-    # per tile, the groups among the good members; a print difference is a split into two or more groups of at least
-    # two, on a tile textured in all of them, recurring on MIN_DIFF_TILES tiles or more (glare or an artefact two
-    # photos share rarely covers several tiles the same way; a moved logo or text does)
-    group = np.zeros((n, tiles), int) - 1
-    splits = {}
-    for t in range(tiles):
-        edges = [(a, b) for a, b in itertools.combinations(good, 2) if A[a, b, t]]
-        roots = components(n, edges)
-        sizes = Counter(roots[i] for i in good)
-        for i in good:
-            group[i, t] = roots[i] if sizes[roots[i]] >= 2 else -1   # -1: a defect (alone) at this tile
-        big = [r for r, c in sizes.items() if c >= 2]
-        if len(big) >= 2 and all(textured[i, t] for i in good):
-            split = frozenset(frozenset(i for i in good if roots[i] == r) for r in big)
-            splits.setdefault(split, []).append(t)
-    differs = np.zeros(tiles, bool)
-    for split, ts in splits.items():
-        if len(ts) >= MIN_DIFF_TILES:
-            differs[ts] = True
-    def compatible(a, b):
-        if releases[a] and releases[b] and releases[a] != releases[b]:
-            return False
-        both = differs & (group[a] >= 0) & (group[b] >= 0)
-        return bool(np.all(group[a][both] == group[b][both]))
-    # merge into prints, most alike pairs first, only where every cross pair is compatible
-    prints = [[i] for i in good]
-    order = sorted(itertools.combinations(good, 2), key=lambda p: -share[p])
-    where = {i: k for k, p in enumerate(prints) for i in p}
-    for a, b in order:
+def split_family(A, D):
+    """A family's prints: [[member index...]], and the tiles that tell its prints apart. A: n x n x tiles booleans
+    (alike); D: n x n x tiles booleans (different: textured in both and not correlating). Two label photos are
+    different prints where they differ on MIN_DIFF_TILES tiles or more (dirt or glare rarely does; other text does).
+    Prints are merged, the pairs with the fewest differing tiles first, where most cross pairs aren't different."""
+    n = A.shape[0]
+    count = D.sum(2)
+    same = count < MIN_DIFF_TILES
+    prints = [[i] for i in range(n)]
+    where = list(range(n))
+    for a, b in sorted(itertools.combinations(range(n), 2), key=lambda p: (count[p], -A[p].mean())):
         pa, pb = where[a], where[b]
-        if pa == pb:
+        if pa == pb or not same[a, b]:
             continue
-        if all(compatible(x, y) for x in prints[pa] for y in prints[pb]):
+        if np.mean([same[x, y] for x in prints[pa] for y in prints[pb]]) > 0.5:
             prints[pa] += prints[pb]
             for i in prints[pb]:
                 where[i] = pa
             prints[pb] = []
-    return [p for p in prints if p] + [[i] for i in sorted(poor)], sorted(poor), differs
+    prints = [p for p in prints if p]
+    differs = np.zeros(A.shape[2], bool)   # tiles where most cross pairs of some two prints differ
+    for p, q in itertools.combinations(prints, 2):
+        differs |= np.mean([D[i, j] for i in p for j in q], 0) > 0.5
+    return prints, differs
 
 
 def pair_masks(groups, A):
     """{(p, q): tiles alike} for the pairs of a family's prints (groups: their member indices; A: n x n x tiles) worth
-    a pair image: alike where most cross pairs are; kept where what they share beyond the family's common tiles (alike
-    between COMMON of its print pairs: a frame) is at least MIN_SHARED of the label. Common tiles only mean something
-    with three or more prints: with one pair every shared tile would be common, and nothing pooled."""
+    a pair image: alike where most cross pairs are, on at least MIN_SHARED of the label. (Tiles shared by most of a
+    family's prints, a frame, were once left out: that dropped the region variants of one release, alike nearly
+    everywhere, from each other's pooling.)"""
     masks = {}
     for p, q in itertools.combinations(range(len(groups)), 2):
         masks[(p, q)] = np.mean([A[i, j] for i in groups[p] for j in groups[q]], 0) > 0.5
-    if not masks:
-        return {}
-    common = np.mean(list(masks.values()), 0) >= COMMON if len(groups) >= 3 else np.zeros_like(next(iter(masks.values())))
-    return {pq: m for pq, m in masks.items() if (m & ~common).mean() >= MIN_SHARED}
+    return {pq: m for pq, m in masks.items() if m.mean() >= MIN_SHARED}
 
 
 def main():
@@ -178,11 +146,10 @@ def main():
         families = {}
         for k, r in solved.items():
             families.setdefault(r["family"], []).append(k)
-        all_prints, poor_fits, pair_images, differences = [], [], {}, {}
+        all_prints, pair_images, differences = [], {}, {}
         for fam, keys in sorted(families.items()):
             keys = sorted(keys)
             shape = solved[keys[0]]["shape"]
-            releases = [serial.get(k, {}).get("release") for k in keys]
             if len(keys) == 1:
                 all_prints.append({"keys": keys, "family": fam})
                 continue
@@ -191,14 +158,15 @@ def main():
             colors = [even_colors(v[1], ref) for v in views]
             n = len(keys)
             A = np.ones((n, n) + views[0][2].shape, bool)
+            D = np.zeros_like(A)
             for i, j in itertools.combinations(range(n), 2):
-                A[i, j] = A[j, i] = alike(views[i], views[j], colors[i], colors[j])
+                a, d = alike(views[i], views[j], colors[i], colors[j])
+                A[i, j] = A[j, i] = a
+                D[i, j] = D[j, i] = d
+            groups, differs = split_family(A.reshape(n, n, -1), D.reshape(n, n, -1))
             A = A.reshape(n, n, -1)
-            textured = np.stack([v[2].ravel() > TEXTURE for v in views])
-            groups, poor, differs = split_family(keys, A, releases, textured)
             if differs.any():
                 differences[fam] = {"grid": list(views[0][2].shape), "tiles": np.flatnonzero(differs).tolist()}
-            poor_fits += [keys[i] for i in poor]
             fam_prints = [{"keys": [keys[i] for i in g], "family": fam, "_idx": g} for g in groups]
             # pooling masks between this family's prints: alike where most cross pairs are
             if len(fam_prints) > 1:
@@ -225,12 +193,12 @@ def main():
                 d = os.path.join(out_dir, straighten.file_name(a["id"])[:-5])
                 os.makedirs(d, exist_ok=True)
                 cv2.imwrite(os.path.join(d, straighten.file_name(b["id"])[:-5] + ".png"), (m * 255).astype(np.uint8))
-        steps.write_json(out, {"prints": sorted(all_prints, key=lambda p: p["id"]), "poor_fits": sorted(poor_fits), "tile_mm": TILE_MM,
+        steps.write_json(out, {"prints": sorted(all_prints, key=lambda p: p["id"]), "tile_mm": TILE_MM,
                                "differences": differences})
         steps.write_json(os.path.join(out_dir, "few-photos.json"), sorted(p["id"] for p in all_prints if len(p["keys"]) < FEW))
     result = json.load(open(out))
     page(out_dir, result, gen)
-    print(f"{len(result['prints'])} prints of {sum(len(p['keys']) for p in result['prints'])} label photos; {len(result['poor_fits'])} poor fits; page: {os.path.join(out_dir, 'index.html')}")
+    print(f"{len(result['prints'])} prints of {sum(len(p['keys']) for p in result['prints'])} label photos; page: {os.path.join(out_dir, 'index.html')}")
 
 
 def page(out_dir, result, gen):
@@ -241,7 +209,6 @@ def page(out_dir, result, gen):
     for p in result["prints"]:
         by_family.setdefault(p["family"], []).append(p)
     rel = os.path.relpath(os.path.join(gen, "straighten"), out_dir)
-    poor = set(result["poor_fits"])
     P, M, T = straighten.PX_PER_MM, straighten.MARGIN, result["tile_mm"]
     blocks = []
     for fam, ps in sorted(by_family.items(), key=lambda kv: (-len(kv[1]), -sum(len(p["keys"]) for p in kv[1]))):
@@ -257,7 +224,7 @@ def page(out_dir, result, gen):
                 r, c = divmod(t, cols)
                 marks += f'<rect x="{(M + 1 + c * T) * P}" y="{(M + 1 + r * T) * P}" width="{T * P}" height="{T * P}" fill="none" stroke="#f33" stroke-width="5"/>'
         overlay = f'<svg viewBox="0 0 {w} {h}">{marks}</svg>'
-        figure = lambda k: f'<div class="ph"><img loading="lazy" src="{rel}/{straighten.file_name(k)}" class="{"poor" if k in poor else ""}">{overlay}</div>'
+        figure = lambda k: f'<div class="ph"><img loading="lazy" src="{rel}/{straighten.file_name(k)}" >{overlay}</div>'
         row = "".join(f'<div class="print"><div>{html.escape(str(p["serial"] or p["release"] or "?"))} ({len(p["keys"])})</div>{"".join(figure(k) for k in p["keys"])}</div>' for p in ps)
         viewer = ""
         if len(ps) > 1:
@@ -271,15 +238,15 @@ def page(out_dir, result, gen):
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>prints</title>
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} .print{{display:inline-block;vertical-align:top;margin:4px 12px 12px 0;padding:4px;border:1px solid #666}}
-.ph{{position:relative;display:inline-block;margin:2px}} .ph img{{width:150px;display:block}} .ph svg, .stack svg{{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}} img.poor{{outline:3px solid #fa0}}
+.ph{{position:relative;display:inline-block;margin:2px}} .ph img{{width:150px;display:block}} .ph svg, .stack svg{{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}}
 .viewer{{display:inline-block;vertical-align:top;margin:0 16px 12px 0;cursor:pointer}} .stack{{position:relative;width:420px}} .stack img{{width:420px}} .caption{{font-weight:bold}}</style>
 <script>
 function flip(v){{const imgs=v.querySelectorAll('.stack img');let i=[...imgs].findIndex(x=>x.style.display!='none');imgs[i].style.display='none';i=(i+1)%imgs.length;imgs[i].style.display='block';v.querySelector('.caption').textContent=imgs[i].dataset.label;}}
 function auto(box){{const v=box.closest('.viewer');if(box.checked){{v._t=setInterval(()=>flip(v),700);}}else{{clearInterval(v._t);}}}}
 </script>
 <h1>prints</h1>
-<p>{n} prints; families with more than one print: {multi}; poor fits: {len(poor)}. Tiles of {result["tile_mm"]} mm.</p>
-{steps.legend([("#f33", "a tile that splits the family into prints (a square on every image of the family)"), ("#fa0", "a poor fit (outline around the image; a print of its own)")])}
+<p>{n} prints; families with more than one print: {multi}. Tiles of {result["tile_mm"]} mm.</p>
+{steps.legend([("#f33", "a tile that tells the family's prints apart (a square on every image of the family)")])}
 <p>The large viewer stacks one label photo per print in the same place: click it, or tick "flip by itself", to switch between them. Families of one label photo left out.</p>
 {"".join(blocks)}""")
 

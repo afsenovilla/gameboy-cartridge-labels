@@ -21,6 +21,6 @@ def test_sources_by_sha1_with_the_folder_as_source(tmp_path):
     assert publish.sources(str(tmp_path)) == {"abc": {"source": "mercari", "page_url": "https://x/1", "image_url": None}}
 
 
-def test_poor_fits_from_prints_and_solve():
+def test_poor_fits_from_solve():
     solved = {"a@1,1": {"fallback": "a poor fit: kept"}, "b@1,1": {"fallback": None}, "c@1,1": {}}
-    assert publish.poor_fits({"poor_fits": ["c@1,1"]}, solved) == {"a@1,1", "c@1,1"}
+    assert publish.poor_fits(solved) == {"a@1,1"}

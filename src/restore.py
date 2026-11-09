@@ -304,7 +304,7 @@ def main():
     for k, r in solved.items():  # the photo's pixels per mm at the label, from the fit
         lw, lh = shapes.LABEL_MM[r["shape"]]
         px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
-    poor = set(result["poor_fits"]) | {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
+    poor = {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
     out_dir = os.path.join(gen, "restore")
     os.makedirs(out_dir, exist_ok=True)
     image = lambda k: os.path.join(gen, "straighten", straighten.file_name(k))

@@ -13,39 +13,33 @@ def alike_matrix(n, tiles, differ=()):
     return A
 
 
-def test_a_revision_on_several_tiles_splits_the_family():
-    A = alike_matrix(4, 50, [({2, 3}, slice(10, 15))])
-    groups, poor, differs = prints.split_family(list("abcd"), A, [None] * 4, np.ones((4, 50), bool))
+def differ_matrix(n, tiles, differ=()):
+    """Different nowhere, except: for (members, tile range) in differ, those members different from the rest there."""
+    return ~alike_matrix(n, tiles, differ)
+
+
+def test_different_text_on_a_few_tiles_splits_the_family():
+    D = differ_matrix(4, 50, [({2, 3}, slice(10, 13))])            # a region code: three tiles
+    groups, differs = prints.split_family(~D, D)
     assert sorted(sorted(g) for g in groups) == [[0, 1], [2, 3]]
-    assert differs[10:15].all() and not differs[:10].any()
+    assert differs[10:13].all() and not differs[:10].any()
 
 
-def test_a_split_on_too_few_tiles_or_flat_tiles_doesnt():
-    A = alike_matrix(4, 50, [({2, 3}, slice(10, 12))])            # two tiles only
-    assert len(prints.split_family(list("abcd"), A, [None] * 4, np.ones((4, 50), bool))[0]) == 1
-    A = alike_matrix(4, 50, [({2, 3}, slice(10, 15))])
-    flat = np.ones((4, 50), bool); flat[:, 10:15] = False             # the differing tiles flat
-    assert len(prints.split_family(list("abcd"), A, [None] * 4, flat)[0]) == 1
+def test_a_single_label_photo_with_other_text_is_a_print_of_its_own():
+    D = differ_matrix(3, 50, [({2}, slice(10, 13))])
+    assert sorted(sorted(g) for g in prints.split_family(~D, D)[0]) == [[0, 1], [2]]
 
 
-def test_a_defect_on_one_sticker_doesnt_split():
-    A = alike_matrix(3, 50, [({2}, slice(0, 20))])                    # one photo off on many tiles: dirt, glare
-    groups, poor, _ = prints.split_family(list("abc"), A, [None] * 3, np.ones((3, 50), bool))
-    assert len(groups) == 1
+def test_a_speck_on_one_or_two_tiles_doesnt_split():
+    D = differ_matrix(3, 50, [({2}, slice(10, 12))])
+    assert len(prints.split_family(~D, D)[0]) == 1
 
 
-def test_different_releases_are_different_prints():
-    A = alike_matrix(2, 50)
-    groups, _, _ = prints.split_family(list("ab"), A, ["dmg-1", "dmg-2"], np.ones((2, 50), bool))
-    assert len(groups) == 2
-
-
-def test_a_poor_fit_is_judged_against_its_own_release_only():
-    A = alike_matrix(4, 50, [({3}, slice(0, 40))])
-    groups, poor, _ = prints.split_family(list("abcd"), A, ["r"] * 4, np.ones((4, 50), bool))
-    assert poor == [3]
-    groups, poor, _ = prints.split_family(list("abcd"), A, ["r1", "r2", "r3", "r4"], np.ones((4, 50), bool))
-    assert poor == []
+def test_one_dirty_label_photo_doesnt_split_a_print_whose_others_agree():
+    # 0-3 one print; 3 differs from 1 only (a smudge on one of them): most cross pairs agree, one print
+    D = differ_matrix(4, 50)
+    D[1, 3, 10:14] = D[3, 1, 10:14] = True
+    assert len(prints.split_family(~D, D)[0]) == 1
 
 
 def test_two_prints_of_a_family_get_a_pair_image():
@@ -55,8 +49,13 @@ def test_two_prints_of_a_family_get_a_pair_image():
     assert list(masks) == [(0, 1)] and masks[(0, 1)][:30].all() and not masks[(0, 1)][30:].any()
 
 
-def test_with_three_prints_tiles_all_of_them_share_dont_count():
-    # three prints alike only on a frame (the first 10 tiles): no pair worth an image
-    A = alike_matrix(6, 50, [({2, 3}, slice(10, 50)), ({4, 5}, slice(10, 50))])
-    A[0:2, 4:6, 10:] = A[4:6, 0:2, 10:] = False
-    assert prints.pair_masks([[0, 1], [2, 3], [4, 5]], A) == {}
+def test_region_variants_alike_nearly_everywhere_all_pool_with_each_other():
+    A = alike_matrix(6, 50, [({2, 3}, slice(10, 13)), ({4, 5}, slice(20, 23))])
+    A[0:2, 4:6, 10:13] = A[4:6, 0:2, 10:13] = False
+    masks = prints.pair_masks([[0, 1], [2, 3], [4, 5]], A)
+    assert sorted(masks) == [(0, 1), (0, 2), (1, 2)]
+
+
+def test_prints_sharing_too_little_get_no_pair_image():
+    A = alike_matrix(4, 50, [({2, 3}, slice(5, 50))])
+    assert prints.pair_masks([[0, 1], [2, 3]], A) == {}

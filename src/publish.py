@@ -1,8 +1,8 @@
 # publish: the outputs collected into <generated>/publish/:
 #   prints/<print>.avif: each restored print, restore's image as it is (paper white where found, else median colours)
 #   label-photos/<key>.avif: each label photo straightened, cut from its straightened image to its shape's canonical
-#     label (the same crop as the prints): whole pixels, no resampling. Poor fits (prints' poor_fits, and solve's "a
-#     poor" fallbacks) get no image, as restore leaves them out; they're listed in index.json with poor_fit true.
+#     label (the same crop as the prints): whole pixels, no resampling. Poor fits (solve's "a poor" fallbacks) get no
+#     image, as restore leaves them out; they're listed in index.json with poor_fit true.
 #   index.json: {"prints": {id: {serial, release, shape, image, paper, label_photos}}, "label_photos": {key: {print,
 #     serial, source, page_url, image_url, image, poor_fit}}}. Ids and keys hold within a run only.
 #   missing.json, unknown-serials.json (read-serials), few-photos.json (prints): the lists, copied as they are.
@@ -46,8 +46,8 @@ def sources(main):
     return out
 
 
-def poor_fits(prints, solved):
-    return set(prints["poor_fits"]) | {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
+def poor_fits(solved):
+    return {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
 
 
 def newer(out, *ins):
@@ -78,7 +78,7 @@ def main():
     solved = json.load(open(need[1]))["label_photos"]
     serials = json.load(open(need[2]))
     src = sources(args.main)
-    poor = poor_fits(prints, solved)
+    poor = poor_fits(solved)
     out_dir = os.path.join(gen, "publish")
     for d in ("prints", "label-photos"):
         os.makedirs(os.path.join(out_dir, d), exist_ok=True)
