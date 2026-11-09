@@ -1,38 +1,49 @@
 # solve: every label photo's homography from its photo into ink coordinates (mm on the label's print, one coordinate
 # system per shape, anchored by each linked set's median cut), into <generated>/solve/solve.json:
 #   {"label_photos": {key: {"photo_to_ink" (3 x 3), "cut_to_photo" (3 x 3: the sticker's cut outline, the canonical
-#                            label size, -> the photo), "offset" (dx, dy mm, turn degrees: the sticker's cut -> ink),
-#                            "start" (how the outline was started), "support" (the share of each side, top, right,
-#                            bottom, left, along LSD segments), "fallback" (null, or why the pose is weak),
+#                            label size, -> the photo), "plastic_to_photo" (3 x 3), "placement" (dx, dy mm, turn
+#                            degrees: the label's cut in the recess, from its nominal place), "offset" (dx, dy mm, turn
+#                            degrees: the sticker's cut -> ink), "start" (how it was started), "support" (the share of
+#                            the face, recess and label samples along segments), "fallback" (null, or why the pose is weak),
 #                            "residual_mm" (matched points' disagreement in ink coordinates, median), "links" (used)},
 #                     ...},
 #    "sets": [{"keys", "links used", "links dropped", "residual_mm"}],
 #    "unsolved": {key: why}}
 # Two stages (label-detection.md):
-#   1. Each label photo on its own: the sticker's cut outline, a perspective view of a rectangle of its shape's
-#      canonical label size, fitted to the photo's LSD segments (edges). Starts, best first: the label placed by a
-#      fixed-place logo (find); a fitted label photo's outline carried through a match (one of the same release first,
-#      then the same game, then any: another layout can be off); a rectangle around the evidence, turned by its
-#      serial's reading direction and scaled by its height. Each side snaps to the line best supported by segments
-#      near it (parallel within ANGLE, within a window shrinking from WINDOWS), the corners from the four lines; a
-#      start is dropped when less than MIN_SUPPORT of the outline lies along segments, and the next tried.
+#   1. Each label photo on its own: three nested rectangles of known sizes and places fitted together to the photo's
+#      LSD segments (edges): the cartridge's outline, its recess and the label's cut (main's shape models,
+#      src/shape-models.json). Unknowns: a homography from the plastic's mm to the photo, and the label's shift and turn
+#      in the recess (the placement), softly held to about PLACEMENT_MM and PLACEMENT_DEG. Each model sample point is
+#      matched to the nearest segment parallel to its edge (within ANGLE) inside a window shrinking through WINDOWS;
+#      the residual is the perpendicular distance in mm, robust (soft L1, ROBUST_MM). Starts, best first: the label
+#      placed by a fixed-place logo (find); a fitted label photo's label carried through a match (one of the same
+#      release first, then the same game, then any: another layout can be off); a rectangle around the evidence,
+#      turned by its serial's reading direction and scaled by its height. A start is dropped when less than
+#      MIN_SUPPORT of the model's sample points end up along segments (within ON_MM), or less than MIN_FACE of the
+#      cartridge's outline (a label placed far off still finds label- and recess-like lines: on the sample, 0.4 kept
+#      69 of 70 fits within 2 mm of main's and dropped 87 of 109 farther off), and the next tried.
 #   2. Each linked set: matched points (match's inliers, assigned to label photo pairs) map into each sticker's
 #      frame; a link's shift and turn between the two frames counts if within MAX_SHIFT and MAX_TURN (else the two are
 #      likely other layouts sharing a template); one least-squares fit gives every label photo a shift and turn, the
 #      set's median taken as none (the median cut anchors ink coordinates).
-# The recess (the placement on the plastic) isn't used yet.
 # Done again when solve.json is older than this file or its inputs.
 # Usage: solve.py [--sample]
 import argparse, html, json, os, sys
 import cv2, numpy as np
+from scipy.optimize import least_squares
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, steps, match, shapes, find
 
-ANGLE = 6.0           # degrees: a segment counts for a side if this parallel
-WINDOWS = (4.0, 1.5, 0.6)  # mm: how far a side may move, per round
-BIN = 0.2             # mm: the offsets of segments from a side are histogrammed in these
-MIN_SUPPORT = 0.45    # the least mean share of the four sides along segments for a fit to count
+ANGLE = 8.0           # degrees: a segment counts for a sample point if this parallel to its edge
+WINDOWS = (6.0, 3.0, 1.5, 0.8)  # mm: how far a sample point looks for a segment, per round
+ROBUST_MM = 0.3       # the soft L1 loss's scale
+ON_MM = 0.5           # a sample point is along a segment within this, for the support
+PLACEMENT_MM = 1.0    # the label's shift in the recess, softly held to about this
+PLACEMENT_DEG = 2.0
+MIN_SUPPORT = 0.4     # the least share of the model's samples along segments for a fit to count
+MIN_FACE = 0.4        # and of the cartridge's outline: a label placed far off still finds label- and recess-like lines
+MODELS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "shape-models.json")))["shapes"]
 MAX_SHIFT = 4.0       # mm: a link's shift between two stickers' frames that still counts
 MAX_TURN = 4.0        # degrees
 MIN_LINK_POINTS = 8
@@ -47,91 +58,108 @@ def project(H, pts):
     return cv2.perspectiveTransform(np.float64(pts).reshape(-1, 1, 2), np.float64(H)).reshape(-1, 2)
 
 
-def line_through(p, q):
-    """(unit normal n, c) with n . x = c for points x on the line through p and q."""
-    d = np.subtract(q, p) / np.linalg.norm(np.subtract(q, p))
-    n = np.array([-d[1], d[0]])
-    return n, float(n @ p)
+def label_to_plastic(shape):
+    """label mm (its top left at 0, 0) -> plastic mm, at its nominal place."""
+    x0, y0 = MODELS[shape]["label"][:2]
+    return np.array([[1.0, 0, x0], [0, 1, y0], [0, 0, 1]])
 
 
-def intersect(l1, l2):
-    (n1, c1), (n2, c2) = l1, l2
-    A = np.array([n1, n2])
-    if abs(np.linalg.det(A)) < 1e-9:
-        return None
-    return np.linalg.solve(A, [c1, c2])
+def placement_matrix(shape, dx, dy, turn_rad):
+    """plastic mm -> plastic mm: the label turned about its nominal centre and shifted."""
+    x0, y0, x1, y1 = MODELS[shape]["label"]
+    c = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
+    R = np.array([[np.cos(turn_rad), -np.sin(turn_rad)], [np.sin(turn_rad), np.cos(turn_rad)]])
+    t = c + [dx, dy] - R @ c
+    return np.array([[R[0, 0], R[0, 1], t[0]], [R[1, 0], R[1, 1], t[1]], [0, 0, 1]])
 
 
-def snap_side(p, q, segs, window_px, bin_px):
-    """The line best supported by segments near the side p -> q (parallel within ANGLE, their midpoints within
-    window_px of it, overlapping it), and the share of the side they cover; the side itself if none."""
-    n, c = line_through(p, q)
-    d = np.subtract(q, p); length = np.linalg.norm(d); u = d / length
+def model_samples(shape):
+    m = MODELS[shape]
+    pts = np.float64([x["point"] for x in m["samples"]])
+    nrm = np.float64([x["normal"] for x in m["samples"]])
+    kinds = np.array([x["kind"] for x in m["samples"]])
+    return pts, nrm, kinds
+
+
+def homography_from(params, H0):
+    """The plastic -> photo homography: the start H0 times a small change (in mm)."""
+    a = params
+    D = np.array([[1 + a[0], a[1], a[2]], [a[3], 1 + a[4], a[5]], [a[6] * 1e-3, a[7] * 1e-3, 1]])
+    return H0 @ D
+
+
+def projected(params, H0, shape, pts, nrm, kinds):
+    """The model's sample points and their edge directions in the photo, the label's moved by the placement."""
+    H = homography_from(params[:8], H0)
+    P = placement_matrix(shape, params[8], params[9], np.radians(params[10]))
+    is_label = kinds == "label"
+    p = pts.copy()
+    p[is_label] = project(P, pts[is_label])
+    tangent = np.stack([-nrm[:, 1], nrm[:, 0]], 1)
+    q = p + 0.5 * tangent
+    pp, qq = project(H, p), project(H, q)
+    d = qq - pp
+    return pp, d / np.maximum(np.linalg.norm(d, axis=1)[:, None], 1e-12), H
+
+
+def correspond(pp, dirs, segs, window_px):
+    """For each projected sample point, the nearest segment parallel to its edge whose line passes within window_px:
+    (index or -1)."""
     sd = segs[:, 2:] - segs[:, :2]
     sl = np.linalg.norm(sd, axis=1)
-    su = sd / np.maximum(sl[:, None], 1e-9)
-    mid = (segs[:, :2] + segs[:, 2:]) / 2
-    off = mid @ n - c
-    along = (mid - p) @ u
-    ok = (np.abs(su @ u) > np.cos(np.radians(ANGLE))) & (np.abs(off) < window_px) & (along > -0.1 * length) & (along < 1.1 * length)
-    if not ok.any():
-        return (n, c), 0.0
-    bins = np.round(off[ok] / bin_px).astype(int)
-    weight = {}
-    for b, w in zip(bins, sl[ok]):
-        for nb in (b - 1, b, b + 1):
-            weight[nb] = weight.get(nb, 0) + w * (1.0 if nb == b else 0.5)
-    best = max(weight, key=weight.get)
-    near = ok.copy()
-    near[ok] = np.abs(bins - best) <= 1
-    pts = np.vstack([segs[near, :2], segs[near, 2:]])
-    w = np.repeat(sl[near], 2)
-    centre = (pts * w[:, None]).sum(0) / w.sum()
-    cov = ((pts - centre) * w[:, None]).T @ (pts - centre)
-    direction = np.linalg.eigh(cov)[1][:, -1]
-    if direction @ u < 0:
-        direction = -direction
-    n2 = np.array([-direction[1], direction[0]])
-    # the share of the side covered: its points within a bin of a supporting segment
-    ts = np.linspace(0, 1, 40)
-    side_pts = np.asarray(p)[None] + ts[:, None] * d[None]
-    covered = np.zeros(len(ts), bool)
-    for s0, s1 in zip(segs[near, :2], segs[near, 2:]):
-        v = s1 - s0
-        t = np.clip(((side_pts - s0) @ v) / max(v @ v, 1e-9), 0, 1)
-        covered |= np.linalg.norm(side_pts - (s0 + t[:, None] * v), axis=1) < 2 * bin_px + window_px * 0.1
-    return (n2, float(n2 @ centre)), float(covered.mean())
+    su = sd / np.maximum(sl[:, None], 1e-12)
+    sn = np.stack([-su[:, 1], su[:, 0]], 1)
+    out = np.full(len(pp), -1)
+    cos = np.cos(np.radians(ANGLE))
+    for i, (p, d) in enumerate(zip(pp, dirs)):
+        par = np.abs(su @ d) > cos
+        if not par.any():
+            continue
+        rel = p - segs[par, :2]
+        perp = np.abs((rel * sn[par]).sum(1))
+        along = (rel * su[par]).sum(1)
+        ok = (perp < window_px) & (along > -0.1 * sl[par] - window_px) & (along < 1.1 * sl[par] + window_px)
+        if ok.any():
+            idx = np.where(par)[0][ok]
+            out[i] = idx[np.argmin(perp[ok])]
+    return out
 
 
-def fit_outline(H0, shape, segs):
-    """The cut outline from a start (H0: label mm -> photo), snapped to the segments round by round: (H, support per
-    side) or (None, support) if the result isn't plausible."""
-    mm = corners_mm(shape)
-    H = np.float64(H0)
-    support = [0.0] * 4
-    for window_mm in WINDOWS:
-        quad = project(H, mm)
-        px_per_mm = np.sqrt(abs(cv2.contourArea(quad.astype(np.float32))) / (shapes.LABEL_MM[shape][0] * shapes.LABEL_MM[shape][1]))
-        lines, support = [], []
-        for k in range(4):
-            l, s = snap_side(quad[k], quad[(k + 1) % 4], segs, window_mm * px_per_mm, BIN * px_per_mm)
-            lines.append(l); support.append(s)
-        new = [intersect(lines[k - 1], lines[k]) for k in range(4)]  # corner k between side k-1 and side k
-        if any(c is None for c in new):
-            return None, support
-        new = np.array(new)
-        if not plausible_quad(new, quad):
-            return None, support
-        H = cv2.getPerspectiveTransform(mm.astype(np.float32), new.astype(np.float32)).astype(np.float64)
-    return H, support
+def fit_nested(H0_plastic, shape, segs):
+    """The three rectangles fitted from a start (plastic mm -> photo): (plastic_to_photo, placement (dx, dy, turn
+    degrees), support {kind: share}) or None."""
+    pts, nrm, kinds = model_samples(shape)
+    params = np.zeros(11)
+    sd = segs[:, 2:] - segs[:, :2]
+    su = sd / np.maximum(np.linalg.norm(sd, axis=1)[:, None], 1e-12)
+    sn = np.stack([-su[:, 1], su[:, 0]], 1)
+    for window in WINDOWS:
+        pp, dirs, H = projected(params, H0_plastic, shape, pts, nrm, kinds)
+        px_per_mm = local_scale(H, MODELS[shape]["label"])
+        corr = correspond(pp, dirs, segs, window * px_per_mm)
+        use = corr >= 0
+        if use.sum() < 12:
+            return None
+
+        def residuals(x):
+            pp, _, H = projected(x, H0_plastic, shape, pts, nrm, kinds)
+            j = corr[use]
+            r = ((pp[use] - segs[j, :2]) * sn[j]).sum(1) / px_per_mm
+            prior = [x[8] / PLACEMENT_MM, x[9] / PLACEMENT_MM, x[10] / PLACEMENT_DEG]
+            return np.concatenate([r, prior])
+
+        params = least_squares(residuals, params, loss="soft_l1", f_scale=ROBUST_MM, max_nfev=200).x
+    pp, dirs, H = projected(params, H0_plastic, shape, pts, nrm, kinds)
+    px_per_mm = local_scale(H, MODELS[shape]["label"])
+    corr = correspond(pp, dirs, segs, ON_MM * px_per_mm)
+    support = {k: round(float((corr[kinds == k] >= 0).mean()), 2) for k in ("face", "recess", "label")}
+    return H / H[2, 2], (float(params[8]), float(params[9]), float(params[10])), support
 
 
-def plausible_quad(new, old):
-    """Convex, not crossed, and its sides within 25 % of the start's (a snap to a far line distorts it)."""
-    if not cv2.isContourConvex(new.astype(np.float32)):
-        return False
-    side = lambda q: np.linalg.norm(np.roll(q, -1, 0) - q, axis=1)
-    return bool(np.all(np.abs(np.log(side(new) / np.maximum(side(old), 1e-9))) < np.log(1.25)))
+def local_scale(H, rect):
+    x0, y0, x1, y1 = rect
+    q = project(H, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+    return np.sqrt(abs(cv2.contourArea(q.astype(np.float32))) / ((x1 - x0) * (y1 - y0)))
 
 
 def similarity_to_H(centre, angle_deg, px_per_mm, shape):
@@ -204,13 +232,22 @@ def stage1(lps, edges_dir, pairs):
     fits, failed = {}, {}
 
     def attempt(lp, H0, start):
+        """H0: a start for the label (label mm -> photo)."""
         if H0 is None:
             return False
-        H, support = fit_outline(H0, lp["shape"], get_segs(lp["photo"]))
-        if H is not None and np.mean(support) >= MIN_SUPPORT:
-            fits[lp["key"]] = {"cut_to_photo": H, "support": [round(s, 2) for s in support], "start": start}
-            return True
-        return False
+        shape = lp["shape"]
+        result = fit_nested(H0 @ np.linalg.inv(label_to_plastic(shape)), shape, get_segs(lp["photo"]))
+        if result is None:
+            return False
+        H, placement, support = result
+        pts, _, kinds = model_samples(shape)
+        share = float(np.mean([support[k] for k in support]))
+        if share < MIN_SUPPORT or support["face"] < MIN_FACE:
+            return False
+        cut = H @ placement_matrix(shape, placement[0], placement[1], np.radians(placement[2])) @ label_to_plastic(shape)
+        fits[lp["key"]] = {"cut_to_photo": cut / cut[2, 2], "plastic_to_photo": H, "placement": placement,
+                           "support": support, "start": start}
+        return True
 
     todo = [lp for lp in lps if lp["shape"]]
     for lp in lps:
@@ -327,6 +364,8 @@ def solve(found, matches, edges_dir):
         out[k] = {"photo": lp["photo"], "shape": lp["shape"], "photo_to_ink": (photo_to_ink / photo_to_ink[2, 2]).tolist(),
                   "cut_to_photo": (f["cut_to_photo"] / f["cut_to_photo"][2, 2]).tolist(),
                   "offset": [round(float(o[1]), 3), round(float(o[2]), 3), round(float(np.degrees(o[0])), 3)],
+                  "plastic_to_photo": f["plastic_to_photo"].tolist(),
+                  "placement": [round(v, 3) for v in f["placement"]],
                   "start": f["start"], "support": f["support"],
                   "fallback": None if not f["start"].startswith("evidence") else "started from the evidence only",
                   "residual_mm": None if residual.get(k) is None else round(residual[k], 3)}
@@ -336,16 +375,20 @@ def solve(found, matches, edges_dir):
 def page(out_dir, chosen, result, sizes):
     lps = result["label_photos"]
     rel = os.path.relpath(".", out_dir)
-    order = sorted(lps.items(), key=lambda kv: (-(kv[1]["residual_mm"] or 0), np.mean(kv[1]["support"])))
+    order = sorted(lps.items(), key=lambda kv: (-(kv[1]["residual_mm"] or 0), np.mean(list(kv[1]["support"].values()))))
 
     def figure(key, r):
         s = r["photo"]; w, h = sizes[s]
         quad = project(r["cut_to_photo"], corners_mm(r["shape"]))
         pts = " ".join(f"{x:.0f},{y:.0f}" for x, y in quad)
+        m = MODELS[r["shape"]]
+        box = project(r["plastic_to_photo"], [[m["box"][0], m["box"][1]], [m["box"][2], m["box"][1]], [m["box"][2], m["box"][3]], [m["box"][0], m["box"][3]]])
+        rec = project(r["plastic_to_photo"], [[m["recess"][0], m["recess"][1]], [m["recess"][2], m["recess"][1]], [m["recess"][2], m["recess"][3]], [m["recess"][0], m["recess"][3]]])
+        extra = "".join(f'<polygon points="{" ".join(f"{x:.0f},{y:.0f}" for x, y in q)}" fill="none" stroke="{c}" stroke-width="{max(w, h) / 400:.1f}"/>' for q, c in ((box, "#08f"), (rec, "#fa0")))
         return (f'<figure><div class="ph"><img loading="lazy" src="{rel}/{chosen[s]}"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
-                f'<polygon points="{pts}" fill="none" stroke="#0c0" stroke-width="{max(w, h) / 250:.1f}"/>'
+                f'{extra}<polygon points="{pts}" fill="none" stroke="#0c0" stroke-width="{max(w, h) / 250:.1f}"/>'
                 f'<circle cx="{quad[0][0]:.0f}" cy="{quad[0][1]:.0f}" r="{max(w, h) / 80:.0f}" fill="#f00"/></svg></div>'
-                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, residual {r["residual_mm"]} mm, offset {r["offset"]}</figcaption></figure>')
+                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, residual {r["residual_mm"]} mm</figcaption></figure>')
 
     unsolved = "".join(f"<li><code>{html.escape(k[:16])}</code>: {html.escape(v)}</li>" for k, v in result["unsolved"].items())
     starts = {}
@@ -358,7 +401,7 @@ def page(out_dir, chosen, result, sizes):
 .ph{{position:relative;display:inline-block}} .ph img{{max-width:280px;max-height:280px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>solve</h1>
 <p>{len(lps)} label photos solved (started: {", ".join(f"{k} {v}" for k, v in starts.items())}), {len(result["unsolved"])} not. Sets: {", ".join(f'{len(si["keys"])} label photos, {si["links used"]} links used, {si["links dropped"]} dropped, residual {si["residual_mm"] and round(si["residual_mm"], 2)} mm' for si in result["sets"][:5])}.</p>
-<p>Green: the sticker's cut outline as fitted (canonical size); red dot: the label's top left. Worst first (residual, then support).</p>
+<p>Blue: the cartridge's outline; orange: the recess; green: the label's cut (canonical size); red dot: the label's top left. Worst first (residual, then support).</p>
 <h2>Not solved ({len(result["unsolved"])})</h2><ul>{unsolved}</ul>
 <h2>Solved</h2>{"".join(figure(k, r) for k, r in order)}
 """)
