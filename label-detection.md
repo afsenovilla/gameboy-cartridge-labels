@@ -278,6 +278,10 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 - 15938cc543 (DMG-FBJ_5): which way is the perspective off, which corner, how far? (outline support 0.57, refinement moved it 0.54 mm)
 - 607e1a516e (AGB-B4WJ-JPN): inconsistent perspective within the print: which page, and the art or the sticker's edges? (by pixels its three label photos agree within 0.06 mm)
 
+**restore, first version** (the sample): 121 prints restored in 23 s. Prints of three or more label photos: the restored image correlates with its own label photos at 0.96 (median; 0.93 at 10 %); its high-frequency energy against theirs 1.13 at the median, 0.85-2.03 at 10-90 % (above 1: the focus-stacking weights favour the strongest detail, which may include noise or dirt; to look at). Two bugs found by the numbers: every single-photo print came out flat (the colour evening kept no pixel when a photo is its own reference: residuals all zero, '< 80th percentile' kept none), and nothing was pooled (with two prints in a family, every shared tile counted as 'common to most pairs'). Pooling now between Fire Red and Leaf Green.
+
+**Tried and reverted: a scale limit** (a candidate dropped if its scale differs from the evidence's by over 40 or 60 %): 73e88d (AGB, fitted at half scale on a printed frame) was fixed only with the details' estimate, which dropped right fits elsewhere (evaluation set 98 -> 97 %); with the serial's estimate alone 73e88d wasn't caught. No single estimate is reliable enough to overrule the fits. 477d69 (AGB, right scale, sitting off; outline support 0.44): a stricter AGB outline threshold would drop more good fits than bad (evaluation set, under 0.6: 1 bad, 6 good).
+
 ## Next
 
-restore: bands, weights, combining, crop.
+The colour experiments (paper white with clipping against the median), the designer's vision, then publish.
