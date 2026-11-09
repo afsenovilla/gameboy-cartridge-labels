@@ -30,7 +30,8 @@
 #   2. Families: link candidates (one per match homography), counted where the matched points agree within
 #      LINK_FIT_MM and the pixels agree (see stage2's comment); poor fits flagged; offsets per family by a robust fit,
 #      each family's median cut its anchor; then each family's label photos aligned to its median view by the pixels
-#      (refine_family: a homography per label photo, correcting the outline fit's perspective errors).
+#      (refine_family: a homography per label photo, correcting the outline fit's perspective errors), then again at
+#      full resolution (refine_fine).
 # Done again when solve.json is older than this file or its inputs.
 # Usage: solve.py [--sample]
 import argparse, html, json, os, sys
@@ -768,6 +769,7 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
     fam_of = {k: (min(m), len(m)) for m in families.values() for k in m}
     corrections = {}
     release_of = {lp["key"]: next((t["release"] for t in lp["strings"] if t.get("release")), None) for lp in lps}
+    all_groups = []
     to_refine = sum(1 for m in families.values() if len(m) >= 2)
     print(f"stage 2: refining the label photos of {to_refine} families by their pixels", flush=True)
     for n_fam, members in enumerate((m for m in families.values() if len(m) >= 2), 1):
@@ -784,6 +786,7 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
             if not release_of.get(k) and largest is not members:
                 largest.append(k)
         groups = [g for g in (by_release.values() if by_release else [members])]
+        all_groups += groups
         for group in groups:
             if len(group) >= 2:
                 c, bad = refine_family(group, views, offsets, shape_of[group[0]])
@@ -798,7 +801,7 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
             "refined": len(corrections),
             "correction_mm": {"median": round(float(np.median([v[1] for v in corrections.values()])), 3) if corrections else None,
                               "90 %": round(float(np.percentile([v[1] for v in corrections.values()], 90)), 3) if corrections else None}}
-    return offsets, fam_of, poor, info, corrections
+    return offsets, fam_of, poor, info, corrections, all_groups
 
 
 # Refinement by pixels: within a family (per release: a series' games share a family), each label photo's view (stage 2's, carried into ink coordinates by its
@@ -920,6 +923,85 @@ def refine_family(members, views, offsets, shape):
     return out, bad
 
 
+# Fine refinement, at full resolution: refine_family aligns at COMPARE_PX_PER_MM (5 px/mm, chosen for the link tests'
+# speed), which left label photos of one print up to about 0.3 mm apart in places (1e37930852 against 837abc2b9c: the
+# bottom left 0.27 mm off), enough for prints' comparison to see differences that aren't there or miss ones that are.
+# Each refinement group (as refine_family's) is drawn at straighten's resolution (FINE_PX_PER_MM) in its current ink
+# coordinates, lighting evened (minus the local mean over the local spread, 0.5 mm), and each label photo aligned to
+# the group's median by a homography (ECC), FINE_ROUNDS times. A fine correction moving the label's corners over
+# MAX_FINE_MM isn't applied (the coarse one stands).
+FINE_PX_PER_MM = 20
+FINE_MARGIN = 2.0
+FINE_ROUNDS = 2
+MAX_FINE_MM = 1.0
+
+
+def fine_view(photo, photo_to_ink, shape):
+    """The label photo in ink coordinates at FINE_PX_PER_MM (FINE_MARGIN around), gray, lighting evened, NaN outside."""
+    w, h = shapes.LABEL_MM[shape]
+    P, m = FINE_PX_PER_MM, FINE_MARGIN
+    W, Hh = int((w + 2 * m) * P), int((h + 2 * m) * P)
+    px_to_mm = np.array([[1 / P, 0, -m], [0, 1 / P, -m], [0, 0, 1.0]])
+    g = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    M = np.linalg.inv(np.float64(photo_to_ink)) @ px_to_mm
+    v = cv2.warpPerspective(g, M, (W, Hh), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=-1)
+    valid = cv2.warpPerspective(np.ones_like(g), M, (W, Hh), flags=cv2.INTER_NEAREST | cv2.WARP_INVERSE_MAP, borderValue=0) > 0
+    mean = cv2.GaussianBlur(v, (0, 0), P / 2)
+    spread = np.sqrt(cv2.GaussianBlur((v - mean) ** 2, (0, 0), P / 2)) + 2.0
+    return np.where(valid, (v - mean) / spread, np.nan).astype(np.float32)
+
+
+def fine_group(job):
+    """{key: (correction: ink mm -> corrected ink mm, how far it moves the label's corners)} for one group, aligned at
+    full resolution (keys whose correction is too large left out)."""
+    import warnings
+    keys, paths, to_inks, shape = job
+    views = {}
+    for k, path, H in zip(keys, paths, to_inks):
+        img = photos.load(path) if path else None
+        if img is not None:
+            views[k] = fine_view(img, H, shape)
+    if len(views) < 2:
+        return {}
+    P, m = FINE_PX_PER_MM, FINE_MARGIN
+    S = np.array([[P, 0, m * P], [0, P, m * P], [0, 0, 1.0]])  # ink mm -> view px
+    corners = corners_mm(shape)
+    W = {k: np.eye(3, dtype=np.float32) for k in views}  # ref px -> member px
+    crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 100, 1e-5)
+    for _ in range(FINE_ROUNDS):
+        warped = [cv2.warpPerspective(v, W[k], (v.shape[1], v.shape[0]), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=np.nan)
+                  for k, v in views.items()]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            ref = np.nanmedian(np.stack(warped), 0)
+        mask = np.isfinite(ref).astype(np.uint8)
+        ref = np.nan_to_num(ref).astype(np.float32)
+        for k, v in views.items():
+            try:
+                _, W[k] = cv2.findTransformECC(ref, np.nan_to_num(v).astype(np.float32), W[k], cv2.MOTION_HOMOGRAPHY, crit, mask, 5)
+            except cv2.error:
+                pass
+    out = {}
+    for k in views:
+        C = np.linalg.inv(np.linalg.inv(S) @ W[k].astype(np.float64) @ S)  # member ink mm -> the reference's
+        moved = float(np.max(np.linalg.norm(project(C, corners) - corners, axis=1)))
+        if moved <= MAX_FINE_MM:
+            out[k] = (C / C[2, 2], moved)
+    return out
+
+
+def refine_fine(groups, photo_to_ink, paths, shape_of, workers=8):
+    """Fine corrections for every refinement group of two or more label photos (fine_group), in parallel."""
+    jobs = [(g, [paths.get(k) for k in g], [photo_to_ink[k] for k in g], shape_of[g[0]]) for g in groups if len(g) >= 2]
+    out = {}
+    with Pool(workers) as pool:
+        for n, c in enumerate(pool.imap_unordered(fine_group, jobs), 1):
+            out.update(c)
+            if n % 100 == 0 or n == len(jobs):
+                print(f"fine refinement: {n} of {len(jobs)} groups", flush=True)
+    return out
+
+
 def apply_offset(o, pts):
     th, dx, dy = o
     R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
@@ -938,7 +1020,19 @@ def solve(found, matches, edges_dir, photo_paths=None):
     global _GEN_DIR
     _GEN_DIR = os.path.dirname(edges_dir)
     fits, failed, choice = stage1(lps, edges_dir, None)
-    offsets, family_of, poor, links_info, corrections = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
+    offsets, family_of, poor, links_info, corrections, groups = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
+    coarse = {}
+    for k, f in fits.items():
+        C, _ = corrections.get(k, (np.eye(3), None))
+        coarse[k] = C @ offset_matrix(offsets.get(k, np.zeros(3))) @ np.linalg.inv(f["cut_to_photo"])
+    photo_of = {lp["key"]: lp["photo"] for lp in lps}
+    paths = {k: (photo_paths or {}).get(photo_of[k]) for k in fits}
+    shape_of = {lp["key"]: lp["shape"] for lp in lps}
+    fine = refine_fine([[k for k in g if k not in poor and k in fits] for g in groups], coarse, paths, shape_of)
+    if fine:
+        links_info["fine refined"] = len(fine)
+        links_info["fine correction_mm"] = {"median": round(float(np.median([v[1] for v in fine.values()])), 3),
+                                            "90 %": round(float(np.percentile([v[1] for v in fine.values()], 90)), 3)}
     out = {}
     for lp in lps:
         k = lp["key"]
@@ -947,7 +1041,8 @@ def solve(found, matches, edges_dir, photo_paths=None):
         f = fits[k]
         o = offsets.get(k, np.zeros(3))
         C, moved = corrections.get(k, (np.eye(3), None))
-        photo_to_ink = C @ offset_matrix(o) @ np.linalg.inv(f["cut_to_photo"])
+        Cf, fine_moved = fine.get(k, (np.eye(3), None))
+        photo_to_ink = Cf @ C @ offset_matrix(o) @ np.linalg.inv(f["cut_to_photo"])
         out[k] = {"photo": lp["photo"], "shape": lp["shape"], "photo_to_ink": (photo_to_ink / photo_to_ink[2, 2]).tolist(),
                   "cut_to_photo": (f["cut_to_photo"] / f["cut_to_photo"][2, 2]).tolist(),
                   "offset": [round(float(o[1]), 3), round(float(o[2]), 3), round(float(np.degrees(o[0])), 3)],
@@ -958,7 +1053,8 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "changed_by_choice": not f["round1_same"],
                   "fallback": "a poor fit: its links disagree" if k in poor else ("found by the pose search" if f["start"].startswith("search") else None),
                   "family": family_of[k][0], "family_size": family_of[k][1],
-                  "correction_mm": None if moved is None else round(moved, 3)}
+                  "correction_mm": None if moved is None else round(moved, 3),
+                  "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3)}
     print("writing solve.json and the page", flush=True)
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
 

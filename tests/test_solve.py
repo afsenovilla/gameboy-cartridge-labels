@@ -122,3 +122,17 @@ def test_release_groups_are_aligned_to_each_other_on_shared_tiles():
     # a print point at mm p lies at p - (0.8, -0.5) in b1's frame; corrected, it should be back at p
     p = np.array([[10.0, 10.0], [30.0, 25.0]])
     assert np.abs(solve.project(C, p - [0.8, -0.5]) - p).max() < 0.15
+
+
+def test_fine_refinement_corrects_a_small_offset_at_full_resolution(tmp_path):
+    # one textured "photo" at 20 px per mm of ink; three label photos of it, the third's homography 0.3 mm off in x
+    rng = np.random.default_rng(3)
+    tex = cv2.GaussianBlur(rng.random((1100, 1200)).astype(np.float32), (0, 0), 3)
+    img = cv2.cvtColor((np.clip((tex - tex.mean()) / tex.std() * 40 + 128, 0, 255)).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+    path = str(tmp_path / "p.png"); cv2.imwrite(path, img)
+    photo_to_ink = np.array([[1 / 20, 0, -5.0], [0, 1 / 20, -5.0], [0, 0, 1]])   # photo px -> ink mm
+    off = np.array([[1, 0, 0.3], [0, 1, 0], [0, 0, 1.0]]) @ photo_to_ink
+    out = solve.fine_group((["a", "b", "c"], [path] * 3, [photo_to_ink, photo_to_ink, off], "dmg"))
+    C = out["c"][0]
+    assert abs(solve.project(C, [[20.0, 18.0]])[0][0] - 19.7) < 0.03          # the 0.3 mm taken back
+    assert out["a"][1] < 0.03
