@@ -33,13 +33,17 @@
 #   Every solved label photo in ink coordinates (20 px/mm, 5 mm around the label) into generated/straighten/; the page
 #   generated/straighten/index.html. Needs make solve.
 #
+#   make read-serials
+#   Every label photo's serial (OCR of the straightened label photos, settled within its family), the database's
+#   entries with no label photo and the serials it doesn't know, into generated/read-serials/. Needs make straighten.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -91,3 +95,9 @@ straighten:
 
 clean-straighten:
 	rm -rf $(GENERATED)/straighten
+
+read-serials:
+	$(PYTHON) src/read_serials.py $(SAMPLE_FLAG)
+
+clean-read-serials:
+	rm -rf $(GENERATED)/read-serials

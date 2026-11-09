@@ -1,0 +1,165 @@
+# read-serials: every solved label photo's serial, into <generated>/read-serials/:
+#   serials.json: {key: {"reads": [{"text", "serial", "kind" (exact, near, unknown), "from" (straightened, photo)}],
+#                        "serial", "release" (the database's id or null), "decided_by", "family"}}
+#   missing.json: the database's entries no label photo has (sorted by id)
+#   unknown-serials.json: {serial-looking string the database doesn't know: [keys]} (possible new releases)
+# The reads: OCR (read_text, RapidOCR) of the straightened label photo (straighten: upright, no perspective), and the
+# serials find read in the photo. Decided, in order:
+#   own: its own exact reads give one release;
+#   own, with its family: they give several, the one most of its family's own exact reads support;
+#   near: no exact read, a near serial (serials.near) its family supports, or its only one;
+#   family: no exact or near read of its own, and its family's own exact reads agree on one release, read by more
+#     than half its other members that read anything serial-like (one cut-off serial that's a real release, DMG-BQ,
+#     isn't passed on to the members reading DMG-BON for DMG-BQIJ);
+#   unknown: else (a serial-looking string the database doesn't know is kept, as a possible new release).
+# The family (solve: label photos joined by links whose points and pixels agree) only settles a label photo's own
+# doubt: families can hold a series' games sharing a layout, and nearly-same prints have serials of their own.
+# Done again when serials.json is older than this file, solve.json or find's label-photos.json; the OCR of a
+# straightened label photo is cached in <generated>/read-serials/ocr/<file>.json (redone when older than its image).
+# The page, <generated>/read-serials/index.html.
+# Usage: read_serials.py [--sample] [--workers N]
+import argparse, html, json, os, sys
+from collections import Counter
+import cv2
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import photos, serials, steps, read_text, straighten
+
+
+def ocr_job(job):
+    image_path, out = job
+    img = cv2.imread(image_path)
+    lines = read_text.read(img) if img is not None else []
+    steps.write_json(out, lines)
+    return out
+
+
+def own_reads(lines, strings, release_of, regions):
+    """A label photo's reads: the straightened image's lines and find's strings from the photo."""
+    reads = []
+    for source, texts in (("straightened", [l["text"] for l in lines]), ("photo", [t["text"] for t in strings])):
+        for text in texts:
+            exact = [s for s in serials.reads(text) if serials.release(s, release_of)]
+            if exact:
+                reads.append({"text": text, "serial": exact[0], "kind": "exact", "from": source})
+                continue
+            near = serials.near(text, regions)
+            if near:
+                reads.append({"text": text, "serial": near[0][0], "kind": "near", "from": source})
+                continue
+            unknown = serials.reads(text)
+            if unknown:
+                reads.append({"text": text, "serial": unknown[0], "kind": "unknown", "from": source})
+    return reads
+
+
+def decide(reads, family_reads, release_of, family_readers=0):
+    """(serial, release id, decided_by) from a label photo's reads, its family's own exact reads (Counter of release
+    ids, its own left out: how many members read each) and how many of its other members read anything serial-like."""
+    rel = lambda s: serials.release(s, release_of)["id"]
+    exact = [r for r in reads if r["kind"] == "exact"]
+    if exact:
+        by_release = Counter(rel(r["serial"]) for r in exact)
+        if len(by_release) == 1:
+            r = exact[0]
+            return r["serial"], rel(r["serial"]), "own"
+        best = max(by_release, key=lambda k: (family_reads.get(k, 0), by_release[k]))
+        r = next(r for r in exact if rel(r["serial"]) == best)
+        return r["serial"], best, "own, with its family"
+    near = [r for r in reads if r["kind"] == "near"]
+    if near:
+        supported = [r for r in near if family_reads.get(rel(r["serial"]), 0) > 0]
+        if supported or len({r["serial"] for r in near}) == 1:
+            r = (supported or near)[0]
+            return r["serial"], rel(r["serial"]), "near"
+    if len(family_reads) == 1 and next(iter(family_reads.values())) > family_readers / 2:
+        # more than half the members reading anything serial-like agree (a cut-off serial that's a real release, read
+        # by one, isn't passed on to those reading something else: DMG-BQ for DMG-BQIJ)
+        release = next(iter(family_reads))
+        return None, release, "family"
+    unknown = [r for r in reads if r["kind"] == "unknown"]
+    if unknown:
+        return unknown[0]["serial"], None, "unknown"
+    return None, None, "unknown"
+
+
+def page(out_dir, result, missing, unknown, gen):
+    decided = Counter(v["decided_by"] for v in result.values())
+    with_release = sum(1 for v in result.values() if v["release"])
+    rel = os.path.relpath(os.path.join(gen, "straighten"), out_dir)
+    doubtful = [(k, v) for k, v in result.items() if v["decided_by"] != "own"]
+    figs = []
+    for k, v in doubtful:
+        reads = "<br>".join(html.escape(r["from"] + ": " + r["text"]) for r in v["reads"]) or "<i>no reads</i>"
+        figs.append(f'<figure><img loading="lazy" src="{rel}/{straighten.file_name(k)}"><figcaption><code>{html.escape(k[:14])}</code> '
+                    f'<b>{html.escape(str(v["serial"] or v["release"]))}</b> ({html.escape(v["decided_by"])})<br>{reads}</figcaption></figure>')
+    figs = "".join(figs)
+    with open(os.path.join(out_dir, "index.html"), "w") as f:
+        f.write(f"""<!doctype html><meta charset="utf-8"><title>read-serials</title>
+<style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:6px;vertical-align:top;width:280px}} img{{width:280px}} figcaption{{font-size:11px}}</style>
+<h1>read-serials</h1>
+<p>{len(result)} label photos; a release the database knows for {with_release}. Decided by: {", ".join(f"{k} {n}" for k, n in decided.most_common())}. Database entries with no label photo: {len(missing)}. Serial-looking strings the database doesn't know: {len(unknown)} ({html.escape(", ".join(sorted(unknown)[:30]))}).</p>
+<h2>Not decided by their own reads alone ({len(doubtful)})</h2>{figs}""")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--sample", action="store_true")
+    ap.add_argument("--workers", type=int, default=4)
+    args = ap.parse_args()
+    gen = photos.generated(args.sample)
+    solve_file, find_file = os.path.join(gen, "solve", "solve.json"), os.path.join(gen, "find", "label-photos.json")
+    for p in (solve_file, find_file):
+        if not os.path.exists(p):
+            sys.exit(f"{p} missing: run make find, solve and straighten first")
+    solved = json.load(open(solve_file))["label_photos"]
+    found = {lp["key"]: lp for lp in json.load(open(find_file))["label_photos"]}
+    out_dir = os.path.join(gen, "read-serials")
+    ocr_dir = os.path.join(out_dir, "ocr")
+    os.makedirs(ocr_dir, exist_ok=True)
+    images = {k: os.path.join(gen, "straighten", straighten.file_name(k)) for k in solved}
+    missing_images = [k for k, p in images.items() if not os.path.exists(p)]
+    if missing_images:
+        sys.exit(f"{len(missing_images)} straightened images missing: run make straighten first")
+    ocr_out = {k: os.path.join(ocr_dir, straighten.file_name(k)[:-5] + ".json") for k in solved}
+    for f in os.listdir(ocr_dir):
+        if f not in {os.path.basename(p) for p in ocr_out.values()}:
+            os.remove(os.path.join(ocr_dir, f))
+    jobs = [(images[k], ocr_out[k]) for k in solved
+            if not os.path.exists(ocr_out[k]) or os.path.getmtime(ocr_out[k]) < max(os.path.getmtime(images[k]), os.path.getmtime(read_text.__file__))]
+    threads = max(1, (os.cpu_count() or 4) // args.workers)
+    steps.run(ocr_job, jobs, args.workers, read_text.init_worker, (threads,), "straightened label photos read:")
+    out = os.path.join(out_dir, "serials.json")
+    newest = max(os.path.getmtime(p) for p in [solve_file, find_file, __file__] + list(ocr_out.values()))
+    release_of = serials.load_database()
+    if not os.path.exists(out) or os.path.getmtime(out) < newest:
+        regions = serials.by_region(release_of)
+        reads = {k: own_reads(json.load(open(ocr_out[k])), found.get(k, {}).get("strings", []), release_of, regions) for k in solved}
+        family_of = {k: v["family"] for k, v in solved.items()}
+        own_release = {k: Counter(serials.release(r["serial"], release_of)["id"] for r in rs if r["kind"] == "exact") for k, rs in reads.items()}
+        result = {}
+        for k in solved:
+            fam, readers = Counter(), 0
+            for o, f in family_of.items():
+                if f == family_of[k] and o != k:
+                    fam.update({rid: 1 for rid in own_release[o]})
+                    readers += bool(reads[o])
+            serial, release, how = decide(reads[k], fam, release_of, readers)
+            result[k] = {"reads": reads[k], "serial": serial, "release": release, "decided_by": how, "family": family_of[k]}
+        steps.write_json(out, result)
+        covered = {v["release"] for v in result.values() if v["release"]}
+        everything = sorted({r["id"] for r in json.load(open(serials.DATABASE))})
+        steps.write_json(os.path.join(out_dir, "missing.json"), [r for r in everything if r not in covered])
+        unknown = {}
+        for k, v in result.items():
+            for r in v["reads"]:
+                if r["kind"] == "unknown":
+                    unknown.setdefault(r["serial"], []).append(k)
+        steps.write_json(os.path.join(out_dir, "unknown-serials.json"), {s: sorted(set(ks)) for s, ks in sorted(unknown.items())})
+    result = json.load(open(out))
+    page(out_dir, result, json.load(open(os.path.join(out_dir, "missing.json"))), json.load(open(os.path.join(out_dir, "unknown-serials.json"))), gen)
+    print(f"{sum(1 for v in result.values() if v['release'])} of {len(result)} with a release; page: {os.path.join(out_dir, 'index.html')}")
+
+
+if __name__ == "__main__":
+    main()

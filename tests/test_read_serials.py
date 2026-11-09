@@ -1,0 +1,25 @@
+from collections import Counter
+import read_serials
+
+DATABASE = {"DMG-BQ": {"id": "dmg-bq"}, "DMG-BQIJ-JPN": {"id": "dmg-bqij"}, "DMG-APSJ-JPN": {"id": "dmg-apsj"},
+            "DMG-APBJ-JPN": {"id": "dmg-apbj"}}
+
+
+def r(serial, kind="exact"):
+    return {"text": serial, "serial": serial, "kind": kind, "from": "straightened"}
+
+
+def test_own_read_wins():
+    assert read_serials.decide([r("DMG-APSJ-JPN")], Counter({"dmg-apbj": 5}), DATABASE, 5)[1:] == ("dmg-apsj", "own")
+
+
+def test_several_own_releases_settled_by_the_family():
+    serial, release, how = read_serials.decide([r("DMG-APSJ-JPN"), r("DMG-APBJ-JPN")], Counter({"dmg-apbj": 3}), DATABASE, 3)
+    assert (release, how) == ("dmg-apbj", "own, with its family")
+
+
+def test_family_passes_a_serial_on_only_with_a_majority():
+    reads = [r("DMG-BON", "unknown")]
+    assert read_serials.decide(reads, Counter({"dmg-bq": 1}), DATABASE, 4)[2] == "unknown"   # 1 of 4 read DMG-BQ
+    assert read_serials.decide(reads, Counter({"dmg-bqij": 3}), DATABASE, 4)[1:] == ("dmg-bqij", "family")
+    assert read_serials.decide([], Counter({"dmg-bqij": 1}), DATABASE, 1)[1:] == ("dmg-bqij", "family")
