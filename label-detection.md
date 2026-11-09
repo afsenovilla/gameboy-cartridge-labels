@@ -282,6 +282,10 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **Tried and reverted: a scale limit** (a candidate dropped if its scale differs from the evidence's by over 40 or 60 %): 73e88d (AGB, fitted at half scale on a printed frame) was fixed only with the details' estimate, which dropped right fits elsewhere (evaluation set 98 -> 97 %); with the serial's estimate alone 73e88d wasn't caught. No single estimate is reliable enough to overrule the fits. 477d69 (AGB, right scale, sitting off; outline support 0.44): a stricter AGB outline threshold would drop more good fits than bad (evaluation set, under 0.6: 1 bad, 6 good).
 
+**restore, the plain median** (the user: it removes noise better than the soft median; the energy weights favoured noise and dirt, which have high local energy too). To experiment with later: the energy only to leave out clearly blurred regions, not to reward the strongest. Two label photos are averaged, one used as it is.
+
+**Colours, first experiment**: each print also restored with its paper white: the brightest near-neutral pixels (Oklab chroma under 0.04, the top half of their lightness, at least 3 % of the label) scaled to white in linear light, 5 % over so the paper's noise and dirt clip. Paper found on 108 of the sample's 121 prints; clipped to white: 10 % of the label at the median (4-27 % at 10-90 %); the paper before: lightness 0.86 (0.71-0.94), chroma 0.013. The page shows median colours and paper white side by side, with the straightened label photos.
+
 ## Next
 
-The colour experiments (paper white with clipping against the median), the designer's vision, then publish.
+The user's judgement of the colours; the designer's vision; publish.
