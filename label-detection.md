@@ -271,6 +271,13 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **solve on the full set** crashed on a degenerate label homography (singular, couldn't be inverted): candidates must now be sound (finite, well conditioned, a convex label at least 20 px across). Stage 1's candidates are cached per label photo, stamped with a fingerprint of the fitting code, so a crash or a change after stage 1 doesn't redo the fitting; progress lines; stage 2 draws in parallel and its workers share the drawings.
 
+**Families tightened** (the sample): five CGB games had formed one family through links whose two labels overlapped only in part (a template matched at another place): only the overlap was compared, and half of it agreed. Now a link's pixels are compared over tiles textured in either label photo (art in one and plain in the other disagrees), over at least half the label, its shift and turn within 4 mm and 4 degrees, 0.45 of the tiles agreeing (same old name 10/50/90 % at 0.46/0.70/0.85, different 0.03/0.12/0.21; the MINUET against plain DMG-TRA 0.36-0.43). Only Fire Red and Leaf Green share a family (the user: right, two prints of one family). Refining per release had never aligned a family's release groups to each other: now aligned on the tiles they share (phase correlation, then ECC on the shared tiles).
+
+## Open questions for the user (remind them)
+
+- 15938cc543 (DMG-FBJ_5): which way is the perspective off, which corner, how far? (outline support 0.57, refinement moved it 0.54 mm)
+- 607e1a516e (AGB-B4WJ-JPN): inconsistent perspective within the print: which page, and the art or the sticker's edges? (by pixels its three label photos agree within 0.06 mm)
+
 ## Next
 
 restore: bands, weights, combining, crop.
