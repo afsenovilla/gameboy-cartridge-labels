@@ -257,6 +257,8 @@ Not yet in find: the ink's extent from agreeing pixels and cut edges (edges isn'
 
 **Main's outline starts ported** (src/outlines.py, computed in edges; solve: the logo placement, else every outline start, the best supported, else the pose search): evaluation set 96 % under 5 mm, 84 % under 1 mm (98 % and 93 % where main failed then; this branch before: 81 % and 57 %). The sample: 273 of 276 solved, 98 % of those with a main fit under 5 mm. Keeping only outline starts near the label photo (find's circle) cost 2 points (87 % where main failed then): find's circles are too rough to filter by.
 
+**The choice learned from round 1** (no main data, no judgements): every candidate kept; round 1 chooses the logo placement if it passed, else the best mean support; confident label photos are those where candidates from at least two kinds of start agree within 0.5 mm with round 1's choice; their candidates are examples (within 0.5 mm right, over 3 mm wrong) for a logistic regression on plain features, which then chooses for every label photo. Evaluation set: 98 % under 5 mm, 89 % under 1 mm (before 96 %, 84 %; the oracle 98 %, 94 %); 217 confident of 298, 1539 examples. Weighs most: how many candidates agree, then a small placement and high support. The sample: 169 of 193 within 1 mm of main's (161 before).
+
 ## Next
 
-The iterative refinement (a first round's confident fits teaching the next: a choice model, the logos' places and the label's scale from this branch's own fits, starts carried within a print); then straighten.
+More from the first round (the logos' places and the label's scale from this branch's own fits, starts carried within a print), or straighten.
