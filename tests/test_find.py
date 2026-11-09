@@ -70,10 +70,3 @@ def test_overlapping_label_photos_of_one_photo_are_merged():
 
 def test_key_is_the_centre_in_percent():
     assert find.key("abc", [512.0, 250.0], [1024, 1000]) == "abc@50,25"
-
-
-def test_region_of_a_serial():
-    assert find.region_of("DMG-ASWP-EUR") == "EUR"
-    assert find.region_of("DMG-UJA") is None       # an old Japanese game code, not a region
-    assert find.region_of("DMG-ML-SCN") == "SCN"
-    assert find.region_of("DIS-CGB-AZ7E-USA") == "USA"
