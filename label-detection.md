@@ -215,6 +215,10 @@ Unit tests are written along with the code, from the first step on (the last att
 
 Both read one on 213 photos, agreeing on 208; RapidOCR alone on 38, Vision alone on 3, neither on 22. RapidOCR's two other releases are cut-off serials that exist (DMG-DD for DMG-DDA, DMG-BQ for DMG-BQIJ). RapidOCR was kept: more serials, portable (a pip package with its models), no Mac needed. Its boxes don't keep the reading direction (always the box's top left first); its 180° classifier is run again on each line to put the corners in reading order. With 4 workers the sample takes about 64 s.
 
+**features** (the sample): SIFT at most 2000 px across, the 8000 strongest: keypoints per photo fewest 386, median 4786; 65 of 276 photos at the cap. 19 s with 8 workers; 189 MB (full set about 3.8 GB; compressing saves only 24 %).
+
+**match** (the sample): candidates from one index of every photo's 1500 strongest keypoints, Lowe's ratio test within each other photo, RANSAC repeated per pair. 1749 matches between 1611 pairs, 11 s. Pairs of photos with the same old name matched: 435 of 437. Matches across different old names: 1299 (watermarks and backgrounds of one source, templates, embossing: for find to sort out). Learned on the way: a photo's own keypoints come first among its neighbours (skip them); keeping only the nearest neighbour per photo loses repeated patterns, keeping all of them drowns RANSAC; the ratio test within each other photo works.
+
 ## Next
 
-features: SIFT of each photo.
+find: label photos from the evidence.
