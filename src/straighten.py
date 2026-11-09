@@ -13,6 +13,7 @@ import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, steps, shapes
+MODELS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "shape-models.json")))["shapes"]
 
 PX_PER_MM = 20
 MARGIN = 5.0
@@ -69,6 +70,12 @@ def page(out_dir, solved):
         m = MARGIN * PX_PER_MM
         lw, lh = shapes.LABEL_MM[r["shape"]]
         rect = f'<rect x="{m}" y="{m}" width="{lw * PX_PER_MM}" height="{lh * PX_PER_MM}" fill="none" stroke="#f0f" stroke-width="3"/>'
+        # the recess, from the plastic's fit: plastic mm -> photo -> ink mm -> the image's px
+        x0, y0, x1, y1 = MODELS[r["shape"]]["recess"]
+        rec = cv2.perspectiveTransform(np.float64([[[x0, y0]], [[x1, y0]], [[x1, y1]], [[x0, y1]]]),
+                                       np.float64(r["photo_to_ink"]) @ np.float64(r["plastic_to_photo"])).reshape(-1, 2)
+        rec = (rec + MARGIN) * PX_PER_MM
+        rect += f'<polygon points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in rec)}" fill="none" stroke="#ff0" stroke-width="3"/>'
         figs.append(f'<figure><div class="ph"><img loading="lazy" src="{file_name(key)}"><svg viewBox="0 0 {w} {h}">{rect}</svg></div>'
                     f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"].split(" (")[0])}, error {r.get("error_mm")} mm</figcaption></figure>')
     with open(os.path.join(out_dir, "index.html"), "w") as f:
@@ -76,7 +83,7 @@ def page(out_dir, solved):
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:6px;vertical-align:top;width:300px}}
 .ph{{position:relative;display:inline-block}} .ph img{{width:300px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>straighten</h1>
-<p>{len(solved)} label photos in ink coordinates, {PX_PER_MM} px/mm, {MARGIN:g} mm around the nominal label (magenta: its canonical size where the sticker's median cut puts it). Largest leftover error first.</p>
+<p>{len(solved)} label photos in ink coordinates, {PX_PER_MM} px/mm, {MARGIN:g} mm around the nominal label (magenta: its canonical size at the linked set's median cut; yellow: this cartridge's recess, from the plastic's fit). Largest leftover error first.</p>
 {"".join(figs)}""")
 
 
