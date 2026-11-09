@@ -8,3 +8,6 @@ generated-sample/
 # Python caches.
 __pycache__/
 .pytest_cache/
+# Photos waiting for make add-photos.
+save-new-images-here/*
+!save-new-images-here/README.md

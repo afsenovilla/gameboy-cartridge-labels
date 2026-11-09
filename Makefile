@@ -8,6 +8,10 @@
 #   make test
 #   Runs the unit tests (tests/).
 #
+#   make add-photos
+#   Files the photos left in save-new-images-here/ into photos/ as <sha1>.<ext>, with where each came from (a
+#   subfolder's name and listing.json) in photo-sources.json (src/add_photos.py).
+#
 #   make read-text
 #   Reads the text on every photo (RapidOCR) into generated/read-text/<sha1>.json; the page generated/read-text/index.html.
 #
@@ -46,7 +50,7 @@
 #
 #   make publish
 #   The outputs collected into generated/publish/: prints/, label-photos/ (straightened, the same crop), index.json
-#   (source and URLs from main's sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
+#   (source and URLs from photo-sources.json and main's sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
 # Plain make lists these.
 
@@ -54,7 +58,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish
+.PHONY: help setup test add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -64,6 +68,9 @@ setup:
 
 test:
 	$(PYTHON) -m pytest -q tests
+
+add-photos:
+	$(PYTHON) src/add_photos.py
 
 read-text:
 	$(PYTHON) src/read_text.py $(SAMPLE_FLAG)

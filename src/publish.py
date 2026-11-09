@@ -48,6 +48,14 @@ def sources(main):
     return out
 
 
+def own_sources(path="photo-sources.json"):
+    """SHA-1 -> {source, page_url, image_url}, for the photos make add-photos filed (src/add_photos.py)."""
+    if not os.path.exists(path):
+        return {}
+    return {k: {"source": e.get("source"), "page_url": e.get("page_url"), "image_url": e.get("image_url")}
+            for k, e in json.load(open(path)).items() if e.get("source")}
+
+
 def poor_fits(solved):
     return {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
 
@@ -79,7 +87,7 @@ def main():
     prints = json.load(open(need[0]))
     solved = json.load(open(need[1]))["label_photos"]
     serials = json.load(open(need[2]))
-    src = sources(args.main)
+    src = {**sources(args.main), **own_sources()}
     poor = poor_fits(solved)
     out_dir = os.path.join(gen, "publish")
     for d in ("prints", "label-photos"):

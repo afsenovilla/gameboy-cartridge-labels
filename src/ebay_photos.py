@@ -6,7 +6,8 @@ query list and takes in the search results, downloading each listing's first pho
     python3 src/ebay_photos.py queries USA > queries.json
     python3 src/ebay_photos.py ingest results.json queries.json
 
-ebay-photos/sources.json: one record per kept file (release, query, listing, image URL, size, date).
+Photos go to save-new-images-here/ebay-search/ with a listing.json there, for make add-photos.
+ebay-photos/sources.json: one record per downloaded file (kept, or deleted by hand afterwards: never downloaded again) (release, query, listing, image URL, size, date).
 ebay-photos/searches.json: every release searched, so a run can be stopped and resumed.
 """
 import datetime
@@ -20,7 +21,9 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 import serials  # noqa: E402
 
-OUT = os.environ.get("EBAY_OUT", "ebay-photos")
+OUT = os.environ.get("EBAY_OUT", "ebay-photos")  # the downloader's own records
+DROP = os.environ.get("EBAY_DROP", "save-new-images-here/ebay-search")  # the photos, for make add-photos
+LISTING = os.path.join(DROP, "listing.json")
 SOURCES = os.path.join(OUT, "sources.json")
 SEARCHES = os.path.join(OUT, "searches.json")
 MISSING = "generated/read-serials/missing.json"
@@ -92,7 +95,8 @@ def ingest(results_file, queries_file):
             if it["item"] in have_items:
                 continue
             name = f"ebay-{it['item']}.jpg"
-            path = os.path.join(OUT, name)
+            os.makedirs(DROP, exist_ok=True)
+            path = os.path.join(DROP, name)
             url = f"https://i.ebayimg.com/images/g/{it['image']}/s-l1600.jpg"
             if subprocess.run(["curl", "-sSf", "-o", path, url]).returncode != 0:
                 continue
@@ -105,6 +109,11 @@ def ingest(results_file, queries_file):
             sources[name] = {"release": res["release"], "serial": res["serial"], "query": res["query"],
                              "listing": f"https://www.ebay.com/itm/{it['item']}", "listing_title": it["title"],
                              "image": url, "size": wh, "fetched": today}
+            listing = load(LISTING)
+            listing[name] = {"page_url": sources[name]["listing"], "image_url": url, "title_on_page": it["title"],
+                             "searched_release": res["release"], "searched_serial": res["serial"],
+                             "query": res["query"], "fetched": today}
+            save(LISTING, listing)
             have_items.add(it["item"])
             kept += 1
         searches[res["release"]] = {"query": res["query"], "candidates": len(res["items"]), "kept": kept,
