@@ -2,7 +2,7 @@
 #   <print>.avif: the restored print, cropped to its shape's canonical label size at its family's median cut (the
 #     origin of ink coordinates), at straighten's PX_PER_MM; its colours scaled so its paper is white (see paper_white)
 #     where paper is found, else the label photos' evened to their median (the user: one image per print)
-#   <print>-full.png (with --full-top N, for the N prints with the most label photos): uncropped, over the whole
+#   uncropped/<print>.png (with --full-top N, for the N prints with the most label photos): uncropped, over the whole
 #     straightened canvas (the label and 5 mm around), each label photo counting only inside its own sticker's cut;
 #     paper white where found; transparent where no label photo shows paper
 #   <print>.json: {"keys" (its label photos used), "pooled" (other prints' label photos used where alike), "single"
@@ -155,10 +155,15 @@ def finest_band(photo_px_per_mm):
     return max(0, int(np.floor(np.log2(max(ratio, 1.0)))))
 
 
+def uncropped(out_base):
+    """Where a print's uncropped image goes: uncropped/ beside the cropped ones."""
+    return os.path.join(os.path.dirname(out_base), "uncropped", os.path.basename(out_base) + ".png")
+
+
 def restore_print(job):
     """Restores one print: (print id, the result's description). With cuts ({key: the sticker's cut outline in the
     straightened image's px}), uncropped: the whole straightened canvas, each label photo counting only inside its own
-    sticker's cut, into <print>-full.png (transparent where no label photo shows paper)."""
+    sticker's cut, into uncropped/<print>.png (transparent where no label photo shows paper)."""
     pid, shape, own, pooled, px_per_mm, out_base = job[:6]
     cuts = job[6] if len(job) > 6 else None
     P, M = straighten.PX_PER_MM, straighten.MARGIN
@@ -234,7 +239,7 @@ def restore_print(job):
         paper, white = paper_white(np.where(covered[..., None], result, 0))
         img = white if white is not None else result
         rgba = np.dstack([(np.clip(img, 0, 1) * 255).round().astype(np.uint8), (covered * 255).astype(np.uint8)])
-        cv2.imwrite(out_base + "-full.png", rgba)
+        cv2.imwrite(uncropped(out_base), rgba)
         return pid, {"full": True, "keys": [k for k, _, _ in own], "paper": paper is not None}
     paper, white = paper_white(result)
     write_avif(out_base + ".avif", white if white is not None else result)
@@ -310,7 +315,7 @@ def main():
         by_family.setdefault(p["family"], []).append(p)
     jobs, all_jobs, wanted = [], [], set()
     for p in result["prints"]:
-        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", ".json", "-full.png")}
+        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", ".json")}
         own = [(k, image(k), None) for k in p["keys"] if k not in poor] or [(k, image(k), None) for k in p["keys"]]
         pooled = []
         pair_dir = os.path.join(gen, "prints", straighten.file_name(p["id"])[:-5])
@@ -323,8 +328,12 @@ def main():
         if not os.path.exists(base(p["id"]) + ".avif") or os.path.getmtime(base(p["id"]) + ".avif") < newest:
             jobs.append(all_jobs[-1])
     for f in os.listdir(out_dir):
-        if f not in wanted and f != "index.html":
+        if f not in wanted and f not in ("index.html", "uncropped"):
             os.remove(os.path.join(out_dir, f))
+    os.makedirs(os.path.join(out_dir, "uncropped"), exist_ok=True)
+    for f in os.listdir(os.path.join(out_dir, "uncropped")):  # those of prints no longer there
+        if f[:-4] + ".avif" not in wanted:
+            os.remove(os.path.join(out_dir, "uncropped", f))
     import multiprocessing
     with multiprocessing.Pool(args.workers) as pool:
         for n, (pid, desc) in enumerate(pool.imap_unordered(restore_print, jobs), 1):
@@ -348,7 +357,7 @@ def main():
             full_jobs.append(j + (cuts,))
         with multiprocessing.Pool(args.workers) as pool:
             for pid, desc in pool.imap_unordered(restore_print, full_jobs):
-                print(f"uncropped: {base(pid)}-full.png", flush=True)
+                print(f"uncropped: {uncropped(base(pid))}", flush=True)
     page(out_dir, result, gen)
     print(f"page: {os.path.join(out_dir, 'index.html')}")
 
