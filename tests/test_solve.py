@@ -46,7 +46,7 @@ def test_pixel_agreement_finds_the_same_print_shifted_and_not_another():
     va = solve.compare_view(print_, cut_a, "dmg")
     vb = solve.compare_view(print_, cut_b, "dmg")
     share, textured_tiles = solve.pixel_agreement(va, vb, 0.0, np.array([1.0, 0.5]), "dmg")
-    assert textured_tiles > 50 and share > 0.9
+    assert textured_tiles > 50 and share > 0.7  # tiles textured in either count: the plain border too
     share, _ = solve.pixel_agreement(va, vb, 0.0, np.array([-1.0, -0.5]), "dmg")   # the wrong way round
     assert share < 0.3
     other = solve.compare_view(textured(np.random.default_rng(1), 400, 500), cut_b, "dmg")

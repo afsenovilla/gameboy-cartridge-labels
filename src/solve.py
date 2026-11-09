@@ -552,7 +552,10 @@ def stage1(lps, edges_dir, pairs, workers=8):
 #     (in good matches the halftone dots line up; 0.5 mm means a fit is off), and
 #   - the two label photos' pixels agree there: both drawn into the label's mm at COMPARE_PX_PER_MM, lighting evened
 #     (minus the local mean, over the local spread), compared in COMPARE_TILE_MM tiles by correlation; at least
-#     AGREE_SHARE of the textured tiles above TILE_CORRELATION (a shared template or offset art agrees only in part).
+#     AGREE_SHARE of the tiles textured in either above TILE_CORRELATION in both (a shared template or offset art
+#     agrees only in part; art in one and plain in the other disagrees), over at least MIN_COVERAGE of the label's
+#     tiles, its shift and turn within MAX_SHIFT and MAX_TURN (a template matched at another place on another layout
+#     overlaps the two labels only in part: those links had chained five CGB games into one family).
 # A label photo most of whose pixel-agreeing links fail the fit test is a poor fit: flagged, no links, its own family.
 # Offsets fitted per family (label photos joined by counting links) by least squares with Tukey reweighting; each
 # family's median offset is none (its median cut anchors its ink coordinates).
@@ -561,7 +564,8 @@ COMPARE_PX_PER_MM = 5
 COMPARE_MARGIN = 2.0
 COMPARE_TILE_MM = 2.0
 TILE_CORRELATION = 0.5
-AGREE_SHARE = 0.5  # sample, links fitting within LINK_FIT_MM: same old name 10/50/90 % at 0.57/0.85/0.97, different 0.05/0.18/0.30
+AGREE_SHARE = 0.45  # sample, links fitting within LINK_FIT_MM, tiles textured in either: same old name 10/50/90 % at 0.46/0.70/0.85, different 0.03/0.12/0.21; the MINUET against plain DMG-TRA 0.36-0.43 (its offset art)
+MIN_COVERAGE = 0.5  # of the label's tiles: a link comparing fewer (two labels overlapping in part) doesn't count
 MIN_TEXTURED_TILES = 20
 TUKEY_MM = 0.5
 
@@ -597,8 +601,8 @@ def compare_view(photo, cut_to_photo, shape):
 
 
 def pixel_agreement(va, vb, theta_deg, t_mm, shape):
-    """The share of textured tiles where label photo b, carried into a's frame (b's mm -> a's mm: turn theta, shift t),
-    agrees with a; and the count of textured tiles."""
+    """The share of tiles textured in either label photo where b, carried into a's frame (b's mm -> a's mm: turn theta,
+    shift t), agrees with a (both textured and correlating); and the count of those tiles."""
     th = np.radians(theta_deg)
     R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
     s, m = COMPARE_PX_PER_MM, COMPARE_MARGIN
@@ -616,10 +620,14 @@ def pixel_agreement(va, vb, theta_deg, t_mm, shape):
     for y in range(y0, y0 + int(h * s) - t + 1, t):
         for x in range(x0, x0 + int(w * s) - t + 1, t):
             pa, pb = va[y:y + t, x:x + t].ravel(), wb[y:y + t, x:x + t].ravel()
-            if np.isnan(pb).any() or pa.std() < 0.5 or pb.std() < 0.5:
+            if np.isnan(pb).any():
                 continue
-            textured += 1
-            agree += float(np.corrcoef(pa, pb)[0, 1]) > TILE_CORRELATION
+            ta, tb = pa.std() >= 0.5, pb.std() >= 0.5
+            if not (ta or tb):
+                continue
+            textured += 1  # textured in either: art in one and plain in the other disagrees (a shared layout's strip
+            # agrees, the games' art doesn't: counting only tiles textured in both let different games link)
+            agree += bool(ta and tb and float(np.corrcoef(pa, pb)[0, 1]) > TILE_CORRELATION)
     return (agree / textured if textured else 0.0), textured
 
 
@@ -702,17 +710,20 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
     for f in os.listdir(view_dir):  # the drawn views are only for the comparison
         os.remove(os.path.join(view_dir, f))
     os.rmdir(view_dir)
-    pixel_ok = lambda j: j[3] >= AGREE_SHARE and j[4] >= MIN_TEXTURED_TILES
+    label_tiles = {sh: int(w // COMPARE_TILE_MM) * int(h // COMPARE_TILE_MM) for sh, (w, h) in shapes.LABEL_MM.items()}
+    shape_of_link = {i: shape_of[candidates[i][0]] for i in judged}
+    pixel_ok = lambda i, j: (j[3] >= AGREE_SHARE and j[4] >= max(MIN_TEXTURED_TILES, MIN_COVERAGE * label_tiles[shape_of_link[i]])
+                             and abs(j[1]) <= MAX_TURN and np.hypot(*j[2]) <= MAX_SHIFT)
     # poor fits: most of a label photo's pixel-agreeing links fail the fit test
     tally = {}
     for i, j in judged.items():
-        if pixel_ok(j):
+        if pixel_ok(i, j):
             a, b = candidates[i][0], candidates[i][1]
             for k in (a, b):
                 tally.setdefault(k, [0, 0])[0 if j[0] <= LINK_FIT_MM else 1] += 1
     poor = {k for k, (good, bad) in tally.items() if bad >= 2 and bad > good}
     links = [(candidates[i][0], candidates[i][1], j) for i, j in judged.items()
-             if pixel_ok(j) and j[0] <= LINK_FIT_MM and candidates[i][0] not in poor and candidates[i][1] not in poor]
+             if pixel_ok(i, j) and j[0] <= LINK_FIT_MM and candidates[i][0] not in poor and candidates[i][1] not in poor]
     # families
     parent = {k: k for k in fits}
     def root(x):
@@ -778,7 +789,7 @@ def stage2(lps, fits, candidates, photo_paths, workers=8):
                 corrections.update(c)
                 poor |= bad
     info = {"link candidates": len(candidates), "judged": len(judged),
-            "pixels agree": sum(pixel_ok(j) for j in judged.values()),
+            "pixels agree": int(sum(pixel_ok(i, j) for i, j in judged.items())),
             "counting links": len(links), "poor fits": len(poor),
             "families": sorted((len(m) for m in families.values()), reverse=True)[:10],
             "refined": len(corrections),
