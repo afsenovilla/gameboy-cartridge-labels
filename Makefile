@@ -37,13 +37,17 @@
 #   Every label photo's serial (OCR of the straightened label photos, settled within its family), the database's
 #   entries with no label photo and the serials it doesn't know, into generated/read-serials/. Needs make straighten.
 #
+#   make prints
+#   Each family's label photos split into prints by a tile comparison, the pooling masks between nearly-same prints,
+#   into generated/prints/; the page generated/prints/index.html. Needs make read-serials.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials
+.PHONY: help setup test read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -101,3 +105,9 @@ read-serials:
 
 clean-read-serials:
 	rm -rf $(GENERATED)/read-serials
+
+prints:
+	$(PYTHON) src/prints.py $(SAMPLE_FLAG)
+
+clean-prints:
+	rm -rf $(GENERATED)/prints
