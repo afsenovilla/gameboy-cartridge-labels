@@ -10,7 +10,8 @@
 # print's median (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
 # the image is under 8 px across). Per band and pixel, a label photo counts unless the band is finer than its own
 # photo's resolution (the fit's photo pixels per mm) or its straightened image is empty there (off the photo).
-# Combined per band: one label photo as it is; two averaged; three or more by the median.
+# Before combining, the label photos are registered finely at full resolution (register). Combined per band: one
+# label photo as it is; two averaged; three or more by the median.
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
 # leave out clearly blurred regions.)
@@ -82,6 +83,68 @@ def even_to(img, ref, valid):
     return np.clip(out, 0, 1)
 
 
+# Fine registration at full resolution: solve aligns a print's label photos by their pixels at 5 px/mm, which leaves
+# 0.4-1.8 px (at 20 px/mm) between them, most at the label's top and bottom, enough to blur small text in a median.
+# Each label photo (lighting-evened gray) is aligned to the print's median by a homography (ECC), the median rebuilt,
+# REGISTER_ROUNDS times; then by a smooth local correction: dense optical flow (DIS) against the median, smoothed over
+# FLOW_SMOOTH_MM and limited to FLOW_MAX_PX, so a gentle bend or lens distortion is followed, not a detail (dirt isn't
+# pulled into place).
+REGISTER_ROUNDS = 2
+FLOW_SMOOTH_MM = 2.0
+FLOW_MAX_PX = 3.0
+
+
+def evened_gray(img, valid):
+    g = cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)
+    P = straighten.PX_PER_MM
+    m = cv2.GaussianBlur(g, (0, 0), P / 2)
+    s = np.sqrt(cv2.GaussianBlur((g - m) ** 2, (0, 0), P / 2)) + 2
+    return np.where(valid, (g - m) / s, 0).astype(np.float32)
+
+
+def warp(img, M, flow=None, nearest=False):
+    h, w = img.shape[:2]
+    out = cv2.warpPerspective(img, M, (w, h), flags=(cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR) | cv2.WARP_INVERSE_MAP,
+                              borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    if flow is not None:
+        gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+        out = cv2.remap(out, gx + flow[..., 0], gy + flow[..., 1], cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR,
+                        borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    return out
+
+
+def register(entries):
+    """The entries' images (and valid masks, weight maps) aligned to their median: a homography each, then a smooth
+    local correction."""
+    imgs = [e[0] for e in entries]
+    valids = [e[1].astype(np.uint8) for e in entries]
+    grays = [evened_gray(i, v > 0) for i, v in zip(imgs, valids)]
+    Ms = [np.eye(3, dtype=np.float32) for _ in entries]
+    crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 60, 1e-5)
+    for _ in range(REGISTER_ROUNDS):
+        ref = np.median(np.stack([warp(g, M) for g, M in zip(grays, Ms)]), 0)
+        for i, g in enumerate(grays):
+            try:
+                _, Ms[i] = cv2.findTransformECC(ref, g, Ms[i], cv2.MOTION_HOMOGRAPHY, crit, valids[i], 5)
+            except cv2.error:
+                pass
+    ref = np.median(np.stack([warp(g, M) for g, M in zip(grays, Ms)]), 0)
+    dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    to8 = lambda x: np.clip(x * 40 + 128, 0, 255).astype(np.uint8)
+    P = straighten.PX_PER_MM
+    out = []
+    for e, g, M in zip(entries, grays, Ms):
+        flow = dis.calc(to8(ref), to8(warp(g, M)), None)        # ref px -> where it is in the aligned photo
+        flow = cv2.GaussianBlur(flow, (0, 0), FLOW_SMOOTH_MM * P)
+        mag = np.linalg.norm(flow, axis=2, keepdims=True)
+        flow = (flow * np.minimum(1, FLOW_MAX_PX / np.maximum(mag, 1e-6))).astype(np.float32)
+        img = warp(e[0], M, flow)
+        valid = warp(e[1].astype(np.uint8), M, flow, nearest=True) > 0
+        extra = warp(e[2], M, flow) if e[2] is not None else None
+        out.append((img, valid, extra, e[3]))
+    return out
+
+
 def finest_band(photo_px_per_mm):
     """The finest band (0 = straighten's full resolution) a photo with this many pixels per mm carries: band k holds
     detail about 2^k pixels of straighten's across, which needs about as many of the photo's per mm."""
@@ -112,6 +175,8 @@ def restore_print(job):
         return pid, None
     if len(entries) > MAX_PHOTOS:
         entries = sorted(entries, key=lambda e: -e[3])[:MAX_PHOTOS]
+    if len(entries) >= 2:
+        entries = register(entries)
     ref = np.median(np.stack([e[0] for e in entries]), 0)
     evened = [even_to(e[0], ref, e[1]) for e in entries]
     n = len(entries)

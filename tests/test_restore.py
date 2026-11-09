@@ -34,3 +34,17 @@ def test_paper_white_makes_the_paper_white_and_leaves_full_colour_art():
     art = np.random.default_rng(4).random((100, 100, 3)).astype(np.float32)
     art[..., 2] = 0.9; art[..., 0] = 0.1                                   # all saturated: no paper
     assert restore.paper_white(art) == (None, None)
+
+
+def test_registering_lines_up_a_shifted_and_slightly_bent_copy():
+    import cv2
+    from test_match import textured
+    base = cv2.resize(textured(np.random.default_rng(8), 150, 170), (850, 740)).astype(np.float32) / 255
+    M = np.array([[1, 0.002, 1.5], [0.001, 1, -1.2], [0, 0, 1]], np.float32)    # about 1.5 px off, slightly sheared
+    moved = cv2.warpPerspective(base, M, (850, 740), borderMode=cv2.BORDER_REFLECT)
+    entries = [(base, np.ones((740, 850), bool), None, 20.0), (base.copy(), np.ones((740, 850), bool), None, 20.0),
+               (moved, np.ones((740, 850), bool), None, 20.0)]
+    out = restore.register(entries)
+    before = np.abs(moved - base)[50:-50, 50:-50].mean()
+    after = np.abs(out[2][0] - out[0][0])[50:-50, 50:-50].mean()
+    assert after < before / 2
