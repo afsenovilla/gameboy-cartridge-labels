@@ -36,23 +36,21 @@ def test_rigid_fit():
     assert abs(theta - 2.0) < 1e-6 and np.allclose(t, [1.0, -0.5])
 
 
-def test_stage2_aligns_two_stickers_and_anchors_by_the_median():
-    # three label photos of one print; sticker b's cut is 1 mm right of a's, c's like a's: matched points tell
-    pts = np.random.default_rng(1).uniform(5, 35, (40, 2))
-    I = np.eye(3)
-    fits = {k: {"cut_to_photo": I} for k in "abc"}
-    pairs = {("a", "b"): (pts, pts - [1.0, 0]), ("a", "c"): (pts, pts.copy())}
-    offsets, info, residual = solve.stage2([], fits, pairs, [["a", "b", "c"]])
-    ink = {k: solve.apply_offset(offsets[k], pts - ([1.0, 0] if k == "b" else 0)) for k in "abc"}
-    assert np.abs(ink["a"] - ink["b"]).max() < 0.05 and np.abs(ink["a"] - ink["c"]).max() < 0.05
-    assert info[0]["links used"] == 2
-
-
-def test_a_link_too_far_off_is_dropped():
-    pts = np.random.default_rng(2).uniform(5, 35, (40, 2))
-    fits = {k: {"cut_to_photo": np.eye(3)} for k in "ab"}
-    offsets, info, _ = solve.stage2([], fits, {("a", "b"): (pts, pts + [10.0, 0])}, [["a", "b"]])
-    assert info[0]["links used"] == 0 and info[0]["links dropped"] == 1
+def test_pixel_agreement_finds_the_same_print_shifted_and_not_another():
+    from test_match import textured
+    print_ = textured(np.random.default_rng(0), 400, 500)
+    # two photos of one print: a's cut at the print's origin, b's cut 1 mm right and 0.5 down (b's frame -> a's: +1, +0.5)
+    px = 10  # photo px per mm
+    cut_a = np.array([[px, 0, 20.0], [0, px, 20.0], [0, 0, 1]])
+    cut_b = np.array([[px, 0, 20.0 + px], [0, px, 20.0 + 0.5 * px], [0, 0, 1]])
+    va = solve.compare_view(print_, cut_a, "dmg")
+    vb = solve.compare_view(print_, cut_b, "dmg")
+    share, textured_tiles = solve.pixel_agreement(va, vb, 0.0, np.array([1.0, 0.5]), "dmg")
+    assert textured_tiles > 50 and share > 0.9
+    share, _ = solve.pixel_agreement(va, vb, 0.0, np.array([-1.0, -0.5]), "dmg")   # the wrong way round
+    assert share < 0.3
+    other = solve.compare_view(textured(np.random.default_rng(1), 400, 500), cut_b, "dmg")
+    assert solve.pixel_agreement(va, other, 0.0, np.array([1.0, 0.5]), "dmg")[0] < 0.3
 
 
 def test_the_choice_learns_which_feature_tells_right_from_wrong():

@@ -5,9 +5,10 @@
 #                            degrees: the label's cut in the recess, from its nominal place), "offset" (dx, dy mm, turn
 #                            degrees: the sticker's cut -> ink), "start" (how it was started), "support" (the share of
 #                            the face, recess and label samples along segments), "fallback" (null, or why the pose is weak),
-#                            "residual_mm" (matched points' disagreement in ink coordinates, median), "links" (used)},
+#                            "error_mm" (the fit's leftover), "family" and "family_size" (label photos joined by
+#                            counting links, anchored together)},
 #                     ...},
-#    "sets": [{"keys", "links used", "links dropped", "residual_mm"}],
+#    "links": the counts of link candidates, judged, pixel-agreeing and counting; poor fits; the largest families,
 #    "unsolved": {key: why}}
 # Two stages (label-detection.md):
 #   1. Each label photo on its own: three nested rectangles of known sizes and places fitted together to the photo's
@@ -26,10 +27,9 @@
 #      model's sample points end up along segments
 #      (within ON_MM), or less than MIN_FACE of the cartridge's outline (a label placed far off still finds label- and
 #      recess-like lines: on the sample, 0.4 kept 69 of 70 fits within 2 mm of main's and dropped 87 of 109 farther off).
-#   2. Each linked set: matched points (match's inliers, assigned to label photo pairs) map into each sticker's
-#      frame; a link's shift and turn between the two frames counts if within MAX_SHIFT and MAX_TURN (else the two are
-#      likely other layouts sharing a template); one least-squares fit gives every label photo a shift and turn, the
-#      set's median taken as none (the median cut anchors ink coordinates).
+#   2. Families: link candidates (one per match homography), counted where the matched points agree within
+#      LINK_FIT_MM and the pixels agree (see stage2's comment); poor fits flagged; offsets per family by a robust fit,
+#      each family's median cut its anchor.
 # Done again when solve.json is older than this file or its inputs.
 # Usage: solve.py [--sample]
 import argparse, html, json, os, sys
@@ -471,55 +471,169 @@ def stage1(lps, edges_dir, pairs, workers=8):
     return fits, failed, description
 
 
-def stage2(lps, fits, pairs, sets):
-    """Per linked set, every fitted label photo's shift and turn (sticker's cut -> ink), the set's median none."""
-    offsets, set_info, residual = {}, [], {}
-    for keys in sets:
-        keys = [k for k in keys if k in fits]
-        if not keys:
-            continue
-        idx = {k: i for i, k in enumerate(keys)}
-        links, dropped = [], 0
-        for (a, b), (pa, pb) in pairs.items():
-            if a not in idx or b not in idx:
+# Stage 2: each link candidate is one match homography between two label photos (not pooled: a match between prints
+# with offset art finds one alignment for the text and another for the art). A link counts where
+#   - its matched points, mapped into each sticker's frame, agree within LINK_FIT_MM after the best shift and turn
+#     (in good matches the halftone dots line up; 0.5 mm means a fit is off), and
+#   - the two label photos' pixels agree there: both drawn into the label's mm at COMPARE_PX_PER_MM, lighting evened
+#     (minus the local mean, over the local spread), compared in COMPARE_TILE_MM tiles by correlation; at least
+#     AGREE_SHARE of the textured tiles above TILE_CORRELATION (a shared template or offset art agrees only in part).
+# A label photo most of whose pixel-agreeing links fail the fit test is a poor fit: flagged, no links, its own family.
+# Offsets fitted per family (label photos joined by counting links) by least squares with Tukey reweighting; each
+# family's median offset is none (its median cut anchors its ink coordinates).
+LINK_FIT_MM = 0.25
+COMPARE_PX_PER_MM = 5
+COMPARE_MARGIN = 2.0
+COMPARE_TILE_MM = 2.0
+TILE_CORRELATION = 0.5
+AGREE_SHARE = 0.5  # sample, links fitting within LINK_FIT_MM: same old name 10/50/90 % at 0.57/0.85/0.97, different 0.05/0.18/0.30
+MIN_TEXTURED_TILES = 20
+TUKEY_MM = 0.5
+
+
+def link_candidates(lps, matches):
+    """One link candidate per match homography: [(key a, key b, points in a, points in b)], the points those in both
+    label photos' circles."""
+    by_photo = {}
+    for lp in lps:
+        by_photo.setdefault(lp["photo"], []).append(lp)
+    out = []
+    for a, b, H, inl in matches:
+        for la in by_photo.get(a, []):
+            ina = np.hypot(*(inl[:, :2] - la["centre"]).T) < la["radius"]
+            for lb in by_photo.get(b, []):
+                ok = ina & (np.hypot(*(inl[:, 2:] - lb["centre"]).T) < lb["radius"])
+                if ok.sum() >= MIN_LINK_POINTS:
+                    out.append((la["key"], lb["key"], inl[ok, :2], inl[ok, 2:]))
+    return out
+
+
+def compare_view(photo, cut_to_photo, shape):
+    """A label photo drawn into its sticker's frame (label mm, COMPARE_MARGIN around), gray, lighting evened."""
+    w, h = shapes.LABEL_MM[shape]
+    W, Hh = int((w + 2 * COMPARE_MARGIN) * COMPARE_PX_PER_MM), int((h + 2 * COMPARE_MARGIN) * COMPARE_PX_PER_MM)
+    s = 1 / COMPARE_PX_PER_MM
+    px_to_mm = np.array([[s, 0, -COMPARE_MARGIN], [0, s, -COMPARE_MARGIN], [0, 0, 1.0]])
+    g = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    v = cv2.warpPerspective(g, np.float64(cut_to_photo) @ px_to_mm, (W, Hh), flags=cv2.INTER_AREA | cv2.WARP_INVERSE_MAP)
+    mean = cv2.GaussianBlur(v, (0, 0), COMPARE_PX_PER_MM)
+    spread = np.sqrt(cv2.GaussianBlur((v - mean) ** 2, (0, 0), COMPARE_PX_PER_MM)) + 2.0
+    return (v - mean) / spread
+
+
+def pixel_agreement(va, vb, theta_deg, t_mm, shape):
+    """The share of textured tiles where label photo b, carried into a's frame (b's mm -> a's mm: turn theta, shift t),
+    agrees with a; and the count of textured tiles."""
+    th = np.radians(theta_deg)
+    R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+    s, m = COMPARE_PX_PER_MM, COMPARE_MARGIN
+    # a's px -> a's mm -> b's mm -> b's px
+    A = np.array([[1 / s, 0, -m], [0, 1 / s, -m], [0, 0, 1.0]])
+    B = np.array([[R[0, 0], R[0, 1], t_mm[0]], [R[1, 0], R[1, 1], t_mm[1]], [0, 0, 1.0]])
+    Binv = np.linalg.inv(B)
+    C = np.array([[s, 0, m * s], [0, s, m * s], [0, 0, 1.0]])
+    M = C @ Binv @ A
+    wb = cv2.warpPerspective(vb, M, (va.shape[1], va.shape[0]), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=np.nan)  # M: a's px -> b's px
+    t = int(COMPARE_TILE_MM * s)
+    w, h = shapes.LABEL_MM[shape]
+    x0, y0 = int(m * s), int(m * s)
+    agree = textured = 0
+    for y in range(y0, y0 + int(h * s) - t + 1, t):
+        for x in range(x0, x0 + int(w * s) - t + 1, t):
+            pa, pb = va[y:y + t, x:x + t].ravel(), wb[y:y + t, x:x + t].ravel()
+            if np.isnan(pb).any() or pa.std() < 0.5 or pb.std() < 0.5:
                 continue
+            textured += 1
+            agree += float(np.corrcoef(pa, pb)[0, 1]) > TILE_CORRELATION
+    return (agree / textured if textured else 0.0), textured
+
+
+def judge_link(job):
+    """(index, fit leftover mm, turn, shift, pixel share, textured tiles) of one link candidate."""
+    i, a, b, ma, mb, va, vb, shape = job
+    theta, t = rigid_fit(mb, ma)  # b's frame -> a's
+    th = np.radians(theta)
+    R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+    leftover = float(np.median(np.linalg.norm(mb @ R.T + t - ma, axis=1)))
+    share, textured = pixel_agreement(va, vb, theta, t, shape) if va is not None and vb is not None else (0.0, 0)
+    return i, leftover, theta, t, share, textured
+
+
+def stage2(lps, fits, candidates, photo_paths, workers=8):
+    """Offsets (sticker's cut -> ink) per family; families; poor fits; the links judged."""
+    shape_of = {lp["key"]: lp["shape"] for lp in lps}
+    photo_of = {lp["key"]: lp["photo"] for lp in lps}
+    views = {}
+    for k, f in fits.items():
+        img = photos.load(photo_paths[photo_of[k]]) if photo_of[k] in photo_paths else None
+        views[k] = compare_view(img, f["cut_to_photo"], shape_of[k]) if img is not None else None
+    jobs = []
+    for i, (a, b, pa, pb) in enumerate(candidates):
+        if a in fits and b in fits and shape_of[a] == shape_of[b]:
             ma = project(np.linalg.inv(fits[a]["cut_to_photo"]), pa)
             mb = project(np.linalg.inv(fits[b]["cut_to_photo"]), pb)
-            theta, t = rigid_fit(mb, ma)  # b's frame -> a's
-            if abs(theta) <= MAX_TURN and np.linalg.norm(t) <= MAX_SHIFT:
-                links.append((idx[a], idx[b], ma, mb))
-            else:
-                dropped += 1
-        # unknowns per label photo: turn (radians, small), dx, dy; ink = R_i m + t_i; matched points agree in ink
-        n = len(keys)
-        rows, rhs = [], []
-        for i, j, ma, mb in links:
-            w = 1 / np.sqrt(len(ma))  # each link counts about equally, however many points
-            for (xa, ya), (xb, yb) in zip(ma, mb):
-                # R_i a + t_i - R_j b - t_j = 0, small angles: x: -ya th_i + dx_i + yb th_j - dx_j = xb - xa
-                r = np.zeros(3 * n); r[3 * i] = -ya; r[3 * i + 1] = 1; r[3 * j] = yb; r[3 * j + 1] = -1
-                rows.append(w * r); rhs.append(w * (xb - xa))
-                r = np.zeros(3 * n); r[3 * i] = xa; r[3 * i + 2] = 1; r[3 * j] = -xb; r[3 * j + 2] = -1
-                rows.append(w * r); rhs.append(w * (yb - ya))
-        # a weak pull of every offset towards none keeps label photos without links (and the gauge) in place
-        for i in range(n):
-            for k in range(3):
-                r = np.zeros(3 * n); r[3 * i + k] = 0.01
-                rows.append(r); rhs.append(0.0)
-        x = np.linalg.lstsq(np.array(rows), np.array(rhs), rcond=None)[0].reshape(n, 3)
-        x -= np.median(x, 0)  # the set's median cut is the anchor
-        for k, i in idx.items():
-            offsets[k] = x[i]
-        res = {k: [] for k in keys}
-        for i, j, ma, mb in links:
-            ink_a = apply_offset(x[i], ma); ink_b = apply_offset(x[j], mb)
-            d = np.linalg.norm(ink_a - ink_b, axis=1)
-            res[keys[i]].append(d); res[keys[j]].append(d)
-        for k in keys:
-            residual[k] = float(np.median(np.concatenate(res[k]))) if res[k] else None
-        set_info.append({"keys": keys, "links used": len(links), "links dropped": dropped,
-                         "residual_mm": float(np.median(np.concatenate([np.linalg.norm(apply_offset(x[i], ma) - apply_offset(x[j], mb), axis=1) for i, j, ma, mb in links]))) if links else None})
-    return offsets, set_info, residual
+            jobs.append((i, a, b, ma, mb, views[a], views[b], shape_of[a]))
+    judged = {}
+    with Pool(workers) as pool:
+        for i, leftover, theta, t, share, textured in pool.imap_unordered(judge_link, jobs, chunksize=8):
+            judged[i] = (leftover, theta, t, share, textured)
+    pixel_ok = lambda j: j[3] >= AGREE_SHARE and j[4] >= MIN_TEXTURED_TILES
+    # poor fits: most of a label photo's pixel-agreeing links fail the fit test
+    tally = {}
+    for i, j in judged.items():
+        if pixel_ok(j):
+            a, b = candidates[i][0], candidates[i][1]
+            for k in (a, b):
+                tally.setdefault(k, [0, 0])[0 if j[0] <= LINK_FIT_MM else 1] += 1
+    poor = {k for k, (good, bad) in tally.items() if bad >= 2 and bad > good}
+    links = [(candidates[i][0], candidates[i][1], j) for i, j in judged.items()
+             if pixel_ok(j) and j[0] <= LINK_FIT_MM and candidates[i][0] not in poor and candidates[i][1] not in poor]
+    # families
+    parent = {k: k for k in fits}
+    def root(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for a, b, _ in links:
+        parent[root(a)] = root(b)
+    families = {}
+    for k in fits:
+        families.setdefault(root(k), []).append(k)
+    offsets, residual = {}, {}
+    for members in families.values():
+        idx = {k: n for n, k in enumerate(members)}
+        fam_links = [(idx[a], idx[b], j) for a, b, j in links if a in idx]
+        x = np.zeros((len(members), 3))
+        if fam_links:
+            weights = np.ones(len(fam_links))
+            for _ in range(6):  # least squares, Tukey reweighting: o_b - o_a = the link's (turn, shift)
+                rows, rhs, ws = [], [], []
+                for (ia, ib, j), w in zip(fam_links, weights):
+                    theta, t = np.radians(j[1]), j[2]
+                    for c, v in ((0, theta), (1, t[0]), (2, t[1])):
+                        r = np.zeros(3 * len(members)); r[3 * ib + c] = 1; r[3 * ia + c] = -1
+                        rows.append(r * np.sqrt(w)); rhs.append(v * np.sqrt(w))
+                for n in range(len(members)):  # the gauge, weakly
+                    for c in range(3):
+                        r = np.zeros(3 * len(members)); r[3 * n + c] = 1e-3
+                        rows.append(r); rhs.append(0.0)
+                x = np.linalg.lstsq(np.array(rows), np.array(rhs), rcond=None)[0].reshape(-1, 3)
+                res = np.array([np.hypot(*(x[ib, 1:] - x[ia, 1:] - j[2])) + 20 * abs(x[ib, 0] - x[ia, 0] - np.radians(j[1]))
+                                for ia, ib, j in fam_links])  # mm; a turn's effect across about 20 mm
+                u = res / TUKEY_MM
+                weights = np.where(u < 1, (1 - u ** 2) ** 2, 0.0) + 1e-6
+            x -= np.median(x, 0)
+            for (ia, ib, j), w in zip(fam_links, weights):
+                pass
+        for k, n in idx.items():
+            offsets[k] = x[n]
+    fam_of = {k: (min(m), len(m)) for m in families.values() for k in m}
+    info = {"link candidates": len(candidates), "judged": len(judged),
+            "pixels agree": sum(pixel_ok(j) for j in judged.values()),
+            "counting links": len(links), "poor fits": len(poor),
+            "families": sorted((len(m) for m in families.values()), reverse=True)[:10]}
+    return offsets, fam_of, poor, info
 
 
 def apply_offset(o, pts):
@@ -533,13 +647,12 @@ def offset_matrix(o):
     return np.array([[np.cos(th), -np.sin(th), dx], [np.sin(th), np.cos(th), dy], [0, 0, 1]])
 
 
-def solve(found, matches, edges_dir):
+def solve(found, matches, edges_dir, photo_paths=None):
     lps = found["label_photos"]
     for lp in lps:
         lp["centre"] = np.float64(lp["centre"])
-    pairs = link_points(lps, matches)
-    fits, failed, choice = stage1(lps, edges_dir, pairs)
-    offsets, set_info, residual = stage2(lps, fits, pairs, found["sets"])
+    fits, failed, choice = stage1(lps, edges_dir, None)
+    offsets, family_of, poor, links_info = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
     out = {}
     for lp in lps:
         k = lp["key"]
@@ -556,9 +669,9 @@ def solve(found, matches, edges_dir):
                   "start": f["start"], "support": f["support"], "error_mm": round(f["error_mm"], 3),
                   "candidates": f["candidates"], "probability": f["probability"] and round(f["probability"], 3),
                   "changed_by_choice": not f["round1_same"],
-                  "fallback": None if not f["start"].startswith("search") else "found by the pose search",
-                  "residual_mm": None if residual.get(k) is None else round(residual[k], 3)}
-    return {"label_photos": out, "sets": set_info, "unsolved": failed, "choice": choice}
+                  "fallback": "a poor fit: its links disagree" if k in poor else ("found by the pose search" if f["start"].startswith("search") else None),
+                  "family": family_of[k][0], "family_size": family_of[k][1]}
+    return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
 
 
 def page(out_dir, chosen, result, sizes):
@@ -579,7 +692,7 @@ def page(out_dir, chosen, result, sizes):
         return (f'<figure><div class="ph"><img loading="lazy" src="{rel}/{chosen[s]}"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
                 f'{extra}<polygon points="{pts}" fill="none" stroke="#0c0" stroke-width="{max(w, h) / 250:.1f}"/>'
                 f'<circle cx="{quad[0][0]:.0f}" cy="{quad[0][1]:.0f}" r="{max(w, h) / 80:.0f}" fill="#f00"/></svg></div>'
-                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, residual {r["residual_mm"]} mm</figcaption></figure>')
+                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, error {r["error_mm"]} mm, family of {r["family_size"]}{", " + r["fallback"] if r["fallback"] else ""}</figcaption></figure>')
 
     unsolved = "".join(f"<li><code>{html.escape(k[:16])}</code>: {html.escape(v)}</li>" for k, v in result["unsolved"].items())
     starts = {}
@@ -591,7 +704,7 @@ def page(out_dir, chosen, result, sizes):
 <style>body{{font:14px system-ui;margin:16px}} figure{{display:inline-block;margin:6px;vertical-align:top;width:280px}}
 .ph{{position:relative;display:inline-block}} .ph img{{max-width:280px;max-height:280px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>solve</h1>
-<p>{len(lps)} label photos solved (started: {", ".join(f"{k} {v}" for k, v in starts.items())}), {len(result["unsolved"])} not. Sets: {", ".join(f'{len(si["keys"])} label photos, {si["links used"]} links used, {si["links dropped"]} dropped, residual {si["residual_mm"] and round(si["residual_mm"], 2)} mm' for si in result["sets"][:5])}.</p>
+<p>{len(lps)} label photos solved (started: {", ".join(f"{k} {v}" for k, v in starts.items())}), {len(result["unsolved"])} not. Links: {html.escape(str(result["links"]))}.</p>
 <p>Blue: the cartridge's outline; orange: the recess; green: the label's cut (canonical size); red dot: the label's top left. Grouped by how the fit was started; within a group, most outline support first.</p>
 <h2>Not solved ({len(result["unsolved"])})</h2><ul>{unsolved}</ul>
 {"".join(f'<h2>Started from: {k} ({len(by_kind[k])})</h2>' + "".join(figure(key, r) for key, r in by_kind[k]) for k in kinds)}
@@ -613,7 +726,7 @@ def main():
     if missing:
         sys.exit(f"{len(missing)} inputs missing: run make find and make edges first")
     if steps.stale(out, __file__) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
-        result = solve(json.load(open(found_file)), match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"))
+        result = solve(json.load(open(found_file)), match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen)
         steps.write_json(out, result)
     result = json.load(open(out))
     sizes = {s: json.load(open(os.path.join(gen, "read-text", s + ".json")))["size"] or [1, 1] for s in chosen}
