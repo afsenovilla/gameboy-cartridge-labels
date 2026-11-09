@@ -13,12 +13,10 @@ def test_cut_is_the_canonical_label_in_whole_pixels():
     assert publish.cut(np.zeros((h, w, 3)), "agb").shape[:2] == (440, 860)
 
 
-def test_sources_by_sha1_with_the_folder_as_source(tmp_path):
-    d = tmp_path / "photos" / "mercari" / "dmg"
-    d.mkdir(parents=True)
-    (d / "sources.json").write_text(json.dumps({"DMG-A1J.jpg": {"sha1": "abc", "page_url": "https://x/1"},
-                                                "other.jpg": {"image_url": "https://x/2.jpg"}}))
-    assert publish.sources(str(tmp_path)) == {"abc": {"source": "mercari", "page_url": "https://x/1", "image_url": None}}
+def test_sources_by_sha1(tmp_path):
+    f = tmp_path / "photo-sources.json"
+    f.write_text(json.dumps({"abc": {"source": "mercari", "file": "mercari/dmg/DMG-A1J.jpg", "page_url": "https://x/1"}}))
+    assert publish.sources(str(f)) == {"abc": {"source": "mercari", "page_url": "https://x/1", "image_url": None}}
 
 
 def test_poor_fits_from_solve():

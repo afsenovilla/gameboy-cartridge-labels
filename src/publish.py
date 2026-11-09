@@ -7,18 +7,17 @@
 #     serial, source, page_url, image_url, image, poor_fit}}}. Ids and keys hold within a run only.
 #   missing.json, unknown-serials.json (read-serials), few-photos.json (prints): the lists, copied as they are.
 #   index.html: the counts, and every print with its label photos.
-# The source and URLs come from main's sources.json files (MAIN/photos/<source>/<system>/sources.json, by the
-# entry's sha1): for output only, never read by a detection step.
+# The source and URLs come from photo-sources.json (by SHA-1): for output only, never read by a detection step.
 # An image is made again when it's missing or older than what it's made from or this file; files of prints and label
 # photos no longer there are removed.
-# Usage: publish.py [--sample] [--main PATH]
-import argparse, glob, html, json, os, shutil, sys
+# Usage: publish.py [--sample]
+import argparse, html, json, os, shutil, sys
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import photos, steps, shapes, straighten
 
-MAIN = "../gameboy-labels"
+SOURCES = "photo-sources.json"
 QUALITY = straighten.QUALITY
 LISTS = [("read-serials", "missing.json"), ("read-serials", "unknown-serials.json"), ("prints", "few-photos.json")]
 
@@ -37,23 +36,10 @@ def cut(img, shape, crop=None):
     return img[y:y + h, x:x + w]
 
 
-def sources(main):
-    """SHA-1 -> {source, page_url, image_url}, from main's per-folder sources.json files."""
-    out = {}
-    for path in sorted(glob.glob(os.path.join(main, "photos", "*", "*", "sources.json"))):
-        source = os.path.relpath(path, os.path.join(main, "photos")).split(os.sep)[0]
-        for e in json.load(open(path)).values():
-            if e.get("sha1"):
-                out[e["sha1"]] = {"source": source, "page_url": e.get("page_url"), "image_url": e.get("image_url")}
-    return out
-
-
-def own_sources(path="photo-sources.json"):
-    """SHA-1 -> {source, page_url, image_url}, for the photos make add-photos filed (src/add_photos.py)."""
-    if not os.path.exists(path):
-        return {}
+def sources(path=SOURCES):
+    """SHA-1 -> {source, page_url, image_url}, from photo-sources.json (src/add_photos.py)."""
     return {k: {"source": e.get("source"), "page_url": e.get("page_url"), "image_url": e.get("image_url")}
-            for k, e in json.load(open(path)).items() if e.get("source")}
+            for k, e in json.load(open(path)).items()}
 
 
 def poor_fits(solved):
@@ -75,7 +61,6 @@ def crop_one(job):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true")
-    ap.add_argument("--main", default=MAIN, help="main's checkout, for sources.json")
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args()
     gen = photos.generated(args.sample)
@@ -87,7 +72,7 @@ def main():
     prints = json.load(open(need[0]))
     solved = json.load(open(need[1]))["label_photos"]
     serials = json.load(open(need[2]))
-    src = {**sources(args.main), **own_sources()}
+    src = sources()
     poor = poor_fits(solved)
     out_dir = os.path.join(gen, "publish")
     for d in ("prints", "label-photos"):

@@ -51,7 +51,7 @@ The point: never build on main's hand-entered verdicts, or more hand entering wo
 - Input: the photos, OCR, the database, main's code, main's designs.json.
 - Not as input: main's fits.json or any other verdicts main's tools stored, the old file names, the sources.
 - Not as ground truth either: main's fits are mostly fairly accurate but have outliers off by about 3 mm, and main's approach is what this branch replaces. Comparing with main statistically (distributions, agreement rates) is fine; no single photo's data in main is taken as true.
-- Main's sources.json (URL by SHA-1; 2950 of 5519 photos have one) is for output only, never read by a detection step.
+- photo-sources.json (every photo's origin by SHA-1, converted from main's sources.json files on 2026-11-10; new photos added by make add-photos) is for output only: publish reads it, never a detection step. Nothing reads main's checkout.
 
 ## Approach (settled)
 
@@ -188,7 +188,7 @@ match and find are separate so that the rule for a label photo can be tried in v
 | read-serials | read-serials/serials.json, missing.json, unknown-serials.json | per key: reads, serial (voted or null), in_database; database entries with no label photo; serials not in the database |
 | prints | prints/prints.json, few-photos.json | per print: id, keys, serial, shape, family; per family, the tiles telling its prints apart |
 | restore | restore/<print>.avif, restore/<print>.json | the image (cropped); the crop; label photos used (own, and other prints' pooled with the share of the label where each counts), how many count in each band, single-photo flag |
-| publish | publish/ | prints/<print>.avif (restore's image: paper white where found, else median colours); label-photos/<key>.avif (cut from its straightened image: whole pixels, no resampling; poor fits get none, as restore leaves them out, and are listed with poor_fit true); index.json (per label photo: print, serial, source (main's photos/ folder), page_url, image_url, image, poor_fit; per print: serial, release, shape, image, paper, label photos); missing.json, unknown-serials.json, few-photos.json copied |
+| publish | publish/ | prints/<print>.avif (restore's image: paper white where found, else median colours); label-photos/<key>.avif (cut from its straightened image: whole pixels, no resampling; poor fits get none, as restore leaves them out, and are listed with poor_fit true); index.json (per label photo: print, serial, source (photo-sources.json), page_url, image_url, image, poor_fit; per print: serial, release, shape, image, paper, label photos); missing.json, unknown-serials.json, few-photos.json copied |
 
 designs.json (hand-edited): `{"<key>": "<design name>"}`; a label photo not listed has no design yet.
 

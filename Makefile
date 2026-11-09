@@ -50,7 +50,7 @@
 #
 #   make publish
 #   The outputs collected into generated/publish/: prints/, label-photos/ (straightened, the same crop), index.json
-#   (source and URLs from photo-sources.json and main's sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
+#   (source and URLs from photo-sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
 # Plain make lists these.
 
