@@ -42,7 +42,7 @@ REGION_GROUP = {"USA": "USA", "CAN": "USA", "JPN": "JPN",
                 **{r: "EUR" for r in ("EUR", "UKV", "NOE", "FRA", "ESP", "ITA", "HOL", "EUU", "EUB", "FAH", "FRG", "DAN", "AUS", "GRA", "SPA")}}
 ID_LETTER_GROUP = {"J": "JPN", "E": "USA", "P": "EUR"}
 REGIONS = {"USA": {"query": ""}, "JPN": {"query": "Japan"}, "EUR": {"query": "PAL"}}
-NOT_GAME_BOY = r"\b(nds|ds|3ds|psp|gamecube|n64|sega)\b"
+NOT_GAME_BOY = r"\b(nds|ds|3ds|psp|gamecube|n64|sega|dreamcast|playstation|ps[1-5x]|sony|xbox|wii|disc|dvd|slps|slus|sles)\b"
 SYSTEM = {"agb": "GBA", "cgb": "Game Boy Color", "dmg": "Game Boy"}
 OTHER_SYSTEMS = {"agb": r"\b(gbc|game ?boy colou?r|nds|ds|3ds|psp|gamecube|sega)\b",  # listing titles naming another system
                  "cgb": r"\b(gba|advance|nds|ds|3ds|psp|n64|sega)\b", "dmg": r"\b(gba|advance|nds|ds|3ds|psp|n64|sega)\b"}
