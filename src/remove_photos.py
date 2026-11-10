@@ -206,6 +206,7 @@ def thumbnail(path, side):
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>Remove photos</title><style>
 * { box-sizing: border-box }
+[hidden] { display: none !important }
 html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; background: #f4f4f4; color: #222 }
 header { display: flex; gap: 8px; align-items: center; padding: 8px 12px; height: 48px; background: #fff; border-bottom: 1px solid #ddd }
 button { border: none; border-radius: 0.3em; padding: 6px 12px; font: inherit; background: #e4e4e4; cursor: pointer }
