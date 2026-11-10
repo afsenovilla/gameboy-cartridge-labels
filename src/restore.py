@@ -7,7 +7,8 @@
 #     "pooled" (other prints' label photos used, see pooling),
 #     "pooled_share" ({key: the share of the label where it counts}), "single" (from one label photo), "bands" (how
 #     many label photos count in each band, finest first), "paper" (the paper's colour found, or null)}
-# The label photos: the print's own (poor fits left out), and those of the other prints of its family where they show
+# The label photos: the print's own (poor fits left out: a print of poor fits only gets no image), and those of the
+# other prints of its family where they show
 # what the print's own show (pooling, below). Each straightened label photo's colours evened per channel to the
 # median of the print's own (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
 # the image is under 8 px across). Per band and pixel, a label photo counts unless the band is finer than its own
@@ -462,7 +463,8 @@ def main():
 
 def print_jobs(gen, result, solved):
     """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], others [(key, image)],
-    px per mm {key: ...}, crop). Poor fits are left out of a print's own label photos unless it has nothing else."""
+    px per mm {key: ...}, crop). Poor fits are left out; a print with nothing else isn't restored at all (the user:
+    fewer prints, all of them good, rather than bad ones among them)."""
     import solve as solve_step
     px_per_mm = {}
     for k, r in solved.items():  # the photo's pixels per mm at the label, from the fit
@@ -481,7 +483,9 @@ def print_jobs(gen, result, solved):
                       else canonical_crop(ps[0]["shape"]))
     jobs = {}
     for p in result["prints"]:
-        own = [(k, image(k)) for k in p["keys"] if k not in poor] or [(k, image(k)) for k in p["keys"]]
+        own = [(k, image(k)) for k in p["keys"] if k not in poor]
+        if not own:
+            continue
         others = [(k, image(k)) for q in by_family[p["family"]] if q is not p for k in q["keys"] if k not in poor]
         jobs[p["id"]] = (p["id"], p["shape"], own, others, px_per_mm, crops[p["family"]])
     return jobs

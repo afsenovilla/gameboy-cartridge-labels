@@ -58,7 +58,7 @@ def make_version(name, note, from_restore, workers):
     else:
         jobs = restore.print_jobs(GEN, result, solved)
         with Pool(workers) as pool:
-            for pid, desc in pool.imap_unordered(restore.restore_print, [jobs[pid] + (base(pid),) for pid in wanted]):
+            for pid, desc in pool.imap_unordered(restore.restore_print, [jobs[pid] + (base(pid),) for pid in wanted if pid in jobs]):
                 if desc is not None:
                     steps.write_json(base(pid) + ".json", desc)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
