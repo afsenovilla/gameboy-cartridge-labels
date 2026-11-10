@@ -9,11 +9,10 @@
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
 #     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
 # Deleting a photo that also holds label photos of other prints asks first (confirm()).
-# Badness of a label photo: 1 - usable x resolution, both 0..1:
+# Badness of a label photo: 1 - usable, 0..1 (the photo's resolution isn't counted; its px/mm is shown):
 #   usable: the share of the label (restore's crop) that is in the photo, inside the sticker's cut, and matches the
 #     reference: its straightened image, colours evened to the reference (restore.even_to), both blurred over BLUR_MM,
 #     within DAMAGE_DE (Oklab) of it. Damage, glare, dirt, blur and a part off the photo all count against it.
-#   resolution: the photo's pixels per mm at the label (from solve's fit) over FULL_PX_PER_MM, at most 1.
 # The reference: the restored print of the print with the most label photos in its family (restore's image), its own
 #   print on a tie or if it has REFERENCE_MIN or more; none if that is the label photo alone (then only the part off the
 #   photo or the cut counts).
@@ -33,7 +32,6 @@ import photos, steps, straighten, cuts, restore, shapes, publish
 GEN = "generated"
 BLUR_MM = 0.15          # what a slightly misregistered or less sharp label photo still matches
 DAMAGE_DE = 0.08        # Oklab distance to the reference over which a pixel is damaged
-FULL_PX_PER_MM = 10     # a photo this sharp at the label or more loses nothing by its resolution
 REFERENCE_MIN = 3       # a print with this many label photos is its own label photos' reference
 THUMB_PX = 600
 DETAIL_PX = 1000
@@ -146,8 +144,7 @@ class Tool:
                 lw, lh = shapes.LABEL_MM[p["shape"]]
                 ppm = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh]) if "cut_to_photo" in r else 0
                 b = bad.get(k) or {"coverage": 0, "damage": 0, "usable": 0, "reference": None}
-                resolution = min(1.0, ppm / FULL_PX_PER_MM)
-                entries.append({"key": k, "photo": k.split("@")[0], "badness": round(1 - b["usable"] * resolution, 3),
+                entries.append({"key": k, "photo": k.split("@")[0], "badness": round(1 - b["usable"], 3),
                                 "damage": b["damage"], "off": round(1 - b["coverage"], 3), "px_per_mm": round(ppm, 1),
                                 "compared": b["reference"] is not None,
                                 "poor_fit": (r.get("fallback") or "").startswith("a poor")})
@@ -331,7 +328,7 @@ function renderPrints() {
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); $("#prints").scrollTop = 0; }),
                         button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); $("#prints").scrollTop = 0; }));
   const box = $("#prints");
-  box.innerHTML = `<div class="legend">Badness = 1 - usable × resolution. Usable: the label's share in the photo and the cut, and within reach of the restored print's colours (0.15 mm blur). Resolution: the photo's px/mm at the label over 10, at most 1. "not compared": no other label photo of its family to compare with.</div>`;
+  box.innerHTML = `<div class="legend">Badness = 1 - usable. Usable: the label's share in the photo and the cut, and within reach of the restored print's colours (0.15 mm blur). The photo's px/mm at the label is shown, not counted. "not compared": no other label photo of its family to compare with.</div>`;
   for (const p of prints.slice(page * PRINTS_PER, page * PRINTS_PER + PRINTS_PER)) {
     const div = document.createElement("div");
     div.className = "print";
