@@ -129,6 +129,8 @@ def ingest(results_file, queries_file, pass_name=None):
     have_items = {v["listing"].rsplit("/", 1)[1] for v in sources.values()}
     today = datetime.date.today().isoformat()
     for release, items in json.load(open(results_file)).items():
+        if release not in query_of:  # taken in before the query file was made again
+            continue
         res = dict(query_of[release], items=items)
         done = searches.get(res["release"], {})
         if (pass_name is None and done) or (pass_name is not None and pass_name in done.get("passes", {})):
