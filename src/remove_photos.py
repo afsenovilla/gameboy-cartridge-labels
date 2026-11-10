@@ -17,7 +17,7 @@
 # Measured on the full set (25 prints of 4 or more label photos): over DAMAGE_DE, 0.1 % of the label for the cleanest,
 #   5 % at the median, 38 % for the worst; at 0.05 the clean ones already differed on 10-20 % (noise, slight blur).
 # Computed when the page starts, kept in generated/remove-photos/badness.json until prints.json, solve.json, a restored
-# print or this file is newer.
+# print is newer, or the settings (BLUR_MM, DAMAGE_DE, REFERENCE_MIN) changed.
 # Usage: remove_photos.py [port]
 import json, os, sys, threading, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -93,12 +93,15 @@ def crop_of(pid):
 
 def badness(prints):
     """key -> {coverage, damage, usable, reference}, from the cache where it's still good."""
-    inputs = [os.path.join(GEN, "prints", "prints.json"), os.path.join(GEN, "solve", "solve.json"), __file__]
+    inputs = [os.path.join(GEN, "prints", "prints.json"), os.path.join(GEN, "solve", "solve.json")]
+    settings = [BLUR_MM, DAMAGE_DE, REFERENCE_MIN]
     newest = max(os.path.getmtime(f) for f in inputs)
     restore_dir = os.path.join(GEN, "restore")
     newest = max([newest] + [os.path.getmtime(os.path.join(restore_dir, f)) for f in os.listdir(restore_dir)])
     if os.path.exists(CACHE) and os.path.getmtime(CACHE) >= newest:
-        return json.load(open(CACHE))
+        cached = json.load(open(CACHE))
+        if cached.get("settings") == settings:
+            return cached["badness"]
     refs = references(prints)
     jobs = [(k, p["shape"], refs[k], crop_of(p["id"])) for p in prints for k in p["keys"]]
     out = {}
@@ -110,7 +113,7 @@ def badness(prints):
             if n % 500 == 0 or n == len(jobs):
                 print(f"compared {n} of {len(jobs)}", flush=True)
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-    steps.write_json(CACHE, out)
+    steps.write_json(CACHE, {"settings": settings, "badness": out})
     return out
 
 
@@ -222,7 +225,9 @@ const PER = 20, PRINTS_PER = 25;
 const $ = s => document.querySelector(s);
 
 async function load() {
-  S = await (await fetch("/state")).json();
+  const r = await fetch("/state");
+  if (r.status === 503) { $("#count").textContent = "loading (comparing label photos with their prints, see the console)"; setTimeout(load, 2000); return; }
+  S = await r.json();
   S.deleted.forEach(s => deleted.add(s));
   render();
 }
@@ -333,6 +338,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.unquote(urllib.parse.urlparse(self.path).path)
         if path == "/":
             return self.send(PAGE.encode(), "text/html; charset=utf-8")
+        if tool is None:
+            return self.send(b"loading", "text/plain", 503)
         if path == "/state":
             return self.send(tool.state())
         part, _, name = path[1:].partition("/")
@@ -352,7 +359,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        if self.path != "/delete":
+        if self.path != "/delete" or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         done = tool.delete([s for s in data.get("photos", []) if isinstance(s, str)])
@@ -366,7 +373,14 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8773
+    tool = None
+    server = ThreadingHTTPServer(("localhost", PORT), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"remove photos at http://localhost:{PORT}/ (ctrl-C to stop); the page waits until the photos are loaded",
+          flush=True)
     tool = Tool()
-    print(f"{len(tool.no_labels)} photos without label photos, {len(tool.prints)} prints; "
-          f"remove photos at http://localhost:{PORT}/ (ctrl-C to stop)", flush=True)
-    ThreadingHTTPServer(("localhost", PORT), Handler).serve_forever()
+    print(f"loaded: {len(tool.no_labels)} photos without label photos, {len(tool.prints)} prints", flush=True)
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        pass
