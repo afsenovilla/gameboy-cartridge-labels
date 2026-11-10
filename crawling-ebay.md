@@ -151,7 +151,19 @@ while true; do
 done
 ```
 
+## Second pass (2026-11-10)
+
+- The database entries with at least one but fewer than 3 high-resolution label photos (20 px/mm or more at the label, straighten's full resolution; poor fits not counted): 1555 (1351 with one, 204 with two), searched in that order, those with one first. eBay photos reach 20 px/mm about as often as the others (28 % against 23 %).
+- All regions on ebay.com (imports are listed there): the region from the cartridge serial's suffix, else the game id's last letter. Japan: "Japan" added to the query, the listing title must name Japan (japan, japanese, jpn, jp, ntsc-j) and no PAL country; Europe and Australia: "PAL" added, the title must name PAL or a European country and not Japan or the USA. Applied in the page and again when downloading. A photo of another regional release does no harm: read-serials reads each photo's own serial.
+- Titles in Japanese script (104): searched by a romanized title, ebay-romanized-titles.json (written by Claude), last in the queue; full-width letters made plain (NFKC) for the rest.
+- A named pass (`queries <region> <releases.json> pass2`, `ingest ... pass2`): a release searched before is searched again (the first pass kept 5 of up to 10 candidates), recorded under its "passes".
+- The records are in save-new-images-here/ now (searches.json, sources.json): run with `EBAY_OUT=save-new-images-here`.
+- One search every 18 to 26 s. Batches: `~/Downloads/ebay-batch-pass2-<n>.json`.
+- Trial: a PAL search ("Castlevania Aria of Sorrow GBA PAL cartridge") found no listing naming PAL among 60 results; Japanese ones found 10 each.
+
 ## Open
+
+- Yahoo! Auctions Japan has many Japanese games (the user, 2026-11-10), likely only through a proxy site such as Jauce or Sendico. Not tried: check a few samples by hand first.
 
 - 39 USA releases not searched (the block). Resume slower, after a pause.
 - Other regions: not started.
