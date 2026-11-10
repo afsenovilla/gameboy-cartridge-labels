@@ -58,7 +58,7 @@
 #   make remove-photos
 #   A tool, not a step: a local page for deleting photos from photos/ (the file and its record in photo-sources.json),
 #   on two tabs: the photos with no label photo found, 20 at a time; every print with its label photos, the worst first
-#   (badness: the share of the label off the photo or unlike its restored print), to
+#   (badness: the share of the label off the photo or unlike its restored print, and a resolution under 10 px/mm), to
 #   delete one or one and all worse. Asks first if a photo holds label photos of other prints (src/remove_photos.py).
 #
 # Plain make lists these.
