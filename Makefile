@@ -52,7 +52,7 @@
 #   where found, into generated/restore/; the page generated/restore/index.html. Needs make prints.
 #
 #   make publish
-#   The outputs collected into generated/publish/: prints/, label-photos/ (straightened, the same crop), index.json
+#   The outputs collected into generated/publish/: prints/ (the restored prints), index.json
 #   (source and URLs from photo-sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
 #   make remove-photos

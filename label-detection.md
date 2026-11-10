@@ -28,7 +28,7 @@ This time everything is agreed before any code is written, in this order: goal, 
 ### Output
 
 - **Restored prints:** at least every print a human has judged visually distinct (judged on the straightened label photos): a restored image, reconstructed from all its label photos, in mm, with its serial. Cropped at the median cut of its linked set's label photos, 0.3 mm inside it (labels are printed with overflow and cut sloppily; the whole print is detected first, then cropped; the 0.3 mm leaves out the highlight or shadow on the cut's edge).
-- **Label photos:** each one straightened in its print's frame, the same crop, with the photo's source and original URL.
+- **Label photos:** each one's photo source and original URL, in index.json; no images (the user, 2026-11-10: the straightened label photos aren't worth distributing, over 1 GB).
 - **Database entries with no label photo:** a list, for tools that search for more photos (getting photos is part of the project).
 - **Serials not in the database:** possible new releases, a by-product.
 
