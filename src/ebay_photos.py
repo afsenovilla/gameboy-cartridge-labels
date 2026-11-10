@@ -35,17 +35,14 @@ MIN_SIDE = 1000  # px, longest side
 OTHER_REGIONS = {  # listing titles naming another region than the release's
     "USA": r"\b(japan|japanese|jpn|jp|ntsc-j|pal|eur|europe|european|uk|german|deutsch|french|fran[cç]ais|spanish|italian|import|chinese|korean)\b|AGB-P-\w{3}[^E\W]"}
 # Regions for the searches of given releases (queries with a release list): the release's group, from its cartridge
-# serial's suffix, else its game id's last letter. Per group: words added to the query, a word a listing's title must
-# have (imports are listed on ebay.com, named so), words it mustn't. A photo of another regional release does no harm
-# (read-serials reads each photo's own serial); the filters only save downloads.
+# serial's suffix, else its game id's last letter. Per group: words added to the query (imports are listed on ebay.com,
+# named so). No listing is left out for its region (the user: all cartridge photos are welcome; read-serials reads each
+# photo's own serial), nor for naming another Game Boy system: only other systems (NOT_GAME_BOY).
 REGION_GROUP = {"USA": "USA", "CAN": "USA", "JPN": "JPN",
                 **{r: "EUR" for r in ("EUR", "UKV", "NOE", "FRA", "ESP", "ITA", "HOL", "EUU", "EUB", "FAH", "FRG", "DAN", "AUS", "GRA", "SPA")}}
 ID_LETTER_GROUP = {"J": "JPN", "E": "USA", "P": "EUR"}
-JAPAN = r"japan|japanese|jpn|jp|ntsc-j"
-PAL = r"pal|eur|europe|european|uk|german|deutsch|french|fran[cç]ais|spanish|italian|dutch|australia|australian"
-REGIONS = {"USA": {"query": "", "require": "", "exclude": None},  # OTHER_REGIONS["USA"], below
-           "JPN": {"query": "Japan", "require": rf"\b({JAPAN})\b", "exclude": rf"\b({PAL})\b"},
-           "EUR": {"query": "PAL", "require": rf"\b({PAL})\b", "exclude": rf"\b({JAPAN}|usa|ntsc)\b"}}
+REGIONS = {"USA": {"query": ""}, "JPN": {"query": "Japan"}, "EUR": {"query": "PAL"}}
+NOT_GAME_BOY = r"\b(nds|ds|3ds|psp|gamecube|n64|sega)\b"
 SYSTEM = {"agb": "GBA", "cgb": "Game Boy Color", "dmg": "Game Boy"}
 OTHER_SYSTEMS = {"agb": r"\b(gbc|game ?boy colou?r|nds|ds|3ds|psp|gamecube|sega)\b",  # listing titles naming another system
                  "cgb": r"\b(gba|advance|nds|ds|3ds|psp|n64|sega)\b", "dmg": r"\b(gba|advance|nds|ds|3ds|psp|n64|sega)\b"}
@@ -89,12 +86,12 @@ def queries(region, releases=None, pass_name=None):
             serial, group = region_of(r)
             if group is None or not re.search(r"[A-Za-z]", search_title(r)):  # no group, or no word the title check can use
                 continue
-        g = REGIONS.get(group, {"query": "", "require": "", "exclude": None})
+        g = REGIONS.get(group, {"query": ""})
         title = search_title(r)
         out.append({"release": r["id"], "serial": serial, "title": title, "region": group,
                     "query": " ".join(w for w in (query_title(title), SYSTEM[r["system"]], g["query"], "cartridge") if w),
-                    "exclude": OTHER_SYSTEMS[r["system"]], "require_region": g["require"],
-                    "exclude_region": g["exclude"] or OTHER_REGIONS["USA"]})
+                    "exclude": OTHER_SYSTEMS[r["system"]] if releases is None else NOT_GAME_BOY,
+                    **({} if releases is None else {"require_region": "", "exclude_region": ""})})
     return out
 
 
@@ -137,10 +134,11 @@ def ingest(results_file, queries_file, pass_name=None):
         if (pass_name is None and done) or (pass_name is not None and pass_name in done.get("passes", {})):
             continue
         kept, small = 0, 0
-        other_region = re.compile(res.get("exclude_region") or OTHER_REGIONS[res["serial"].rsplit("-", 1)[1]], re.I)
+        pattern = res["exclude_region"] if "exclude_region" in res else OTHER_REGIONS[res["serial"].rsplit("-", 1)[1]]
+        other_region = re.compile(pattern, re.I) if pattern else None
         this_region = re.compile(res["require_region"], re.I) if res.get("require_region") else None
         for it in res["items"]:
-            if other_region.search(it["title"]) or (this_region and not this_region.search(it["title"])):
+            if (other_region and other_region.search(it["title"])) or (this_region and not this_region.search(it["title"])):
                 continue
             if kept >= PER_RELEASE:
                 break
