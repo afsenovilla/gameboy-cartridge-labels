@@ -231,7 +231,8 @@ def finest_band(photo_px_per_mm):
 # SHARP_SHARE of the second most detailed label photo's there (the second: dirt or noise on one photo has detail too,
 # and mustn't push the others out). Only to leave out what's clearly blurred, never to favour the most detailed (the
 # energy-weighted median favoured noise and dirt). Needs three or more label photos: with two, which is blurred and
-# which is dirty can't be told.
+# which is dirty can't be told; so per pixel, a label photo is left out only where three or more still count (a
+# watermark on one of three came through where the softest was left out: 1b32d2a69c…_68_34, 2026-11-10).
 SHARP_MM = 1.0
 SHARP_SHARE = 0.5
 
@@ -316,7 +317,10 @@ def restore_print(job):
             weights.append(wgt)
         W = np.stack(weights)
         if n >= 3 and lv < levels - 1:
-            W *= sharp_enough(vals[..., 0], W > 0, lv)
+            sharp = W * sharp_enough(vals[..., 0], W > 0, lv)
+            # only where three or more still count: with two left, the dirty one isn't outvoted (a watermark on one
+            # of three came through at half strength where the third, softest, was left out)
+            W = np.where(((sharp > 0).sum(0) >= 3)[None], sharp, W)
         total = W.sum(0)
         Wn = W / np.maximum(total, 1e-12)
         counts.append(int(np.median((W > 0).sum(0))))
