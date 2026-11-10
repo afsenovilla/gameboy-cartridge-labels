@@ -361,46 +361,65 @@ def write_avif(path, img):
 
 
 # Paper white: the paper is the restored image's brightest near-neutral pixels (Oklab chroma under PAPER_CHROMA, in the
-# top PAPER_TOP of the lightness among those), at least PAPER_MIN of the label; each channel scaled in linear light so
-# the paper at its PAPER_WHITE quantile of lightness becomes white: only the brightest of the paper clips (the user:
-# the paper's median made white, 5 % over, clipped far too much). A label with too little such paper isn't done.
+# top PAPER_TOP of the lightness among those), at least PAPER_MIN_TOP of the label, their median lightness at least
+# PAPER_LIGHT; each channel scaled in linear light so the paper at its PAPER_WHITE quantile of lightness becomes white:
+# only the brightest of the paper clips (the user: the paper's median made white, 5 % over, clipped far too much). A
+# label with too little near-neutral area (PAPER_MIN) or such paper isn't done. The top tenth, not half (2026-11-10):
+# halftoned greys and tints aren't resolved into dots at this resolution, so a dark label's near-neutral pixels are
+# mostly mid greys, and their lighter half was no paper (832 of 5589 prints got none; AGB-BRKE-USA's white came out at
+# 84 %, the user's 85 % by hand).
 # Black point, likewise (the user: the printed solid black's texture crushed, that's the point): the ink is the
-# near-neutral pixels darker than INK_MAX lightness, at least INK_MIN of the label; the ink at its INK_BLACK quantile of
-# lightness becomes black (an offset per channel in linear light, so the black is neutral too), the darkest of it
-# clipped. A label with too little such ink keeps its blacks as they are.
+# near-neutral pixels darker than INK_MAX lightness, at least INK_MIN of the label; black is where their histogram's
+# peak falls to half its height on its light side (the solid black's texture, crushed), but at most INK_ABOVE_DARKEST
+# above their INK_BLACK quantile (a peak well above the darkest ink is a grey: DMG-NM-NOE was too dark), the colour of
+# the ink at that lightness (or its neutral grey if none is), taken off per channel in linear light so the black is
+# neutral too. A label with too little such ink keeps its blacks as they are. (Tried: a cap at 15 % sRGB: no gain on
+# clean labels, too little on glary ones, which need the higher black.)
 PAPER_CHROMA = 0.04
-PAPER_TOP = 0.5
+PAPER_TOP = 0.1
 PAPER_MIN = 0.03
+PAPER_MIN_TOP = 0.01
+PAPER_LIGHT = 0.6
 PAPER_WHITE = 0.9
 INK_MAX = 0.4
 INK_MIN = 0.01
 INK_BLACK = 0.1
+INK_ABOVE_DARKEST = 0.1
+INK_BINS = 40
 
 
 def paper_white(bgr):
     """(the paper's colour BGR 0..1, the image with paper white and, where there's ink enough, ink black) or (None, None)."""
     lab = to_oklab(bgr)
+    L = lab[..., 0]
     neutral = np.hypot(lab[..., 1], lab[..., 2]) < PAPER_CHROMA
     if neutral.mean() < PAPER_MIN:
         return None, None
-    L = lab[..., 0][neutral]
-    paper = neutral & (lab[..., 0] >= np.quantile(L, 1 - PAPER_TOP))
-    if paper.mean() < PAPER_MIN or np.median(lab[..., 0][paper]) < 0.6:
+    paper = neutral & (L >= np.quantile(L[neutral], 1 - PAPER_TOP))
+    if paper.mean() < PAPER_MIN_TOP or np.median(L[paper]) < PAPER_LIGHT:
         return None, None
     lin = np.where(bgr <= 0.04045, bgr / 12.92, ((bgr + 0.055) / 1.055) ** 2.4)
-    light = lab[..., 0][paper]
     brightest = paper.copy()
-    brightest[paper] = light >= np.quantile(light, PAPER_WHITE)
+    brightest[paper] = L[paper] >= np.quantile(L[paper], PAPER_WHITE)
     white_lin = np.median(lin[brightest], axis=0)  # the colour of the paper's brightest tenth, so its hue stays even
-    ink = neutral & (lab[..., 0] < INK_MAX)
+    ink = neutral & (L < INK_MAX)
     black_lin = np.zeros(3)
     if ink.mean() >= INK_MIN:
-        dark = ink.copy()
-        dark[ink] = lab[..., 0][ink] <= np.quantile(lab[..., 0][ink], INK_BLACK)
-        black_lin = np.median(lin[dark], axis=0)
+        black_lin = ink_black(L[ink], lin[ink])
     out = np.clip((lin - black_lin) / np.maximum(white_lin - black_lin, 1e-3), 0, 1)
     out = np.where(out <= 0.0031308, out * 12.92, 1.055 * np.power(out, 1 / 2.4) - 0.055)
     return np.median(bgr[paper], axis=0), out.astype(np.float32)
+
+
+def ink_black(L, lin):
+    """The black point (linear BGR) of the ink's lightness L and colours lin (see above)."""
+    edges = np.linspace(0, INK_MAX, INK_BINS + 1)
+    h = np.convolve(np.histogram(L, edges)[0], np.ones(3) / 3, "same")
+    peak = int(np.argmax(h))
+    side = peak + next((i for i, v in enumerate(h[peak:]) if v < h[peak] / 2), len(h) - peak)
+    level = min(edges[min(side, INK_BINS)], np.quantile(L, INK_BLACK) + INK_ABOVE_DARKEST)
+    near = np.abs(L - level) < INK_MAX / INK_BINS / 2
+    return np.median(lin[near], axis=0) if near.any() else np.full(3, level ** 3)
 
 
 def main():
