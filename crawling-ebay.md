@@ -168,6 +168,7 @@ done
 - Yahoo refuses curl (HTTP 403), on its image server and its thumbnail server (auc-pctr.c.yimg.jp) alike; through Jauce's image proxy (`https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/<path>`) curl gets the full size.
 - Searched by the database's Japanese-script title (gb-game-list's titles: 1753 of 1888 Japanese releases have one; readings in brackets left out, NFKC) and the system's Japanese name (ゲームボーイ, ゲームボーイカラー, ゲームボーイアドバンス). A listing's title must hold ¾ of the title's parts.
 - Left out: lots and sets (まとめ, セット, N本), boxes and manuals (外箱, 空箱, 箱 and 説明書 but not 箱なし or 説明書なし), guides, cases, consoles (本体), accessories, repros; other systems (DS, PSP, PS, SFC, スーパーファミコン, ファミコン but not ファミコンミニ, the GBA's Famicom Mini series, and the like). Photos under 1000 px skipped by their name, before downloading.
+- A search with no results comes back as HTTP 404 with "No results found." (first seen on エアフォースデルタII): zero results, not an error.
 - One search every 20 to 30 s; batches `~/Downloads/jauce-batch-<n>.json`, taken in by `python3 src/jauce_photos.py ingest`. Records: save-new-images-here/jauce-sources.json, jauce-searches.json; photos: save-new-images-here/jauce-search/ (page_url: the Yahoo listing).
 - First run: the 567 Japanese releases of the second pass's list with a Japanese title.
 
