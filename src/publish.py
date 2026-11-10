@@ -1,5 +1,7 @@
 # publish: the outputs collected into <generated>/publish/:
-#   prints/<print>.avif: each restored print, restore's image as it is (paper white where found, else median colours)
+#   prints/<serial>_<print>.avif: each restored print, restore's image as it is (paper white where found, else median
+#     colours), its file name prefixed with its serial (else its release, else "unknown"; characters other than letters,
+#     digits and "-" made "-")
 #   No label photo images (the user, 2026-11-10: the straightened photos aren't worth distributing, over 1 GB): each
 #     label photo is in index.json, with where it came from. Poor fits (solve's "a poor" fallbacks) are listed with
 #     poor_fit true; a print of poor fits only has no image (restore leaves it out).
@@ -13,7 +15,7 @@
 # A print's image is copied again when it's missing or older than restore's; files of prints no longer there are
 # removed, and the label-photos/ folder an older version wrote.
 # Usage: publish.py [--sample]
-import argparse, html, json, os, shutil, sys
+import argparse, html, json, os, re, shutil, sys
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,6 +49,11 @@ def sources(path=SOURCES):
 
 def poor_fits(solved):
     return {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
+
+
+def file_prefix(p):
+    """A print's serial for its file name: its serial, else its release, else "unknown", made safe."""
+    return re.sub(r"[^A-Za-z0-9-]+", "-", str(p["serial"] or p["release"] or "unknown")).strip("-") or "unknown"
 
 
 def newer(out, *ins):
@@ -84,7 +91,7 @@ def main():
         desc = json.load(open(desc_file)) if os.path.exists(desc_file) else {}
         image = None
         if os.path.exists(restored):
-            image = "prints/" + name
+            image = "prints/" + file_prefix(p) + "_" + name
             copies.append((restored, os.path.join(out_dir, image)))
         crop = desc.get("crop") or {}
         index["prints"][p["id"]] = {"serial": p["serial"], "release": p["release"], "title": titles.get(p["release"]),

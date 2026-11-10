@@ -22,3 +22,9 @@ def test_sources_by_sha1(tmp_path):
 def test_poor_fits_from_solve():
     solved = {"a@1,1": {"fallback": "a poor fit: kept"}, "b@1,1": {"fallback": None}, "c@1,1": {}}
     assert publish.poor_fits(solved) == {"a@1,1"}
+
+
+def test_file_prefix():
+    assert publish.file_prefix({"serial": "DMG-AK-USA", "release": "DMG-AK"}) == "DMG-AK-USA"
+    assert publish.file_prefix({"serial": None, "release": "DMG-208 CHN"}) == "DMG-208-CHN"
+    assert publish.file_prefix({"serial": None, "release": None}) == "unknown"
