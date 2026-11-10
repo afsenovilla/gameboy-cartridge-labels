@@ -159,16 +159,19 @@ class Tool:
             for e in p["label_photos"]:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
         return {"no_labels": [s for s in self.no_labels if s in have], "matched": self.matched,
-                "prints": self.prints, "photo_prints": photo_prints, "deleted": sorted(set(self.photos) - have)}
+                "prints": self.prints, "photo_prints": photo_prints,
+                "deleted": sorted((set(self.photos) | set(photo_prints)) - have)}  # gone, also before the page started
 
     def delete(self, sha1s):
+        """Deletes those of sha1s still in photos/; returns all of sha1s no longer there."""
         done = []
         with lock:
             have = photos.all_photos()
             for s in sha1s:
                 if s in have:
                     photos.delete(s)
-                    done.append(s)
+                    print(f"deleted {s}", flush=True)
+                done.append(s)
         return done
 
 
@@ -388,8 +391,6 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         done = tool.delete([s for s in data.get("photos", []) if isinstance(s, str)])
-        for s in done:
-            print(f"deleted {s}", flush=True)
         self.send({"deleted": done})
 
     def log_message(self, *args):
