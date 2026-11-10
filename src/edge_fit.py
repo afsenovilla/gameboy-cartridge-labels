@@ -28,7 +28,8 @@ HALF, PER_MM = 10.0, 10  # the strip: +-10 mm, 10 samples per mm
 FINE = 20  # the photo brought down to at most this many px per mm first, as in training
 STEP, END = 1.0, 1.5  # strips 1 mm apart, 1.5 mm clear of the corners
 T = np.linspace(-HALF, HALF, int(2 * HALF * PER_MM) + 1)
-MIN_CONFIDENCE = 0.2
+MIN_CONFIDENCE = 0.2  # a strip less sure than this is left out of the fit
+ACCEPT = 0.8  # a fit less sure than this (its median strip) isn't to be used
 END_GUARD = 0.5  # mm from the window's ends: no answer
 _sessions = {}
 
@@ -36,7 +37,9 @@ _sessions = {}
 def model(shape, part):
     key = (shape, part)
     if key not in _sessions:
-        _sessions[key] = onnxruntime.InferenceSession(os.path.join(MODELS, f"{shape}-{part}.onnx"), providers=["CPUExecutionProvider"])
+        options = onnxruntime.SessionOptions()
+        options.intra_op_num_threads = 1  # the steps run one process per core
+        _sessions[key] = onnxruntime.InferenceSession(os.path.join(MODELS, f"{shape}-{part}.onnx"), options, providers=["CPUExecutionProvider"])
     return _sessions[key]
 
 
@@ -144,6 +147,33 @@ def refine(photo, H, shape, part, rounds=8):
         if moved < 0.01 and (part == "label" or rnd >= 3):
             break
     return H, float(np.median(conf))
+
+
+def fit_params(photo, shape, part, pose_of, x0, rounds=8):
+    """The parameters x of a pose (pose_of(x): plastic mm -> photo px, the part's rectangle in plastic mm) fitted to the
+    part's edges from x0, as refine does: (x, pose, confidence)."""
+    rect = SHAPES[shape][part]
+    part_id = 0 if part == "recess" else 1
+    session = model(shape, part)
+    pts, normals, sides = edge_points(rect)
+    x = np.asarray(x0, np.float64)
+    conf = np.zeros(len(pts))
+    for rnd in range(rounds):
+        H = pose_of(x)
+        pos, conf = peaks(session, strips(photo, H, pts, normals), part_id, sides, nearest=rnd >= 2)
+        q = pts + pos[:, None] * normals
+        w = np.sqrt(np.clip(conf, 0.02, 1)) * (conf >= MIN_CONFIDENCE)
+        back = np.linalg.inv(H)
+
+        def residuals(y):
+            return w * ((project(back @ pose_of(y), pts) - q) * normals).sum(1)
+
+        x_new = least_squares(residuals, x, loss="soft_l1", f_scale=0.3, x_scale="jac").x
+        moved = np.abs(project(back @ pose_of(x_new), corners_of(rect)) - corners_of(rect)).max()
+        x = x_new
+        if moved < 0.01:
+            break
+    return x, pose_of(x), float(np.median(conf))
 
 
 def corner_error(H, H_ref, rect):

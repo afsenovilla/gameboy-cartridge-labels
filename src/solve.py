@@ -37,14 +37,16 @@
 #      each family's median cut its anchor; then each family's label photos aligned to its median view by the pixels
 #      (refine_family: a homography per label photo, correcting the outline fit's perspective errors), then again at
 #      full resolution (refine_fine).
-# Done again when solve.json is older than this file or its inputs.
+#   Between them, 1b (an experiment): each chosen fit refined by the learned edge models where they're sure
+#      (stage1_edges, src/edge_fit.py).
+# Done again when solve.json is older than this file, src/edge_fit.py, the edge models or its inputs.
 # Usage: solve.py [--sample]
 import argparse, html, json, os, sys
 import cv2, numpy as np
 from scipy.optimize import least_squares
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, match, shapes, find, outlines
+import photos, steps, match, shapes, find, outlines, edge_fit
 from multiprocessing import Pool
 
 ANGLE = 8.0           # degrees: a segment counts for a sample point if this parallel to its edge
@@ -564,6 +566,97 @@ def stage1(lps, edges_dir, pairs, workers=8):
     return fits, failed, description
 
 
+# Stage 1b, an experiment (label-detection.md: edge models): each chosen fit refined by the learned edge models
+# (src/edge_fit.py), on the photo's pixels instead of its segments: the recess (the plastic's pose), then on it the
+# label's cut (its shift, turn and width in the recess, as the nested fit has them). Each part's refinement is used only
+# if its confidence is at least edge_fit.ACCEPT, and the label's only if it stays within the nested fit's limits
+# (WIDTHS; shift and turn within EDGE_SHIFT_MM and EDGE_TURN_DEG); else the nested fit's is kept (a label not used
+# keeps its place in the photo). Cached per label photo in <generated>/solve/edge/, for its chosen fit and this code.
+EDGE_SHIFT_MM = 3 * PLACEMENT_MM
+EDGE_TURN_DEG = 3 * PLACEMENT_DEG
+
+
+def edge_version():
+    import hashlib, inspect
+    h = hashlib.sha1(inspect.getsource(edge_fit).encode())
+    for name in ("edge_refine", "placement_matrix", "label_to_plastic", "corners_mm"):
+        h.update(inspect.getsource(globals()[name]).encode())
+    h.update(repr((EDGE_SHIFT_MM, EDGE_TURN_DEG, WIDTHS)).encode())
+    for f in sorted(os.listdir(edge_fit.MODELS)):
+        if f.endswith(".onnx"):
+            h.update(open(os.path.join(edge_fit.MODELS, f), "rb").read())
+    return h.hexdigest()[:16]
+
+
+def edge_refine(job):
+    """(key, what the edge models made of one chosen fit: the poses to use and the measures), None if the photo can't be read."""
+    key, shape, path, H, placement, width = job
+    photo = photos.load(path)
+    if photo is None:
+        return key, None
+    H = np.asarray(H, np.float64)
+    recess = MODELS[shape]["recess"]
+    Hr, recess_conf = edge_fit.refine(photo, H, shape, "recess")
+    recess_used = recess_conf >= edge_fit.ACCEPT
+    base = Hr if recess_used else H
+    pose_of = lambda x: base @ placement_matrix(shape, x[0], x[1], np.radians(x[2]), x[3])
+    x, Hl, label_conf = edge_fit.fit_params(photo, shape, "label", pose_of, [*placement, width])
+    label_used = bool(label_conf >= edge_fit.ACCEPT and WIDTHS[shape][0] <= x[3] <= WIDTHS[shape][1]
+                      and np.hypot(x[0], x[1]) <= EDGE_SHIFT_MM and abs(x[2]) <= EDGE_TURN_DEG)
+    old_cut = H @ placement_matrix(shape, *placement[:2], np.radians(placement[2])) @ label_to_plastic(shape)
+    new_cut = base @ placement_matrix(shape, x[0], x[1], np.radians(x[2])) @ label_to_plastic(shape)
+    mm = corners_mm(shape)
+    label_moved = float(np.max(np.linalg.norm(project(np.linalg.inv(old_cut), project(new_cut, mm)) - mm, axis=1)))
+    return key, {"plastic_to_photo": (Hr if recess_used else H).tolist(),
+                 "cut_to_photo": ((new_cut if label_used else old_cut) / (new_cut if label_used else old_cut)[2, 2]).tolist(),
+                 "placement": [float(v) for v in (x[:3] if label_used else placement)], "width_mm": float(x[3] if label_used else width),
+                 "recess_confidence": round(recess_conf, 3), "recess_used": bool(recess_used),
+                 "recess_moved_mm": round(edge_fit.corner_error(Hr, H, recess), 3),
+                 "label_confidence": round(label_conf, 3), "label_used": label_used, "label_moved_mm": round(label_moved, 3)}
+
+
+def stage1_edges(lps, fits, photo_paths, workers=8):
+    """The chosen fits, each refined by the edge models where they're sure (stage 1b, above)."""
+    cache_dir = os.path.join(_GEN_DIR, "solve", "edge")
+    os.makedirs(cache_dir, exist_ok=True)
+    version = edge_version()
+    by_key = {lp["key"]: lp for lp in lps}
+    done, todo = {}, []
+    for key, f in fits.items():
+        lp = by_key[key]
+        job = (key, lp["shape"], photo_paths.get(lp["photo"]), np.asarray(f["plastic_to_photo"]).tolist(),
+               [float(v) for v in f["placement"]], float(f.get("width_mm", MEDIAN_WIDTHS[lp["shape"]])))
+        if job[2] is None:
+            continue
+        p = cache_file(cache_dir, key)
+        if os.path.exists(p):
+            d = json.load(open(p))
+            if d.get("version") == version and d.get("job") == list(job[3:]):
+                done[key] = d["edge"]
+                continue
+        todo.append(job)
+    print(f"stage 1b: {len(done)} label photos' edge refinements cached, {len(todo)} to do", flush=True)
+    jobs = {j[0]: j for j in todo}
+    with Pool(workers) as pool:
+        for n, (key, e) in enumerate(pool.imap_unordered(edge_refine, todo, chunksize=4), 1):
+            steps.write_json(cache_file(cache_dir, key), {"version": version, "job": list(jobs[key][3:]), "edge": e})
+            done[key] = e
+            if n % 200 == 0 or n == len(todo):
+                print(f"stage 1b: refined {n} of {len(todo)}", flush=True)
+    out = {}
+    for key, f in fits.items():
+        e = done.get(key)
+        if e is None:
+            out[key] = dict(f, edge=None)
+            continue
+        out[key] = dict(f, plastic_to_photo=np.asarray(e["plastic_to_photo"]), cut_to_photo=np.asarray(e["cut_to_photo"]),
+                        placement=e["placement"], width_mm=e["width_mm"],
+                        edge={k: v for k, v in e.items() if k not in ("plastic_to_photo", "cut_to_photo", "placement", "width_mm")})
+    used = lambda part: sum(1 for f in out.values() if f["edge"] and f["edge"][part + "_used"])
+    print(f"stage 1b: the edge models' recess used on {used('recess')}, label on {used('label')} of {len(out)}", flush=True)
+    return out
+
+
 # Stage 2: each link candidate is one match homography between two label photos (not pooled: a match between prints
 # with offset art finds one alignment for the text and another for the art). A link counts where
 #   - its matched points, mapped into each sticker's frame, agree within LINK_FIT_MM after the best shift and turn
@@ -1037,6 +1130,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
     global _GEN_DIR
     _GEN_DIR = os.path.dirname(edges_dir)
     fits, failed, choice = stage1(lps, edges_dir, None)
+    fits = stage1_edges(lps, fits, photo_paths or {})
     offsets, family_of, poor, links_info, corrections, groups = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
     coarse = {}
     for k, f in fits.items():
@@ -1072,13 +1166,23 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "fallback": "a poor fit: its links disagree" if k in poor else ("found by the pose search" if f["start"].startswith("search") else None),
                   "family": family_of[k][0], "family_size": family_of[k][1],
                   "correction_mm": None if moved is None else round(moved, 3),
-                  "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3)}
+                  "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3),
+                  "edge": f.get("edge")}
     print("writing solve.json and the page", flush=True)
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
 
 
+def edge_caption(e):
+    if not e:
+        return ""
+    part = lambda p: f'{p} {e[p + "_confidence"]:.2f} {"used" if e[p + "_used"] else "not used"}, moved {e[p + "_moved_mm"]} mm'
+    return f'<br>edge models: {part("recess")}; {part("label")}'
+
+
 def page(out_dir, chosen, result, sizes):
     lps = result["label_photos"]
+    edges = [r["edge"] for r in lps.values() if r.get("edge")]
+    edge_used = {p: sum(1 for e in edges if e[p + "_used"]) for p in ("recess", "label")}
     rel = os.path.relpath(".", out_dir)
     kinds = ["placed", "outline", "search"]
     group = lambda r: next((k for k in kinds if r["start"].startswith(k)), "search")
@@ -1095,7 +1199,7 @@ def page(out_dir, chosen, result, sizes):
         return (f'<figure><div class="ph"><img loading="lazy" src="{rel}/{chosen[s]}"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
                 f'{extra}<polygon points="{pts}" fill="none" stroke="#0c0" stroke-width="{max(w, h) / 250:.1f}"/>'
                 f'<circle cx="{quad[0][0]:.0f}" cy="{quad[0][1]:.0f}" r="{max(w, h) / 80:.0f}" fill="#f00"/></svg></div>'
-                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, error {r["error_mm"]} mm, family of {r["family_size"]}{", " + r["fallback"] if r["fallback"] else ""}</figcaption></figure>')
+                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, error {r["error_mm"]} mm, family of {r["family_size"]}{", " + r["fallback"] if r["fallback"] else ""}{edge_caption(r.get("edge"))}</figcaption></figure>')
 
     unsolved = "".join(f"<li><code>{html.escape(k[:16])}</code>: {html.escape(v)}</li>" for k, v in result["unsolved"].items())
     starts = {}
@@ -1109,6 +1213,7 @@ def page(out_dir, chosen, result, sizes):
 <h1>solve</h1>
 <p>{len(lps)} label photos solved (started: {", ".join(f"{k} {v}" for k, v in starts.items())}), {len(result["unsolved"])} not. Links: {html.escape(str(result["links"]))}.</p>
 {steps.legend([("#08f", "the cartridge's outline"), ("#fa0", "the recess"), ("#0c0", "the label's cut (canonical size)"), ("#f00", "the label's top left")])}
+<p>The edge models (an experiment) refined {len(edges)}: their recess used on {edge_used["recess"]}, their label on {edge_used["label"]} (confidence at least {edge_fit.ACCEPT}, the label within the fit's limits); the drawing shows the poses used.</p>
 <p>Grouped by how the fit was started; within a group, most outline support first.</p>
 <h2>Not solved ({len(result["unsolved"])})</h2><ul>{unsolved}</ul>
 {"".join(f'<h2>Started from: {k} ({len(by_kind[k])})</h2>' + "".join(figure(key, r) for key, r in by_kind[k]) for k in kinds)}
@@ -1129,7 +1234,8 @@ def main():
     missing = [p for p in inputs if not os.path.exists(p)]
     if missing:
         sys.exit(f"{len(missing)} inputs missing: run make find and make edges first")
-    if steps.stale(out, __file__) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
+    code = [__file__, edge_fit.__file__] + [os.path.join(edge_fit.MODELS, f) for f in os.listdir(edge_fit.MODELS) if f.endswith(".onnx")]
+    if any(steps.stale(out, c) for c in code) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
         result = solve(json.load(open(found_file)), match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen)
         steps.write_json(out, result)
     result = json.load(open(out))
