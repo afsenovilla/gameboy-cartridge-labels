@@ -574,7 +574,8 @@ def stage1(lps, edges_dir, pairs, workers=8):
 # confidence is at least edge_fit.ACCEPT, and the label's only if it's plausible: its corners within the recess (with
 # EDGE_RECESS_SLACK mm for the fit's error) and its width and height each within EDGE_SIZE_TOLERANCE mm of the
 # canonical ones (the sample's widest departure 1.5 mm, 2026-11-10); else the
-# nested fit's is kept (a label not used keeps its place in the photo). Cached per label photo in
+# nested fit's is kept (a label not used keeps its place in the photo), but marked a poor fit (its fallback), so restore
+# and publish leave it out: the nested fit's label is no better where the edge models found none. Cached per label photo in
 # <generated>/solve/edge/, for its chosen fit and this code.
 EDGE_RECESS_SLACK = 0.5
 EDGE_SIZE_TOLERANCE = 2.0
@@ -1174,7 +1175,9 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "start": f["start"], "support": f["support"], "error_mm": round(f["error_mm"], 3),
                   "candidates": f["candidates"], "probability": f["probability"] and round(f["probability"], 3),
                   "changed_by_choice": not f["round1_same"],
-                  "fallback": "a poor fit: its links disagree" if k in poor else ("found by the pose search" if f["start"].startswith("search") else None),
+                  "fallback": "a poor fit: its links disagree" if k in poor else
+                              "a poor fit: the edge models found no plausible label" if f.get("edge") and not f["edge"]["label_used"] else
+                              ("found by the pose search" if f["start"].startswith("search") else None),
                   "family": family_of[k][0], "family_size": family_of[k][1],
                   "correction_mm": None if moved is None else round(moved, 3),
                   "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3),
