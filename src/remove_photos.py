@@ -1,7 +1,8 @@
 # remove-photos: a tool, not a step: a local page for deleting photos from photos/ (the file and its record in
 # photo-sources.json, photos.delete). The steps drop what they made from a deleted photo on their next run. Two tabs:
-#   - No labels: the photos in which find found no label photo, 5 x 4 at a time: delete one, delete the page's 20, or
-#     go on to the next 20.
+#   - No labels: the photos in which find found no label photo, 5 x 4 at a time, the least detail first (detail: the
+#     variance of the Laplacian of the photo's gray scaled to DETAIL_PX on its long side; small, blurry or heavily
+#     compressed photos score low, so does a plain one): delete one, delete the page's 20, or go on to the next 20.
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
 #     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
@@ -33,6 +34,7 @@ DAMAGE_DE = 0.08        # Oklab distance to the reference over which a pixel is 
 FULL_PX_PER_MM = 10     # a photo this sharp at the label or more loses nothing by its resolution
 REFERENCE_MIN = 3       # a print with this many label photos is its own label photos' reference
 THUMB_PX = 600
+DETAIL_PX = 1000
 CACHE = os.path.join(GEN, "remove-photos", "badness.json")
 lock = threading.Lock()
 
@@ -123,7 +125,11 @@ class Tool:
         self.photos = photos.all_photos()
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
         with_labels = {lp["photo"] for lp in found}
-        self.no_labels = sorted(s for s in self.photos if s not in with_labels)
+        from concurrent.futures import ThreadPoolExecutor
+        no_labels = [s for s in self.photos if s not in with_labels]
+        with ThreadPoolExecutor(8) as ex:
+            self.detail = dict(zip(no_labels, ex.map(lambda s: detail(self.photos[s]), no_labels)))
+        self.no_labels = sorted(no_labels, key=lambda s: self.detail[s])
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
         bad = badness(prints)
@@ -155,7 +161,7 @@ class Tool:
         for p in self.prints:
             for e in p["label_photos"]:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
-        return {"no_labels": [s for s in self.no_labels if s in have],
+        return {"no_labels": [s for s in self.no_labels if s in have], "detail": self.detail,
                 "prints": self.prints, "photo_prints": photo_prints, "deleted": sorted(set(self.photos) - have)}
 
     def delete(self, sha1s):
@@ -167,6 +173,16 @@ class Tool:
                     photos.delete(s)
                     done.append(s)
         return done
+
+
+def detail(path):
+    """How much fine detail the photo has at DETAIL_PX on its long side (the variance of its gray's Laplacian)."""
+    img = photos.load(path)
+    if img is None:
+        return 0.0
+    f = DETAIL_PX / max(img.shape[:2])
+    img = cv2.resize(img, None, fx=f, fy=f, interpolation=cv2.INTER_AREA if f < 1 else cv2.INTER_CUBIC)
+    return round(float(cv2.Laplacian(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.CV_32F).var()), 1)
 
 
 def thumbnail(path, side):
@@ -259,7 +275,7 @@ function renderNoLabels() {
   const pages = Math.max(1, Math.ceil(left.length / PER));
   page = Math.min(page, pages - 1);
   const shown = left.slice(page * PER, page * PER + PER);
-  $("#count").textContent = `${left.length} photos without label photos; page ${page + 1} of ${pages}`;
+  $("#count").textContent = `${left.length} photos without label photos, the least detail first; page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
   const all = button("Delete these " + shown.length, "danger", () => remove(shown));
   all.disabled = !shown.length;
@@ -270,7 +286,7 @@ function renderNoLabels() {
   for (const s of shown) {
     const cell = document.createElement("div");
     cell.className = "cell";
-    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)}</span>`;
+    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} detail ${Math.round(S.detail[s])}</span>`;
     cell.append(button("Delete", "danger", () => remove([s])));
     grid.append(cell);
   }
