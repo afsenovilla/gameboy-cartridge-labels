@@ -32,7 +32,7 @@ SOURCES = os.path.join(OUT, "jauce-sources.json")
 SEARCHES = os.path.join(OUT, "jauce-searches.json")
 PER_RELEASE = 5
 MIN_SIDE = 1000  # px, longest side (Yahoo's photo names say their size: i-img1200x900-...)
-PROXY = "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/"
+PROXY = "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/"
 SYSTEM = {"agb": "ゲームボーイアドバンス", "cgb": "ゲームボーイカラー", "dmg": "ゲームボーイ"}
 # Listing titles left out: lots and sets, boxes and manuals (but not "box: none"), guides, consoles, other systems
 # (ファミコン, but not the GBA's ファミコンミニ series).
