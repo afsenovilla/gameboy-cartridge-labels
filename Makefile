@@ -55,13 +55,19 @@
 #   The outputs collected into generated/publish/: prints/, label-photos/ (straightened, the same crop), index.json
 #   (source and URLs from photo-sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
+#   make remove-photos
+#   A tool, not a step: a local page for deleting photos from photos/ (the file and its record in photo-sources.json),
+#   on two tabs: the photos with no label photo found, 20 at a time; every print with its label photos, the worst first
+#   (badness: the share of the label off the photo or unlike its restored print, and a resolution under 10 px/mm), to
+#   delete one or one and all worse. Asks first if a photo holds label photos of other prints (src/remove_photos.py).
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish
+.PHONY: help setup test all add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -145,3 +151,6 @@ publish:
 
 clean-publish:
 	rm -rf $(GENERATED)/publish
+
+remove-photos:
+	$(PYTHON) src/remove_photos.py

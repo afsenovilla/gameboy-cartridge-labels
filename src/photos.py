@@ -40,3 +40,17 @@ def load(path):
             if done.returncode == 0:
                 photo = cv2.imread(copy)
     return photo
+
+
+def delete(sha1, root=ROOT, sources_file="photo-sources.json"):
+    """Deletes a photo from photos/: its file and its record in photo-sources.json."""
+    os.remove(all_photos(root)[sha1])
+    import json
+    if os.path.exists(sources_file):
+        sources = json.load(open(sources_file))
+        if sources.pop(sha1, None) is not None:
+            tmp = sources_file + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(sources, f, indent=1, ensure_ascii=False, sort_keys=True)
+                f.write("\n")
+            os.replace(tmp, sources_file)
