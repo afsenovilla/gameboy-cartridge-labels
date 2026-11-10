@@ -5,6 +5,8 @@ query list and takes in the search results, downloading each listing's first pho
 
     python3 src/ebay_photos.py queries USA > queries.json
     python3 src/ebay_photos.py ingest results.json queries.json
+    python3 src/ebay_photos.py queries USA releases.json <pass> > queries.json   (given releases, a named pass)
+    python3 src/ebay_photos.py ingest results.json queries.json <pass>
 
 Photos go to save-new-images-here/ebay-search/ with a listing.json there, for make add-photos.
 ebay-photos/sources.json: one record per downloaded file (kept, or deleted by hand afterwards: never downloaded again) (release, query, listing, image URL, size, date).
@@ -31,6 +33,18 @@ PER_RELEASE = 5
 MIN_SIDE = 1000  # px, longest side
 OTHER_REGIONS = {  # listing titles naming another region than the release's
     "USA": r"\b(japan|japanese|jpn|jp|ntsc-j|pal|eur|europe|european|uk|german|deutsch|french|fran[cç]ais|spanish|italian|import|chinese|korean)\b|AGB-P-\w{3}[^E\W]"}
+# Regions for the searches of given releases (queries with a release list): the release's group, from its cartridge
+# serial's suffix, else its game id's last letter. Per group: words added to the query, a word a listing's title must
+# have (imports are listed on ebay.com, named so), words it mustn't. A photo of another regional release does no harm
+# (read-serials reads each photo's own serial); the filters only save downloads.
+REGION_GROUP = {"USA": "USA", "CAN": "USA", "JPN": "JPN",
+                **{r: "EUR" for r in ("EUR", "UKV", "NOE", "FRA", "ESP", "ITA", "HOL", "EUU", "EUB", "FAH", "FRG", "DAN", "AUS", "GRA", "SPA")}}
+ID_LETTER_GROUP = {"J": "JPN", "E": "USA", "P": "EUR"}
+JAPAN = r"japan|japanese|jpn|jp|ntsc-j"
+PAL = r"pal|eur|europe|european|uk|german|deutsch|french|fran[cç]ais|spanish|italian|dutch|australia|australian"
+REGIONS = {"USA": {"query": "", "require": "", "exclude": None},  # OTHER_REGIONS["USA"], below
+           "JPN": {"query": "Japan", "require": rf"\b({JAPAN})\b", "exclude": rf"\b({PAL})\b"},
+           "EUR": {"query": "PAL", "require": rf"\b({PAL})\b", "exclude": rf"\b({JAPAN}|usa|ntsc)\b"}}
 SYSTEM = {"agb": "GBA", "cgb": "Game Boy Color", "dmg": "Game Boy"}
 OTHER_SYSTEMS = {"agb": r"\b(gbc|game ?boy colou?r|nds|ds|3ds|psp|gamecube|sega)\b",  # listing titles naming another system
                  "cgb": r"\b(gba|advance|nds|ds|3ds|psp|n64|sega)\b", "dmg": r"\b(gba|advance|nds|ds|3ds|psp|n64|sega)\b"}
@@ -52,21 +66,44 @@ def query_title(title):
     return re.sub(r"\s+", " ", t.replace(" - ", " ")).strip()
 
 
-def queries(region):
+def queries(region, releases=None, pass_name=None):
+    """The queries for the region's releases no label photo has (missing.json), not yet searched; or for the given
+    releases (a list of database ids, in that order), not yet searched in the named pass."""
     db = json.load(open(serials.DATABASE))
-    missing = set(json.load(open(MISSING)))
     searched = load(SEARCHES)
+    if releases is None:
+        missing = set(json.load(open(MISSING)))
+        wanted = [r for r in db if r["id"] in missing and r["id"] not in searched]
+    else:
+        by_id = {r["id"]: r for r in db}
+        wanted = [by_id[i] for i in releases if i in by_id and pass_name not in searched.get(i, {}).get("passes", {})]
     out = []
-    for r in db:
-        if r["id"] not in missing or r["id"] in searched:
-            continue
-        cart = [s for s in r.get("cartridgeSerials", []) if s.endswith("-" + region)]
-        if not cart:
-            continue
-        out.append({"release": r["id"], "serial": cart[0], "title": r["title"],
-                    "query": f"{query_title(r['title'])} {SYSTEM[r['system']]} cartridge",
-                    "exclude": OTHER_SYSTEMS[r["system"]]})
+    for r in wanted:
+        if releases is None:
+            cart = [s for s in r.get("cartridgeSerials", []) if s.endswith("-" + region)]
+            if not cart:
+                continue
+            serial, group = cart[0], "USA" if region == "USA" else None
+        else:
+            serial, group = region_of(r)
+            if group is None or not re.search(r"[A-Za-z]", r["title"]):  # no group, or no word the title check can use
+                continue
+        g = REGIONS.get(group, {"query": "", "require": "", "exclude": None})
+        out.append({"release": r["id"], "serial": serial, "title": r["title"], "region": group,
+                    "query": " ".join(w for w in (query_title(r["title"]), SYSTEM[r["system"]], g["query"], "cartridge") if w),
+                    "exclude": OTHER_SYSTEMS[r["system"]], "require_region": g["require"],
+                    "exclude_region": g["exclude"] or OTHER_REGIONS["USA"]})
     return out
+
+
+def region_of(r):
+    """(serial, region group) of a database record: its first cartridge serial with a known region, else its game
+    id's last letter (serial: the id)."""
+    for s in r.get("cartridgeSerials", []):
+        group = REGION_GROUP.get(s.rsplit("-", 1)[-1])
+        if "-" in s and group:
+            return s, group
+    return r["id"], ID_LETTER_GROUP.get(r["id"][-1])
 
 
 def size(path):
@@ -75,20 +112,23 @@ def size(path):
     return [w, h]
 
 
-def ingest(results_file, queries_file):
-    """results: {release: [{item, title, image}]}, items already filtered and ranked in the eBay tab."""
+def ingest(results_file, queries_file, pass_name=None):
+    """results: {release: [{item, title, image}]}, items already filtered and ranked in the eBay tab. With a pass name,
+    a release searched before is searched again: the pass is recorded under its "passes"."""
     sources, searches = load(SOURCES), load(SEARCHES)
     query_of = {q["release"]: q for q in json.load(open(queries_file))}
     have_items = {v["listing"].rsplit("/", 1)[1] for v in sources.values()}
     today = datetime.date.today().isoformat()
     for release, items in json.load(open(results_file)).items():
         res = dict(query_of[release], items=items)
-        if res["release"] in searches:
+        done = searches.get(res["release"], {})
+        if (pass_name is None and done) or (pass_name is not None and pass_name in done.get("passes", {})):
             continue
         kept, small = 0, 0
-        other_region = re.compile(OTHER_REGIONS[res["serial"].rsplit("-", 1)[1]], re.I)
+        other_region = re.compile(res.get("exclude_region") or OTHER_REGIONS[res["serial"].rsplit("-", 1)[1]], re.I)
+        this_region = re.compile(res["require_region"], re.I) if res.get("require_region") else None
         for it in res["items"]:
-            if other_region.search(it["title"]):
+            if other_region.search(it["title"]) or (this_region and not this_region.search(it["title"])):
                 continue
             if kept >= PER_RELEASE:
                 break
@@ -116,15 +156,19 @@ def ingest(results_file, queries_file):
             save(LISTING, listing)
             have_items.add(it["item"])
             kept += 1
-        searches[res["release"]] = {"query": res["query"], "candidates": len(res["items"]), "kept": kept,
-                                    "too_small": small, "date": today}
+        record = {"query": res["query"], "candidates": len(res["items"]), "kept": kept, "too_small": small, "date": today}
+        if pass_name is None:
+            searches[res["release"]] = record
+        else:
+            searches.setdefault(res["release"], {}).setdefault("passes", {})[pass_name] = record
         save(SOURCES, sources)
         save(SEARCHES, searches)
         print(res["release"], len(res["items"]), "candidates,", kept, "kept,", small, "too small", flush=True)
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "queries":
-        json.dump(queries(sys.argv[2]), sys.stdout, ensure_ascii=False)
-    elif sys.argv[1] == "ingest":
-        ingest(sys.argv[2], sys.argv[3])
+    if sys.argv[1] == "queries":  # queries <region> [<releases.json> <pass name>]
+        releases = json.load(open(sys.argv[3])) if len(sys.argv) > 3 else None
+        json.dump(queries(sys.argv[2], releases, sys.argv[4] if len(sys.argv) > 4 else None), sys.stdout, ensure_ascii=False)
+    elif sys.argv[1] == "ingest":  # ingest <results> <queries> [<pass name>]
+        ingest(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
