@@ -572,11 +572,12 @@ def stage1(lps, edges_dir, pairs, workers=8):
 # label's cut: its shift and turn in the recess, its width and its height, each free (stickers are cut as they are),
 # started from the nested fit's (the height from the canonical one). Each part's refinement is used only if its
 # confidence is at least edge_fit.ACCEPT, and the label's only if it's plausible: its corners within the recess (with
-# EDGE_RECESS_SLACK mm for the fit's error) and both its sides at least EDGE_MIN_SIZE of the canonical ones; else the
+# EDGE_RECESS_SLACK mm for the fit's error) and its width and height each within EDGE_SIZE_TOLERANCE mm of the
+# canonical ones (the sample's widest departure 1.5 mm, 2026-11-10); else the
 # nested fit's is kept (a label not used keeps its place in the photo). Cached per label photo in
 # <generated>/solve/edge/, for its chosen fit and this code.
 EDGE_RECESS_SLACK = 0.5
-EDGE_MIN_SIZE = 0.9
+EDGE_SIZE_TOLERANCE = 2.0
 
 
 def edge_version():
@@ -584,7 +585,7 @@ def edge_version():
     h = hashlib.sha1(inspect.getsource(edge_fit).encode())
     for name in ("edge_refine", "placement_matrix", "label_to_plastic", "corners_mm"):
         h.update(inspect.getsource(globals()[name]).encode())
-    h.update(repr((EDGE_RECESS_SLACK, EDGE_MIN_SIZE)).encode())
+    h.update(repr((EDGE_RECESS_SLACK, EDGE_SIZE_TOLERANCE)).encode())
     for f in sorted(os.listdir(edge_fit.MODELS)):
         if f.endswith(".onnx"):
             h.update(open(os.path.join(edge_fit.MODELS, f), "rb").read())
@@ -610,7 +611,7 @@ def edge_refine(job):
     rx1, ry1, rx2, ry2 = recess
     inside = bool(np.all((placed[:, 0] >= rx1 - EDGE_RECESS_SLACK) & (placed[:, 0] <= rx2 + EDGE_RECESS_SLACK)
                          & (placed[:, 1] >= ry1 - EDGE_RECESS_SLACK) & (placed[:, 1] <= ry2 + EDGE_RECESS_SLACK)))
-    label_used = bool(label_conf >= edge_fit.ACCEPT and inside and x[3] >= EDGE_MIN_SIZE * lw and x[4] >= EDGE_MIN_SIZE * lh)
+    label_used = bool(label_conf >= edge_fit.ACCEPT and inside and abs(x[3] - lw) <= EDGE_SIZE_TOLERANCE and abs(x[4] - lh) <= EDGE_SIZE_TOLERANCE)
     old_cut = H @ placement_matrix(shape, *placement[:2], np.radians(placement[2])) @ label_to_plastic(shape)
     new_cut = base @ placement_matrix(shape, x[0], x[1], np.radians(x[2])) @ label_to_plastic(shape)
     mm = corners_mm(shape)
