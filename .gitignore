@@ -12,3 +12,8 @@ __pycache__/
 # Photos waiting for make add-photos.
 save-new-images-here/*
 !save-new-images-here/README.md
+# Edge models training: main's fits.json copy, the strips, the PyTorch models, the evaluation results.
+edge-models/training/fits.json
+edge-models/training/data/
+edge-models/training/models/
+edge-models/training/fit-*.json
