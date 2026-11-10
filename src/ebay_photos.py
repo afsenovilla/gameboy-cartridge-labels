@@ -19,6 +19,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 
 sys.path.insert(0, os.path.dirname(__file__))
 import serials  # noqa: E402
@@ -86,14 +87,25 @@ def queries(region, releases=None, pass_name=None):
             serial, group = cart[0], "USA" if region == "USA" else None
         else:
             serial, group = region_of(r)
-            if group is None or not re.search(r"[A-Za-z]", r["title"]):  # no group, or no word the title check can use
+            if group is None or not re.search(r"[A-Za-z]", search_title(r)):  # no group, or no word the title check can use
                 continue
         g = REGIONS.get(group, {"query": "", "require": "", "exclude": None})
-        out.append({"release": r["id"], "serial": serial, "title": r["title"], "region": group,
-                    "query": " ".join(w for w in (query_title(r["title"]), SYSTEM[r["system"]], g["query"], "cartridge") if w),
+        title = search_title(r)
+        out.append({"release": r["id"], "serial": serial, "title": title, "region": group,
+                    "query": " ".join(w for w in (query_title(title), SYSTEM[r["system"]], g["query"], "cartridge") if w),
                     "exclude": OTHER_SYSTEMS[r["system"]], "require_region": g["require"],
                     "exclude_region": g["exclude"] or OTHER_REGIONS["USA"]})
     return out
+
+
+ROMANIZED = "ebay-romanized-titles.json"  # romanized titles for releases titled in Japanese script, written by hand
+
+
+def search_title(r):
+    """The title to search a release by: its romanized one (ROMANIZED) if written, else the database's, full-width
+    letters made plain (NFKC)."""
+    romanized = load(ROMANIZED)
+    return romanized.get(r["id"]) or unicodedata.normalize("NFKC", r["title"])
 
 
 def region_of(r):
