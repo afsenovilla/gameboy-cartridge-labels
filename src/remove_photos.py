@@ -1,8 +1,10 @@
 # remove-photos: a tool, not a step: a local page for deleting photos from photos/ (the file and its record in
 # photo-sources.json, photos.delete). The steps drop what they made from a deleted photo on their next run. Two tabs:
-#   - No labels: the photos in which find found no label photo, 5 x 4 at a time, the least detail first (detail: the
+#   - No labels: the photos in which find found no label photo, 5 x 4 at a time, the fewest matched features first
+#     (its distinct points among the inliers of its matches with other photos, match's), then the least detail (the
 #     variance of the Laplacian of the photo's gray scaled to DETAIL_PX on its long side; small, blurry or heavily
 #     compressed photos score low, so does a plain one): delete one, delete the page's 20, or go on to the next 20.
+#     (On the full set, 48 of the 71 matched nothing.)
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
 #     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
@@ -129,7 +131,8 @@ class Tool:
         no_labels = [s for s in self.photos if s not in with_labels]
         with ThreadPoolExecutor(8) as ex:
             self.detail = dict(zip(no_labels, ex.map(lambda s: detail(self.photos[s]), no_labels)))
-        self.no_labels = sorted(no_labels, key=lambda s: self.detail[s])
+        self.matched = matched_features(set(no_labels))
+        self.no_labels = sorted(no_labels, key=lambda s: (self.matched[s], self.detail[s]))
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
         bad = badness(prints)
@@ -161,7 +164,7 @@ class Tool:
         for p in self.prints:
             for e in p["label_photos"]:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
-        return {"no_labels": [s for s in self.no_labels if s in have], "detail": self.detail,
+        return {"no_labels": [s for s in self.no_labels if s in have], "detail": self.detail, "matched": self.matched,
                 "prints": self.prints, "photo_prints": photo_prints, "deleted": sorted(set(self.photos) - have)}
 
     def delete(self, sha1s):
@@ -173,6 +176,28 @@ class Tool:
                     photos.delete(s)
                     done.append(s)
         return done
+
+
+def matched_features(wanted):
+    """sha1 -> how many distinct points of the photo are inliers of its matches with other photos, for those wanted."""
+    points = {s: [] for s in wanted}
+    folder = os.path.join(GEN, "match")
+    for f in os.listdir(folder):
+        if not f.endswith(".npz"):
+            continue
+        a = f[:-4]
+        z = np.load(os.path.join(folder, f))
+        others = z["others"]
+        if not len(others) or (a not in wanted and not wanted.intersection(others)):
+            continue
+        inliers, starts = z["inliers"], z["starts"]
+        for i, b in enumerate(others):
+            pair = inliers[starts[i]:starts[i + 1]]
+            if a in wanted:
+                points[a].append(pair[:, :2])
+            if b in wanted:
+                points[b].append(pair[:, 2:])
+    return {s: len(np.unique(np.round(np.concatenate(v)), axis=0)) if v else 0 for s, v in points.items()}
 
 
 def detail(path):
@@ -275,7 +300,7 @@ function renderNoLabels() {
   const pages = Math.max(1, Math.ceil(left.length / PER));
   page = Math.min(page, pages - 1);
   const shown = left.slice(page * PER, page * PER + PER);
-  $("#count").textContent = `${left.length} photos without label photos, the least detail first; page ${page + 1} of ${pages}`;
+  $("#count").textContent = `${left.length} photos without label photos, the fewest matched features first, then the least detail; page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
   const all = button("Delete these " + shown.length, "danger", () => remove(shown));
   all.disabled = !shown.length;
@@ -286,7 +311,7 @@ function renderNoLabels() {
   for (const s of shown) {
     const cell = document.createElement("div");
     cell.className = "cell";
-    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} detail ${Math.round(S.detail[s])}</span>`;
+    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} matched ${S.matched[s]} detail ${Math.round(S.detail[s])}</span>`;
     cell.append(button("Delete", "danger", () => remove([s])));
     grid.append(cell);
   }
