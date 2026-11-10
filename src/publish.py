@@ -146,7 +146,7 @@ def page(out_dir, index):
             w = (p.get("size") or [680])[0] / 2
             figs.append(f'<figure><img loading="lazy" src="{p["image"]}" style="max-width:{w:.0f}px">'
                         f'<figcaption><b>{html.escape(p["title"] or "(no title)")}</b><br>{html.escape(str(p["serial"] or p["release"] or "?"))}, '
-                        f'Recreated from {used(p)} photo{"" if used(p) == 1 else "s"}{"" if p["paper"] else "; no paper found: median colours"}'
+                        f'Recreated from {used(p)} photo{"" if used(p) == 1 else "s"}'
                         f'<div class="src">{sources}</div></figcaption></figure>')
         links.append(f'<li><a href="#{shape}">{platform}</a>: {len(ps)} images</li>')
         sections.append(f'<h2 id="{shape}">{platform} ({len(ps)})</h2><div class="grid">{"".join(figs)}</div>')
