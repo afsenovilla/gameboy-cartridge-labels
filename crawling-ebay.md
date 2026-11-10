@@ -162,9 +162,21 @@ done
 - What the user deleted (57 of the first 344 photos): 14 were other systems' games of the same title (PlayStation 2, Xbox: Defender, MLB Slugfest, All-Star Baseball), so PlayStation, PS1-5, Sony, Xbox, Wii, Dreamcast, disc and the like are left out now. 7 were one seller's, titles ending "Nintendo <4 digits> gba" (games photographed in their box, likely), 1 of theirs kept: not filtered (the user: nothing to go on). Booklet, graded, set and "new" caught too few to filter. The other 36 had ordinary titles: only the photo shows a box.
 - Trial: a PAL search ("Castlevania Aria of Sorrow GBA PAL cartridge") found no listing naming PAL among 60 results; Japanese ones found 10 each.
 
-## Open
+## Yahoo! Auctions Japan through Jauce (2026-11-10)
 
-- Yahoo! Auctions Japan has many Japanese games (the user, 2026-11-10), likely only through a proxy site such as Jauce or Sendico. Not tried: check a few samples by hand first.
+- www.jauce.com, a proxy shop for Yahoo! Auctions: a search is a form post to `/directory_list.php` (`find` = the words); the results are in the HTML (like eBay's), each an `li` with the auction id (`/auction/v1250734539`), the title (Japanese, in the image's alt) and the first photo (`auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/.../i-img1200x900-....jpg`: its size in its name).
+- Yahoo refuses curl (HTTP 403), on its image server and its thumbnail server (auc-pctr.c.yimg.jp) alike; through Jauce's image proxy (`https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/<path>`) curl gets the full size.
+- Searched by the database's Japanese-script title (gb-game-list's titles: 1753 of 1888 Japanese releases have one; readings in brackets left out, NFKC) and the system's Japanese name (ゲームボーイ, ゲームボーイカラー, ゲームボーイアドバンス). A listing's title must hold ¾ of the title's parts.
+- Left out: lots and sets (まとめ, セット, N本), boxes and manuals (外箱, 空箱, 箱 and 説明書 but not 箱なし or 説明書なし), guides, cases, consoles (本体), accessories, repros; other systems (DS, PSP, PS, SFC, スーパーファミコン, ファミコン but not ファミコンミニ, the GBA's Famicom Mini series, and the like). Photos under 1000 px skipped by their name, before downloading.
+- One search every 20 to 30 s; batches `~/Downloads/jauce-batch-<n>.json`, taken in by `python3 src/jauce_photos.py ingest`. Records: save-new-images-here/jauce-sources.json, jauce-searches.json; photos: save-new-images-here/jauce-search/ (page_url: the Yahoo listing).
+- First run: the 567 Japanese releases of the second pass's list with a Japanese title.
+
+## Mercari (www.mercari.com, tried 2026-11-10)
+
+- Photos: `u-mercari-images.mercdn.net/photos/<item>_1.jpg`, curl works, 1600 x 1200.
+- Searches: the search page's HTML has no results; the page gets them from Mercari's own GraphQL API (`/v1/api`, undocumented). Not used: either a navigation per search driven from the conversation, or calling that API. Waiting on the user.
+
+## Open
 
 - 39 USA releases not searched (the block). Resume slower, after a pause.
 - Other regions: not started.
