@@ -307,11 +307,10 @@ function pct(x) { return (100 * x).toFixed(0).padStart(3) + " %"; }
 function renderPrints() {
   const prints = S.prints.map(p => ({...p, label_photos: p.label_photos.filter(e => !deleted.has(e.photo))}))
                          .filter(p => p.label_photos.length);
-  prints.forEach(p => p.left = p.label_photos.reduce((a, e) => a + e.badness, 0));
-  prints.sort((a, b) => b.left - a.left);
+  prints.forEach(p => p.left = p.label_photos.reduce((a, e) => a + e.badness, 0));  // the order stays as loaded
   const pages = Math.max(1, Math.ceil(prints.length / PRINTS_PER));
   page = Math.min(page, pages - 1);
-  $("#count").textContent = `${prints.length} prints, the worst first; page ${page + 1} of ${pages}`;
+  $("#count").textContent = `${prints.length} prints, the worst first (as when the page was loaded); page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); $("#prints").scrollTop = 0; }),
                         button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); $("#prints").scrollTop = 0; }));
