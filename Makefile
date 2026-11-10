@@ -12,6 +12,9 @@
 #   Files the photos left in save-new-images-here/ into photos/ as <sha1>.<ext>, with where each came from (a
 #   subfolder's name and listing.json) in photo-sources.json (src/add_photos.py).
 #
+#   make all
+#   Runs every step below in order, read-text through publish (not add-photos), each skipping what it has already done.
+#
 #   make read-text
 #   Reads the text on every photo (RapidOCR) into generated/read-text/<sha1>.json; the page generated/read-text/index.html.
 #
@@ -58,7 +61,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish
+.PHONY: help setup test all add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -71,6 +74,11 @@ test:
 
 add-photos:
 	$(PYTHON) src/add_photos.py
+
+STEPS := read-text features edges match find solve straighten read-serials prints restore publish
+
+all:
+	set -e; for step in $(STEPS); do $(MAKE) $$step; done
 
 read-text:
 	$(PYTHON) src/read_text.py $(SAMPLE_FLAG)
