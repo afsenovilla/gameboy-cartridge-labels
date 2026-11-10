@@ -9,8 +9,9 @@
 # edge at its most likely sample (after two rounds: the strong peak nearest the pose's edge, so a strong edge farther
 # out can't pull the fit away; a parabola through the peak for the fraction); the pose corrected to put the edges
 # there (robust least squares, soft L1 at 0.3 mm; strips under 0.2 confidence left out); repeated until it moves under
-# 0.01 mm. The recess: shift, turn and scale for three rounds, then a full homography; the label: shift, turn and scale
-# only (it's flat on the recess's plane). A pose maps plastic coordinates (mm) to the photo's pixels.
+# 0.01 mm. The recess: shift, turn and scale for three rounds, then a full homography; the label: shift, turn, and its
+# width and height each free (stickers are cut as they are; it's flat on the recess's plane, so no more). A pose maps
+# plastic coordinates (mm) to the photo's pixels. fit_params fits any parameters of a pose instead (solve's label).
 # Confidence: the median over the strips of the probability within 0.3 mm of the edge found, 0 for a strip whose edge
 # is at its window's end (no edge seen; added after the evaluation below, which didn't have it). Below 0.8 every fit
 # tried was off by more than 1 mm; above it 1 to 4 % still were, and label fits can run far off with 0.84 (check that
@@ -109,13 +110,18 @@ def peaks(session, st, part_id, sides, nearest):
 
 
 def correction(kind, x, center):
-    """A correction in plastic coordinates: a homography near the identity, or a similarity about center."""
+    """A correction in plastic coordinates: a homography near the identity; a similarity about center (shift, turn, one
+    scale); or a rectangle's (shift, turn, its width and height scaled apart, along its own sides)."""
     if kind == "homography":
         a, b, c, d, e, f, g, h = x
         return np.array([[1 + a, b, c], [d, 1 + e, f], [g / 100, h / 100, 1]])
-    tx, ty, th, ls = x
-    s = np.exp(ls)
-    M = np.array([[s * np.cos(th), -s * np.sin(th), 0], [s * np.sin(th), s * np.cos(th), 0], [0, 0, 1]])
+    if kind == "similarity":
+        tx, ty, th, ls = x
+        sx = sy = np.exp(ls)
+    else:
+        tx, ty, th, lsx, lsy = x
+        sx, sy = np.exp(lsx), np.exp(lsy)
+    M = np.array([[np.cos(th) * sx, -np.sin(th) * sy, 0], [np.sin(th) * sx, np.cos(th) * sy, 0], [0, 0, 1]])
     T1, T2 = np.eye(3), np.eye(3)
     T1[:2, 2] = -np.asarray(center)
     T2[:2, 2] = np.asarray(center) + [tx, ty]
@@ -132,7 +138,7 @@ def refine(photo, H, shape, part, rounds=8):
     H = np.asarray(H, np.float64)
     conf = np.zeros(len(pts))
     for rnd in range(rounds):
-        kind = "homography" if part == "recess" and rnd >= 3 else "similarity"
+        kind = ("homography" if rnd >= 3 else "similarity") if part == "recess" else "rectangle"
         pos, conf = peaks(session, strips(photo, H, pts, normals), part_id, sides, nearest=rnd >= 2)
         q = pts + pos[:, None] * normals
         w = np.sqrt(np.clip(conf, 0.02, 1)) * (conf >= MIN_CONFIDENCE)
@@ -140,7 +146,7 @@ def refine(photo, H, shape, part, rounds=8):
         def residuals(x):
             return w * ((project(correction(kind, x, center), pts) - q) * normals).sum(1)
 
-        r = least_squares(residuals, np.zeros(8 if kind == "homography" else 4), loss="soft_l1", f_scale=0.3, x_scale="jac")
+        r = least_squares(residuals, np.zeros({"homography": 8, "similarity": 4, "rectangle": 5}[kind]), loss="soft_l1", f_scale=0.3, x_scale="jac")
         C = correction(kind, r.x, center)
         H = H @ C
         moved = np.abs(project(C, corners_of(rect)) - corners_of(rect)).max()

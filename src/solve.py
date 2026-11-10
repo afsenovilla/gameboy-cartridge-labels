@@ -1,8 +1,8 @@
 # solve: every label photo's homography from its photo into ink coordinates (mm on the label's print, one coordinate
 # system per shape, anchored by each linked set's median cut), into <generated>/solve/solve.json:
 #   {"label_photos": {key: {"photo_to_ink" (3 x 3), "cut_to_photo" (3 x 3: the sticker's cut outline, the canonical
-#                            label size about the sticker's centre, -> the photo), "width_mm" (the sticker's own width;
-#                            its cut is cut_to_photo's rectangle that wide about its centre), "plastic_to_photo" (3 x 3),
+#                            label size about the sticker's centre, -> the photo), "width_mm" and "height_mm" (the
+#                            sticker's own size; its cut is cut_to_photo's rectangle that size about its centre), "plastic_to_photo" (3 x 3),
 #                            "placement" (dx, dy mm, turn degrees: the label's cut in the recess, from its nominal place),
 #                            "offset" (dx, dy mm, turn
 #                            degrees: the sticker's cut -> ink), "start" (how it was started), "support" (the share of
@@ -84,14 +84,14 @@ def label_to_plastic(shape):
     return np.array([[1.0, 0, x0], [0, 1, y0], [0, 0, 1]])
 
 
-def placement_matrix(shape, dx, dy, turn_rad, width=None):
-    """plastic mm -> plastic mm: the label made width mm wide (if given) about its nominal centre, turned about it and
-    shifted."""
+def placement_matrix(shape, dx, dy, turn_rad, width=None, height=None):
+    """plastic mm -> plastic mm: the label made width mm wide and height mm high (if given) about its nominal centre,
+    turned about it and shifted."""
     x0, y0, x1, y1 = MODELS[shape]["label"]
     c = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
     R = np.array([[np.cos(turn_rad), -np.sin(turn_rad)], [np.sin(turn_rad), np.cos(turn_rad)]])
-    if width is not None:
-        R = R @ np.diag([width / (x1 - x0), 1.0])
+    if width is not None or height is not None:
+        R = R @ np.diag([(width or x1 - x0) / (x1 - x0), (height or y1 - y0) / (y1 - y0)])
     t = c + [dx, dy] - R @ c
     return np.array([[R[0, 0], R[0, 1], t[0]], [R[1, 0], R[1, 1], t[1]], [0, 0, 1]])
 
@@ -569,12 +569,14 @@ def stage1(lps, edges_dir, pairs, workers=8):
 
 # Stage 1b, an experiment (label-detection.md: edge models): each chosen fit refined by the learned edge models
 # (src/edge_fit.py), on the photo's pixels instead of its segments: the recess (the plastic's pose), then on it the
-# label's cut (its shift, turn and width in the recess, as the nested fit has them). Each part's refinement is used only
-# if its confidence is at least edge_fit.ACCEPT, and the label's only if it stays within the nested fit's limits
-# (WIDTHS; shift and turn within EDGE_SHIFT_MM and EDGE_TURN_DEG); else the nested fit's is kept (a label not used
-# keeps its place in the photo). Cached per label photo in <generated>/solve/edge/, for its chosen fit and this code.
-EDGE_SHIFT_MM = 3 * PLACEMENT_MM
-EDGE_TURN_DEG = 3 * PLACEMENT_DEG
+# label's cut: its shift and turn in the recess, its width and its height, each free (stickers are cut as they are),
+# started from the nested fit's (the height from the canonical one). Each part's refinement is used only if its
+# confidence is at least edge_fit.ACCEPT, and the label's only if it's plausible: its corners within the recess (with
+# EDGE_RECESS_SLACK mm for the fit's error) and both its sides at least EDGE_MIN_SIZE of the canonical ones; else the
+# nested fit's is kept (a label not used keeps its place in the photo). Cached per label photo in
+# <generated>/solve/edge/, for its chosen fit and this code.
+EDGE_RECESS_SLACK = 0.5
+EDGE_MIN_SIZE = 0.9
 
 
 def edge_version():
@@ -582,7 +584,7 @@ def edge_version():
     h = hashlib.sha1(inspect.getsource(edge_fit).encode())
     for name in ("edge_refine", "placement_matrix", "label_to_plastic", "corners_mm"):
         h.update(inspect.getsource(globals()[name]).encode())
-    h.update(repr((EDGE_SHIFT_MM, EDGE_TURN_DEG, WIDTHS)).encode())
+    h.update(repr((EDGE_RECESS_SLACK, EDGE_MIN_SIZE)).encode())
     for f in sorted(os.listdir(edge_fit.MODELS)):
         if f.endswith(".onnx"):
             h.update(open(os.path.join(edge_fit.MODELS, f), "rb").read())
@@ -600,10 +602,15 @@ def edge_refine(job):
     Hr, recess_conf = edge_fit.refine(photo, H, shape, "recess")
     recess_used = recess_conf >= edge_fit.ACCEPT
     base = Hr if recess_used else H
-    pose_of = lambda x: base @ placement_matrix(shape, x[0], x[1], np.radians(x[2]), x[3])
-    x, Hl, label_conf = edge_fit.fit_params(photo, shape, "label", pose_of, [*placement, width])
-    label_used = bool(label_conf >= edge_fit.ACCEPT and WIDTHS[shape][0] <= x[3] <= WIDTHS[shape][1]
-                      and np.hypot(x[0], x[1]) <= EDGE_SHIFT_MM and abs(x[2]) <= EDGE_TURN_DEG)
+    pose_of = lambda x: base @ placement_matrix(shape, x[0], x[1], np.radians(x[2]), x[3], x[4])
+    lw, lh = shapes.LABEL_MM[shape]
+    x, Hl, label_conf = edge_fit.fit_params(photo, shape, "label", pose_of, [*placement, width, lh])
+    x1, y1, x2, y2 = MODELS[shape]["label"]
+    placed = project(placement_matrix(shape, x[0], x[1], np.radians(x[2]), x[3], x[4]), [[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
+    rx1, ry1, rx2, ry2 = recess
+    inside = bool(np.all((placed[:, 0] >= rx1 - EDGE_RECESS_SLACK) & (placed[:, 0] <= rx2 + EDGE_RECESS_SLACK)
+                         & (placed[:, 1] >= ry1 - EDGE_RECESS_SLACK) & (placed[:, 1] <= ry2 + EDGE_RECESS_SLACK)))
+    label_used = bool(label_conf >= edge_fit.ACCEPT and inside and x[3] >= EDGE_MIN_SIZE * lw and x[4] >= EDGE_MIN_SIZE * lh)
     old_cut = H @ placement_matrix(shape, *placement[:2], np.radians(placement[2])) @ label_to_plastic(shape)
     new_cut = base @ placement_matrix(shape, x[0], x[1], np.radians(x[2])) @ label_to_plastic(shape)
     mm = corners_mm(shape)
@@ -611,6 +618,7 @@ def edge_refine(job):
     return key, {"plastic_to_photo": (Hr if recess_used else H).tolist(),
                  "cut_to_photo": ((new_cut if label_used else old_cut) / (new_cut if label_used else old_cut)[2, 2]).tolist(),
                  "placement": [float(v) for v in (x[:3] if label_used else placement)], "width_mm": float(x[3] if label_used else width),
+                 "height_mm": float(x[4] if label_used else lh),
                  "recess_confidence": round(recess_conf, 3), "recess_used": bool(recess_used),
                  "recess_moved_mm": round(edge_fit.corner_error(Hr, H, recess), 3),
                  "label_confidence": round(label_conf, 3), "label_used": label_used, "label_moved_mm": round(label_moved, 3)}
@@ -651,8 +659,8 @@ def stage1_edges(lps, fits, photo_paths, workers=8):
             out[key] = dict(f, edge=None)
             continue
         out[key] = dict(f, plastic_to_photo=np.asarray(e["plastic_to_photo"]), cut_to_photo=np.asarray(e["cut_to_photo"]),
-                        placement=e["placement"], width_mm=e["width_mm"],
-                        edge={k: v for k, v in e.items() if k not in ("plastic_to_photo", "cut_to_photo", "placement", "width_mm")})
+                        placement=e["placement"], width_mm=e["width_mm"], height_mm=e["height_mm"],
+                        edge={k: v for k, v in e.items() if k not in ("plastic_to_photo", "cut_to_photo", "placement", "width_mm", "height_mm")})
     used = lambda part: sum(1 for f in out.values() if f["edge"] and f["edge"][part + "_used"])
     print(f"stage 1b: the edge models' recess used on {used('recess')}, label on {used('label')} of {len(out)}", flush=True)
     return out
@@ -1158,6 +1166,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
         out[k] = {"photo": lp["photo"], "shape": lp["shape"], "photo_to_ink": (photo_to_ink / photo_to_ink[2, 2]).tolist(),
                   "cut_to_photo": (f["cut_to_photo"] / f["cut_to_photo"][2, 2]).tolist(),
                   "width_mm": round(float(f.get("width_mm", shapes.LABEL_MM[lp["shape"]][0])), 3),
+                  "height_mm": round(float(f.get("height_mm", shapes.LABEL_MM[lp["shape"]][1])), 3),
                   "offset": [round(float(o[1]), 3), round(float(o[2]), 3), round(float(np.degrees(o[0])), 3)],
                   "plastic_to_photo": f["plastic_to_photo"].tolist(),
                   "placement": [round(v, 3) for v in f["placement"]],
@@ -1200,7 +1209,7 @@ def page(out_dir, chosen, result, sizes):
         return (f'<figure><div class="ph"><img loading="lazy" src="{rel}/{chosen[s]}"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
                 f'{extra}<polygon points="{pts}" fill="none" stroke="#0c0" stroke-width="{max(w, h) / 250:.1f}"/>'
                 f'<circle cx="{quad[0][0]:.0f}" cy="{quad[0][1]:.0f}" r="{max(w, h) / 80:.0f}" fill="#f00"/></svg></div>'
-                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, error {r["error_mm"]} mm, family of {r["family_size"]}{", " + r["fallback"] if r["fallback"] else ""}{edge_caption(r.get("edge"))}</figcaption></figure>')
+                f'<figcaption><code>{html.escape(key[:14])}</code> {html.escape(r["start"][:30])}<br>support {r["support"]}, placement {r["placement"]}, size {r["width_mm"]} x {r.get("height_mm", "?")} mm, error {r["error_mm"]} mm, family of {r["family_size"]}{", " + r["fallback"] if r["fallback"] else ""}{edge_caption(r.get("edge"))}</figcaption></figure>')
 
     unsolved = "".join(f"<li><code>{html.escape(k[:16])}</code>: {html.escape(v)}</li>" for k, v in result["unsolved"].items())
     starts = {}

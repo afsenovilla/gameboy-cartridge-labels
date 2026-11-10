@@ -70,3 +70,9 @@ def test_the_crop_is_the_median_inset_in_whole_pixels():
     c = cuts.crop(cs, "dmg", P, M)
     assert c["mm"] == [0.3, 0.3, 42.2, 36.7]
     assert (c["x"], c["y"], c["w"], c["h"]) == (106, 106, 838, 728)
+
+
+def test_corners_in_ink_own_size():
+    lw, lh = cuts.shapes.LABEL_MM["dmg"]
+    c = cuts.corners_in_ink(np.eye(3), "dmg", lw - 1.0, lh + 0.4)
+    assert np.allclose(c, [[0.5, -0.2], [lw - 0.5, -0.2], [lw - 0.5, lh + 0.2], [0.5, lh + 0.2]])

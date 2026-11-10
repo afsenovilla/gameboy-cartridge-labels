@@ -17,10 +17,12 @@ def test_edge_points_clear_of_corners():
 
 def test_corrections():
     center = (28.5, 37.5)
-    for kind, n in (("homography", 8), ("similarity", 4)):
+    for kind, n in (("homography", 8), ("similarity", 4), ("rectangle", 5)):
         assert np.allclose(edge_fit.correction(kind, np.zeros(n), center), np.eye(3))
     C = edge_fit.correction("similarity", [1.0, 0.0, np.radians(90), 0.0], center)
     assert np.allclose(edge_fit.project(C, [center])[0], [29.5, 37.5])  # turned about the center, then shifted
+    C = edge_fit.correction("rectangle", [0.0, 0.0, 0.0, np.log(1.1), np.log(0.9)], center)
+    assert np.allclose(edge_fit.project(C, [[center[0] + 10, center[1] + 10]])[0], [center[0] + 11, center[1] + 9])  # width and height apart
 
 
 def test_models_give_a_logit_per_sample():

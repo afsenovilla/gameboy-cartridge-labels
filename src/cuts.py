@@ -26,12 +26,12 @@ INSET = 0.3
 SIDES = ("top", "right", "bottom", "left")
 
 
-def corners_in_ink(H, shape, width=None):
+def corners_in_ink(H, shape, width=None, height=None):
     """The fitted label's corners (top left, top right, bottom right, bottom left) through H (label mm -> ink mm): the
-    canonical label, made width mm wide about its centre if given (solve's width_mm)."""
+    canonical label, made width mm wide and height mm high about its centre if given (solve's width_mm, height_mm)."""
     lw, lh = shapes.LABEL_MM[shape]
-    a = (lw - (width or lw)) / 2
-    return cv2.perspectiveTransform(np.float64([[[a, 0]], [[lw - a, 0]], [[lw - a, lh]], [[a, lh]]]), np.float64(H)).reshape(-1, 2)
+    a, b = (lw - (width or lw)) / 2, (lh - (height or lh)) / 2
+    return cv2.perspectiveTransform(np.float64([[[a, b]], [[lw - a, b]], [[lw - a, lh - b]], [[a, lh - b]]]), np.float64(H)).reshape(-1, 2)
 
 
 def side_position(corners, side):
