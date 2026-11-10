@@ -39,7 +39,8 @@
 #      full resolution (refine_fine).
 #   Between them, 1b (an experiment): each chosen fit refined by the learned edge models where they're sure
 #      (stage1_edges, src/edge_fit.py).
-# Done again when solve.json is older than this file, src/edge_fit.py, the edge models or its inputs.
+# Done again when solve.json is older than this file, src/edge_fit.py, the edge models or its inputs, or holds a photo
+# since deleted (find's label photos of deleted photos are left out).
 # Usage: solve.py [--sample]
 import argparse, html, json, os, sys
 import cv2, numpy as np
@@ -1235,8 +1236,12 @@ def main():
     if missing:
         sys.exit(f"{len(missing)} inputs missing: run make find and make edges first")
     code = [__file__, edge_fit.__file__] + [os.path.join(edge_fit.MODELS, f) for f in os.listdir(edge_fit.MODELS) if f.endswith(".onnx")]
-    if any(steps.stale(out, c) for c in code) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
-        result = solve(json.load(open(found_file)), match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen)
+    # done again for a deleted photo too (remove-photos): a deletion makes no input newer, and find isn't redone for it
+    deleted = os.path.exists(out) and any(r["photo"] not in chosen for r in json.load(open(out))["label_photos"].values())
+    if deleted or any(steps.stale(out, c) for c in code) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
+        found = json.load(open(found_file))
+        found["label_photos"] = [lp for lp in found["label_photos"] if lp["photo"] in chosen]  # deleted since find ran: left out
+        result = solve(found, match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen)
         steps.write_json(out, result)
     result = json.load(open(out))
     sizes = {s: json.load(open(os.path.join(gen, "read-text", s + ".json")))["size"] or [1, 1] for s in chosen}
