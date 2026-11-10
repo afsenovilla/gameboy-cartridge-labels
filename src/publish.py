@@ -129,9 +129,8 @@ def page(out_dir, index):
     """index.html: per platform (linked from the top, with its image count) the prints with an image, by game title
     (prints without one last, by serial), in a flexbox; each image at most half its pixel width wide, so it shows at
     2x pixel density or more."""
-    lists = {f: json.load(open(os.path.join(out_dir, f))) for _, f in LISTS if os.path.exists(os.path.join(out_dir, f))}
     lp = index["label_photos"]
-    with_url = sum(1 for r in lp.values() if r["page_url"] or r["image_url"])
+    used = lambda p: sum(1 for k in p["label_photos"] if not lp[k]["poor_fit"])  # poor fits aren't used
     shown = [p for p in index["prints"].values() if p["image"]]
     order = lambda p: (p["title"] is None, (p["title"] or "").casefold(), str(p["serial"] or p["release"] or ""))
     sections, links = [], []
@@ -146,20 +145,16 @@ def page(out_dir, index):
             w = (p.get("size") or [680])[0] / 2
             figs.append(f'<figure style="flex:0 1 {w:.0f}px"><img loading="lazy" src="{p["image"]}" style="max-width:{w:.0f}px">'
                         f'<figcaption><b>{html.escape(p["title"] or "(no title)")}</b><br>{html.escape(str(p["serial"] or p["release"] or "?"))}, '
-                        f'{len(p["label_photos"])} label photos{"" if p["paper"] else "; no paper found: median colours"}'
+                        f'Recreated from {used(p)} photo{"" if used(p) == 1 else "s"}{"" if p["paper"] else "; no paper found: median colours"}'
                         f'<div class="src">{sources}</div></figcaption></figure>')
         links.append(f'<li><a href="#{shape}">{platform}</a>: {len(ps)} images</li>')
         sections.append(f'<h2 id="{shape}">{platform} ({len(ps)})</h2><div class="grid">{"".join(figs)}</div>')
-    counts = "".join(f"<li>{html.escape(f)}: {len(v)}</li>" for f, v in lists.items())
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>publish</title>
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} .grid{{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}}
 figure{{margin:0;min-width:0}} figure img{{display:block;width:100%;height:auto}} figcaption{{font-size:12px;margin:4px 0}}
 .src{{font-size:11px;color:#bbb;margin-top:2px}} .poor{{color:#fa0}} a{{color:#9cf}} h2{{margin-top:32px}}</style>
-<h1>publish</h1>
 <ul>{"".join(links)}</ul>
-<p>{len(shown)} prints with an image; {len(lp)} label photos, {sum(1 for r in lp.values() if r["poor_fit"])} of them poor fits (not used), {with_url} with a URL (under each print, its label photos' sources, linked to their pages). Files: index.json, prints/, and the lists:</p>
-<ul>{counts}</ul>
 {"".join(sections)}""")
 
 
