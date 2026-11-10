@@ -61,13 +61,18 @@
 #   (badness: the share of the label off the photo or unlike its restored print, and a resolution under 10 px/mm), to
 #   delete one or one and all worse. Asks first if a photo holds label photos of other prints (src/remove_photos.py).
 #
+#   make todo-report NAME=<name> NOTE="what changed"
+#   A tool, not a step: the prints listed in todo.md restored with the current code as a new version
+#   (generated/todo-report/<n>-<name>/, every version kept), and the page generated/todo-report/index.html: each listed
+#   print with your note and all its versions side by side (src/todo_report.py). Without NAME, only the page.
+#
 # Plain make lists these.
 
 PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
+.PHONY: help setup test all todo-report add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -80,6 +85,9 @@ test:
 
 add-photos:
 	$(PYTHON) src/add_photos.py
+
+todo-report:
+	$(PYTHON) src/todo_report.py $(if $(NAME),$(NAME) --note "$(NOTE)",--page)
 
 STEPS := read-text features edges match find solve straighten read-serials prints restore publish
 

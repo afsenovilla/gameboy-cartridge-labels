@@ -434,35 +434,18 @@ def main():
             sys.exit(f"{p} missing: run make prints first")
     result = json.load(open(prints_file))
     solved = json.load(open(solve_file))["label_photos"]
-    import solve as solve_step
-    px_per_mm = {}
-    for k, r in solved.items():  # the photo's pixels per mm at the label, from the fit
-        lw, lh = shapes.LABEL_MM[r["shape"]]
-        px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
-    poor = {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
     out_dir = os.path.join(gen, "restore")
     os.makedirs(out_dir, exist_ok=True)
-    image = lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
     base = lambda pid: os.path.join(out_dir, straighten.file_name(pid)[:-5])
     newest = max(os.path.getmtime(p) for p in (prints_file, solve_file, __file__, cuts.__file__))
-    by_family = {}
-    for p in result["prints"]:
-        by_family.setdefault(p["family"], []).append(p)
-    crops = {}
-    for fam, ps in by_family.items():
-        keys = [k for p in ps for k in p["keys"] if k not in poor] or [k for p in ps for k in p["keys"]]
-        found = [c for c in (straighten.load_cut(gen, k) for k in keys) if c is not None]
-        crops[fam] = (cuts.crop(found, ps[0]["shape"], straighten.PX_PER_MM, straighten.MARGIN) if found
-                      else canonical_crop(ps[0]["shape"]))
     mtime = lambda f: os.path.getmtime(f) if os.path.exists(f) else 0
     jobs, wanted = [], set()
-    for p in result["prints"]:
-        wanted |= {os.path.basename(base(p["id"])) + s for s in (".avif", ".json")}
-        own = [(k, image(k)) for k in p["keys"] if k not in poor] or [(k, image(k)) for k in p["keys"]]
-        others = [(k, image(k)) for q in by_family[p["family"]] if q is not p for k in q["keys"] if k not in poor]
+    for pid, job in print_jobs(gen, result, solved).items():
+        wanted |= {os.path.basename(base(pid)) + s for s in (".avif", ".json")}
+        own, others = job[2], job[3]
         inputs = max([newest] + [max(mtime(f), mtime(straighten.cut_file(f))) for _, f in own + others])
-        if not os.path.exists(base(p["id"]) + ".avif") or os.path.getmtime(base(p["id"]) + ".avif") < inputs:
-            jobs.append((p["id"], p["shape"], own, others, px_per_mm, crops[p["family"]], base(p["id"])))
+        if not os.path.exists(base(pid) + ".avif") or os.path.getmtime(base(pid) + ".avif") < inputs:
+            jobs.append(job + (base(pid),))
     for f in os.listdir(out_dir):
         if f not in wanted and f != "index.html":
             os.remove(os.path.join(out_dir, f))
@@ -475,6 +458,33 @@ def main():
                 print(f"restored {n} of {len(jobs)} prints", flush=True)
     page(out_dir, result, gen)
     print(f"page: {os.path.join(out_dir, 'index.html')}")
+
+
+def print_jobs(gen, result, solved):
+    """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], others [(key, image)],
+    px per mm {key: ...}, crop). Poor fits are left out of a print's own label photos unless it has nothing else."""
+    import solve as solve_step
+    px_per_mm = {}
+    for k, r in solved.items():  # the photo's pixels per mm at the label, from the fit
+        lw, lh = shapes.LABEL_MM[r["shape"]]
+        px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
+    poor = {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
+    image = lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
+    by_family = {}
+    for p in result["prints"]:
+        by_family.setdefault(p["family"], []).append(p)
+    crops = {}
+    for fam, ps in by_family.items():
+        keys = [k for p in ps for k in p["keys"] if k not in poor] or [k for p in ps for k in p["keys"]]
+        found = [c for c in (straighten.load_cut(gen, k) for k in keys) if c is not None]
+        crops[fam] = (cuts.crop(found, ps[0]["shape"], straighten.PX_PER_MM, straighten.MARGIN) if found
+                      else canonical_crop(ps[0]["shape"]))
+    jobs = {}
+    for p in result["prints"]:
+        own = [(k, image(k)) for k in p["keys"] if k not in poor] or [(k, image(k)) for k in p["keys"]]
+        others = [(k, image(k)) for q in by_family[p["family"]] if q is not p for k in q["keys"] if k not in poor]
+        jobs[p["id"]] = (p["id"], p["shape"], own, others, px_per_mm, crops[p["family"]])
+    return jobs
 
 
 def page(out_dir, result, gen):
