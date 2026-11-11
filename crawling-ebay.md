@@ -159,6 +159,7 @@ done
 - A named pass (`queries <region> <releases.json> pass2`, `ingest ... pass2`): a release searched before is searched again (the first pass kept 5 of up to 10 candidates), recorded under its "passes".
 - The records are in save-new-images-here/ now (searches.json, sources.json): run with `EBAY_OUT=save-new-images-here`.
 - One search every 18 to 26 s. Batches: `~/Downloads/ebay-batch-pass2-<n>.json`. A network failure ("Failed to fetch", once after 14 searches) is retried after a minute, up to 3 times; an HTTP error or a page without results still stops the run.
+- Blocked (HTTP 403) on 2026-11-11 after 344 of the pass's searches at one every 18 to 26 s (207 since the tab was restarted); lifted by the time it was noticed (a few hours at most). Resumed at one every 35 to 50 s; the page now records when an error came (`EB.errorAt`).
 - What the user deleted (57 of the first 344 photos): 14 were other systems' games of the same title (PlayStation 2, Xbox: Defender, MLB Slugfest, All-Star Baseball), so PlayStation, PS1-5, Sony, Xbox, Wii, Dreamcast, disc and the like are left out now. 7 were one seller's, titles ending "Nintendo <4 digits> gba" (games photographed in their box, likely), 1 of theirs kept: not filtered (the user: nothing to go on). Booklet, graded, set and "new" caught too few to filter. The other 36 had ordinary titles: only the photo shows a box.
 - Trial: a PAL search ("Castlevania Aria of Sorrow GBA PAL cartridge") found no listing naming PAL among 60 results; Japanese ones found 10 each.
 
@@ -170,7 +171,7 @@ done
 - Left out: lots and sets (まとめ, セット, N本), boxes and manuals (外箱, 空箱, 箱 and 説明書 but not 箱なし or 説明書なし), guides, cases, consoles (本体), accessories, repros; other systems (DS, PSP, PS, SFC, スーパーファミコン, ファミコン but not ファミコンミニ, the GBA's Famicom Mini series, and the like). Photos under 1000 px skipped by their name, before downloading.
 - A search with no results comes back as HTTP 404 with "No results found." (first seen on エアフォースデルタII): zero results, not an error.
 - One search every 20 to 30 s; batches `~/Downloads/jauce-batch-<n>.json`, taken in by `python3 src/jauce_photos.py ingest`. Records: save-new-images-here/jauce-sources.json, jauce-searches.json; photos: save-new-images-here/jauce-search/ (page_url: the Yahoo listing).
-- First run: the 567 Japanese releases of the second pass's list with a Japanese title.
+- First run: the 567 Japanese releases of the second pass's list with a Japanese title, all searched (2026-11-11): 1608 photos, never blocked.
 
 ## Mercari (www.mercari.com, tried 2026-11-10)
 
