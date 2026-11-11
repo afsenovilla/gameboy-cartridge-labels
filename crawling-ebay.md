@@ -172,6 +172,7 @@ done
 - A search with no results comes back as HTTP 404 with "No results found." (first seen on エアフォースデルタII): zero results, not an error.
 - One search every 20 to 30 s; batches `~/Downloads/jauce-batch-<n>.json`, taken in by `python3 src/jauce_photos.py ingest`. Records: save-new-images-here/jauce-sources.json, jauce-searches.json; photos: save-new-images-here/jauce-search/ (page_url: the Yahoo listing).
 - First run: the 567 Japanese releases of the second pass's list with a Japanese title, all searched (2026-11-11): 1608 photos, never blocked.
+- Second run (2026-11-11), the worst Japanese prints first (the user: raising the worst existing prints' quality is the top priority): the 21 Japanese releases with only poor fits (no restored image), then the 958 with good label photos but none at 20 px/mm, the lowest resolution first, then the 289 with no label photo; 1174 of them with a Japanese title. Still 5 photos per release (the user: if not enough, the next pass shows it). Batches `jauce2-batch-<n>.json`.
 
 ## Mercari (www.mercari.com, tried 2026-11-10)
 
