@@ -495,18 +495,29 @@ def cache_file(cache_dir, key):
     return os.path.join(cache_dir, key.replace("@", "_").replace(",", "_") + ".json")
 
 
-def save_candidates(cache_dir, key, cands, why, version):
+def fitting_inputs(lp, edges_dir):
+    """What a label photo's fit depends on besides the code: find's shape, logo placement, outline, centre and radius
+    for it, and its photo's edges file (its time)."""
+    e = os.path.join(edges_dir, lp["photo"] + ".npz")
+    plain = lambda v: v.tolist() if isinstance(v, np.ndarray) else v
+    return {k: plain(lp.get(k)) for k in ("shape", "placed_by", "outline", "centre", "radius")} | {
+        "edges": os.path.getmtime(e) if os.path.exists(e) else None}
+
+
+def save_candidates(cache_dir, lp, cands, why, version, edges_dir):
     plain = [{k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in c.items()} for c in cands]
-    steps.write_json(cache_file(cache_dir, key), {"version": version, "candidates": plain, "why": why})
+    steps.write_json(cache_file(cache_dir, lp["key"]), {"version": version, "inputs": fitting_inputs(lp, edges_dir),
+                                                        "candidates": plain, "why": why})
 
 
-def load_candidates(cache_dir, lp, version):
-    """(candidates, why) if cached for this fitting code and newer than the label photo's edges, else None."""
+def load_candidates(cache_dir, lp, version, edges_dir):
+    """(candidates, why) if cached for this fitting code and the same inputs (fitting_inputs: a label photo whose find
+    result or edges changed under the same key is fitted again), else None."""
     p = cache_file(cache_dir, lp["key"])
     if not os.path.exists(p):
         return None
     d = json.load(open(p))
-    if d.get("version") != version:
+    if d.get("version") != version or d.get("inputs") != json.loads(json.dumps(fitting_inputs(lp, edges_dir))):
         return None
     cands = [{k: (np.array(v) if k in ("cut_to_photo", "plastic_to_photo") else v) for k, v in c.items()} for c in d["candidates"]]
     return cands, d["why"]
@@ -521,9 +532,10 @@ def stage1(lps, edges_dir, pairs, workers=8):
     shape_of = {lp["key"]: lp["shape"] for lp in lps}
     all_cands, failed = {}, {}
     version = fitting_version()
+    by_key = {lp["key"]: lp for lp in lps}
     todo = []
     for lp in lps:
-        cached = load_candidates(cache_dir, lp, version)
+        cached = load_candidates(cache_dir, lp, version, edges_dir)
         if cached is None:
             todo.append(lp)
         elif cached[0]:
@@ -533,7 +545,7 @@ def stage1(lps, edges_dir, pairs, workers=8):
     print(f"stage 1: {len(lps) - len(todo)} label photos' candidates cached, {len(todo)} to fit", flush=True)
     with Pool(workers) as pool:
         for n, (key, cands, why) in enumerate(pool.imap_unordered(fit_label_photo, [(lp, edges_dir, text_dir) for lp in todo]), 1):
-            save_candidates(cache_dir, key, cands, why, version)
+            save_candidates(cache_dir, by_key[key], cands, why, version, edges_dir)
             if cands:
                 all_cands[key] = cands
             else:
