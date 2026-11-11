@@ -7,6 +7,9 @@ thumbnail servers alike), so photos come through Jauce's image proxy (/read_yafi
 
     python3 src/jauce_photos.py queries releases.json > queries.json   (the Japanese ones among them, by Japanese title)
     python3 src/jauce_photos.py ingest results.json queries.json
+    python3 src/jauce_photos.py queries releases.json <pass> short > queries.json   (searched again, a named pass;
+        short: the title's first word and its numbers, GBA/GBC/GB)
+    python3 src/jauce_photos.py ingest results.json queries.json <pass>
 
 Photos go to save-new-images-here/jauce-search/ with a listing.json there (page_url: the Yahoo listing), for make
 add-photos. Records, as ebay_photos': <out>/jauce-sources.json (every downloaded file, also those deleted by hand
@@ -62,32 +65,64 @@ def parts(title):
     return [p for p in re.split(r"[\s・:：~〜\-－!！?？、。,.『』「」]+", query_title(title).lower()) if p]
 
 
-def queries(releases):
+SHORT_SYSTEM = {"agb": "GBA", "cgb": "GBC", "dmg": "GB"}
+
+
+def short_parts(title):
+    """The short query's words: the title's first word (split at spaces and "/"; a Latin one with the next words until
+    6 letters, a title in Latin letters only at least two words), then the numbers in the rest not already in them (a
+    series' volume), each once."""
+    words = [w for w in re.split(r"[\s/／]+", query_title(title)) if w]
+    latin = all(ord(c) < 0x3000 for c in "".join(words))
+    taken = words[:2] if latin else words[:1]
+    while len(taken) < len(words) and len(re.sub(r"[^A-Za-z]", "", " ".join(taken))) < 6 and re.search(r"[A-Za-z]", taken[-1]):
+        taken.append(words[len(taken)])
+    numbers = []
+    for w in words[len(taken):]:
+        for n in re.findall(r"\d+", w):
+            if n not in numbers and not any(n in t for t in taken):
+                numbers.append(n)
+    return taken + numbers
+
+
+def searched_in(searches, release, pass_name):
+    done = searches.get(release, {})
+    return bool(done) if pass_name is None else pass_name in done.get("passes", {})
+
+
+def queries(releases, pass_name=None, short=False):
+    """The queries for the Japanese releases among the given ones, not yet searched (in the named pass): by the
+    Japanese-script title and the system's Japanese name; short, by the title's first word and the numbers in it and
+    the system's short name (GBA, GBC, GB), a release without a Japanese-script title by its romanized one."""
     db = {r["id"]: r for r in json.load(open(serials.DATABASE))}
     searched = load(SEARCHES)
     out = []
     for i in releases:
         r = db.get(i)
-        if r is None or i in searched or not i.endswith("J"):
+        if r is None or searched_in(searched, i, pass_name) or not i.endswith("J"):
             continue
-        title = japanese_title(r)
+        title = japanese_title(r) or (r["title"].split(" - ")[0] if short else None)
         if title is None:
             continue
         serial = next((s for s in r.get("cartridgeSerials", []) if s.endswith("-JPN")), i)
-        out.append({"release": i, "serial": serial, "title": title, "parts": parts(title),
-                    "query": f"{query_title(title)} {SYSTEM[r['system']]}",
-                    "exclude": NOT_GAME_BOY, "bad": NOT_A_CARTRIDGE})
+        if short:
+            words = short_parts(title)
+            q = {"parts": [w.lower() for w in words], "query": f"{' '.join(words)} {SHORT_SYSTEM[r['system']]}"}
+        else:
+            q = {"parts": parts(title), "query": f"{query_title(title)} {SYSTEM[r['system']]}"}
+        out.append({"release": i, "serial": serial, "title": title, **q, "exclude": NOT_GAME_BOY, "bad": NOT_A_CARTRIDGE})
     return out
 
 
-def ingest(results_file, queries_file):
-    """results: {release: [{id, title, image (the path after auctions.c.yimg.jp/), w, h}]}, filtered in the tab."""
+def ingest(results_file, queries_file, pass_name=None):
+    """results: {release: [{id, title, image (the path after auctions.c.yimg.jp/), w, h}]}, filtered in the tab. With
+    a pass name, a release searched before is searched again: the pass is recorded under its "passes"."""
     sources, searches = load(SOURCES), load(SEARCHES)
     query_of = {q["release"]: q for q in json.load(open(queries_file))}
     have = {v["auction"] for v in sources.values()}
     today = datetime.date.today().isoformat()
     for release, items in json.load(open(results_file)).items():
-        if release in searches or release not in query_of:
+        if searched_in(searches, release, pass_name) or release not in query_of:
             continue
         q = query_of[release]
         kept, small = 0, 0
@@ -122,14 +157,19 @@ def ingest(results_file, queries_file):
             save(LISTING, listing)
             have.add(it["id"])
             kept += 1
-        searches[release] = {"query": q["query"], "candidates": len(items), "kept": kept, "too_small": small, "date": today}
+        record = {"query": q["query"], "candidates": len(items), "kept": kept, "too_small": small, "date": today}
+        if pass_name is None:
+            searches[release] = record
+        else:
+            searches.setdefault(release, {}).setdefault("passes", {})[pass_name] = record
         save(SOURCES, sources)
         save(SEARCHES, searches)
         print(release, len(items), "candidates,", kept, "kept,", small, "too small", flush=True)
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "queries":
-        json.dump(queries(json.load(open(sys.argv[2]))), sys.stdout, ensure_ascii=False)
-    elif sys.argv[1] == "ingest":
-        ingest(sys.argv[2], sys.argv[3])
+    if sys.argv[1] == "queries":  # queries <releases.json> [<pass name> [short]]
+        json.dump(queries(json.load(open(sys.argv[2])), sys.argv[3] if len(sys.argv) > 3 else None,
+                          len(sys.argv) > 4 and sys.argv[4] == "short"), sys.stdout, ensure_ascii=False)
+    elif sys.argv[1] == "ingest":  # ingest <results> <queries> [<pass name>]
+        ingest(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
