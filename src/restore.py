@@ -4,20 +4,19 @@
 #     the family); its colours scaled so its paper is white (see paper_white) where paper is found, else the label
 #     photos' evened to their median (the user: one image per print)
 #   <print>.json: {"crop" (cuts.crop's: x, y, w, h px in the straightened images, mm), "keys" (its label photos used),
-#     "pooled" (other prints' label photos used, see pooling),
-#     "pooled_share" ({key: the share of the label where it counts}), "single" (from one label photo), "bands" (how
-#     many label photos count in each band, finest first), "paper" (the paper's colour found, or null)}
-# The label photos: the print's own (poor fits left out: a print of poor fits only gets no image), and those of the
-# other prints of its family where they show
-# what the print's own show (pooling, below). Each straightened label photo's colours evened per channel to the
+#     "single" (from one label photo), "bands" (how many label photos count in each band, finest first), "paper" (the
+#     paper's colour found, or null)}
+# The label photos: the print's own only (poor fits left out: a print of poor fits only gets no image). (Pooling the
+# label photos of the family's other prints where they matched the print's own was removed, 2026-11-11: the user found
+# it very broken.) Each straightened label photo's colours evened per channel to the
 # median of the print's own (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
 # the image is under 8 px across). Per band and pixel, a label photo counts unless the band is finer than its own
 # photo's resolution (the fit's photo pixels per mm), its straightened image is empty there (off the photo), it lies
-# outside its own sticker's cut moved cuts.INSET mm inward (plastic, and the highlight or shadow on the cut's edge) or, for
-# another print's label photo, it doesn't match the print's own there; in coarser bands, only where the whole pixel
+# outside its own sticker's cut moved cuts.INSET mm inward (plastic, and the highlight or shadow on the cut's edge); in
+# coarser bands, only where the whole pixel
 # counts. Outside where it counts, each is filled from its nearest pixel that counts before it's split into bands (so
-# neither black nor plastic leaks into the coarse bands). Before combining, the print's own label photos are registered finely at full resolution (register), the
-# other prints' to their median (register_to_own_photos). Combined per band: one
+# neither black nor plastic leaks into the coarse bands). Before combining, the label photos are registered finely at
+# full resolution (register). Combined per band: one
 # label photo as it is; two averaged; three or more by the median.
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
@@ -164,60 +163,6 @@ def register(entries):
     return [warped_onto(ref, e, g, M) for e, g, M in zip(entries, grays, Ms)]
 
 
-def register_to_own_photos(own_ref, entry):
-    """Another print's label photo (image, valid, px/mm) aligned to own_ref (the evened gray median of the print's own
-    label photos, registered), as register aligns the print's own to their median."""
-    valid = entry[1].astype(np.uint8)
-    gray = evened_gray(entry[0], valid > 0)
-    M = np.eye(3, dtype=np.float32)
-    for _ in range(REGISTER_ROUNDS):
-        M = homography_to(own_ref, gray, valid, M)
-    return warped_onto(own_ref, entry, gray, M)
-
-
-# Pooling: the label photos of the family's other prints (solve's family, split by prints) count in a restored print
-# only where they show what the print's own label photos show; prints' comparison only tells prints apart (it ignores
-# the label's outer millimetre and tiles textured in one photo only, which is right for that and wrong for this).
-# Each is registered to the median of the print's own and its colours evened to the same median as theirs, then
-# compared with each of them per pixel, over a POOL_WINDOW_MM square, on gray blurred POOL_BLUR_MM: where both are
-# textured (gray spread over POOL_TEXTURE), the gray must correlate over POOL_CORRELATION; where both are flat, the
-# mean colours must differ under POOL_COLOR_DIFF; textured in one and flat in the other never matches (small text on
-# paper hardly moves the mean colour: DMG-JU-FAH's "this side out" showed in DMG-JU-USA that way). It counts where it
-# matches more than half of the print's own label photos, and not at all if that's under POOL_MIN_SHARE of the label.
-# The thresholds are prints' tile comparison's, not yet measured for this.
-POOL_WINDOW_MM = 1.0
-POOL_BLUR_MM = 0.25
-POOL_TEXTURE = 6.0
-POOL_CORRELATION = 0.0
-POOL_COLOR_DIFF = 15.0
-POOL_MIN_SHARE = 0.15
-
-
-def where_other_print_photo_matches_own_photos(other, own):
-    """H x W booleans: where another print's label photo (image 0..1 BGR, valid) matches more than half of the print's
-    own label photos [(image, valid)], all registered and evened to the same median. See pooling."""
-    P = straighten.PX_PER_MM
-    k = max(1, int(round(POOL_WINDOW_MM * P)))
-    box = lambda x: cv2.boxFilter(x, -1, (k, k))
-
-    def local(img, valid):
-        g = cv2.GaussianBlur(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) * 255, (0, 0), POOL_BLUR_MM * P)
-        m = box(g)
-        var = np.maximum(box(g * g) - m * m, 0)
-        return g, m, var, box(img * 255), box(valid.astype(np.float32)) > 0.999
-
-    og, om, ovar, ocol, ocover = local(*other)
-    votes = np.zeros(og.shape, np.int32)
-    for img, valid in own:
-        g, m, var, col, cover = local(img, valid)
-        corr = (box(og * g) - om * m) / np.sqrt(ovar * var + 1e-9)
-        o_tex, s_tex = np.sqrt(ovar) > POOL_TEXTURE, np.sqrt(var) > POOL_TEXTURE
-        matches = ((o_tex & s_tex & (corr > POOL_CORRELATION))
-                   | (~o_tex & ~s_tex & (np.abs(ocol - col).mean(2) < POOL_COLOR_DIFF)))
-        votes += matches & cover
-    return ocover & (votes > len(own) / 2)
-
-
 def finest_band(photo_px_per_mm):
     """The finest band (0 = straighten's full resolution) a photo with this many pixels per mm carries: band k holds
     detail about 2^k pixels of straighten's across, which needs about as many of the photo's per mm."""
@@ -257,7 +202,7 @@ def filled(img, where):
 
 def restore_print(job):
     """Restores one print: (print id, the result's description)."""
-    pid, shape, own, others, px_per_mm, crop, out_base = job
+    pid, shape, own, px_per_mm, crop, out_base = job
     P = straighten.PX_PER_MM
     x0, y0, w, h = crop["x"], crop["y"], crop["w"], crop["h"]
     size, px_to_mm = straighten.canvas(shape)
@@ -285,22 +230,7 @@ def restore_print(job):
         entries = register(entries)
     ref = np.median(np.stack([e[0] for e in entries]), 0)
     evened = [even_to(e[0], ref, e[1]) for e in entries]
-    own_ref = np.median(np.stack([evened_gray(e[0], e[1]) for e in entries]), 0)
-    own_photos = list(zip(evened, [e[1] for e in entries]))
     valids = [e[1] for e in entries]
-    pooled_share = {}
-    for key, path in others:
-        e = load(key, path)
-        if e is None:
-            continue
-        img, valid, ppm = register_to_own_photos(own_ref, e)
-        img = even_to(img, ref, valid)
-        counts = where_other_print_photo_matches_own_photos((img, valid), own_photos)
-        if counts.mean() >= POOL_MIN_SHARE:
-            entries.append((img, counts, ppm))
-            evened.append(img)
-            valids.append(valid)
-            pooled_share[key] = round(float(counts.mean()), 3)
     n = len(entries)
     pyrs = [pyramid(to_oklab(filled(img, v))) for img, v in zip(evened, valids)]
     levels = len(pyrs[0])
@@ -310,7 +240,7 @@ def restore_print(job):
         hh, ww = vals.shape[1:3]
         weights = []
         for e, p in zip(entries, pyrs):
-            # where it counts (on the photo; for another print's label photo, where it matches): the whole pixel
+            # where it counts (on the photo, inside its cut): the whole pixel
             counts_here = cv2.resize(e[1].astype(np.float32), (ww, hh), interpolation=cv2.INTER_AREA) > 0.99
             wgt = counts_here.astype(np.float32)
             if lv < levels - 1 and lv < finest_band(e[2]):
@@ -342,7 +272,7 @@ def restore_print(job):
     for old in (out_base + "-median.avif", out_base + "-paper.avif"):
         if os.path.exists(old):
             os.remove(old)
-    return pid, {"crop": crop, "keys": own_keys, "pooled": list(pooled_share), "pooled_share": pooled_share, "single": n == 1,
+    return pid, {"crop": crop, "keys": own_keys, "single": n == 1,
                  "bands": counts,
                  "paper": None if paper is None else [round(float(v), 3) for v in paper]}
 
@@ -443,8 +373,7 @@ def main():
     jobs, wanted = [], set()
     for pid, job in print_jobs(gen, result, solved).items():
         wanted |= {os.path.basename(base(pid)) + s for s in (".avif", ".json")}
-        own, others = job[2], job[3]
-        inputs = max([newest] + [max(mtime(f), mtime(straighten.cut_file(f))) for _, f in own + others])
+        inputs = max([newest] + [max(mtime(f), mtime(straighten.cut_file(f))) for _, f in job[2]])
         if not os.path.exists(base(pid) + ".avif") or os.path.getmtime(base(pid) + ".avif") < inputs:
             jobs.append(job + (base(pid),))
     for f in os.listdir(out_dir):
@@ -462,8 +391,8 @@ def main():
 
 
 def print_jobs(gen, result, solved):
-    """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], others [(key, image)],
-    px per mm {key: ...}, crop). Poor fits are left out; a print with nothing else isn't restored at all (the user:
+    """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], px per mm {key: ...},
+    crop). Poor fits are left out; a print with nothing else isn't restored at all (the user:
     fewer prints, all of them good, rather than bad ones among them)."""
     import solve as solve_step
     px_per_mm = {}
@@ -486,8 +415,7 @@ def print_jobs(gen, result, solved):
         own = [(k, image(k)) for k in p["keys"] if k not in poor]
         if not own:
             continue
-        others = [(k, image(k)) for q in by_family[p["family"]] if q is not p for k in q["keys"] if k not in poor]
-        jobs[p["id"]] = (p["id"], p["shape"], own, others, px_per_mm, crops[p["family"]])
+        jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, crops[p["family"]])
     return jobs
 
 
@@ -509,10 +437,9 @@ def page(out_dir, result, gen):
         crop = lambda k: (f'<div class="src" style="width:{c["w"] * scale:.0f}px;height:{c["h"] * scale:.0f}px">'
                           f'<img loading="lazy" src="{rel}/{straighten.file_name(k)}" style="width:{cw * scale:.0f}px;'
                           f'margin:{-c["y"] * scale:.0f}px 0 0 {-c["x"] * scale:.0f}px"></div>')
-        sources = "".join(crop(k) for k in desc.get("keys", [])) + "".join(crop(k) for k in desc.get("pooled", []))
+        sources = "".join(crop(k) for k in desc.get("keys", []))
         figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif"></div>'
                     f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos'
-                    f'{", " + str(len(desc.get("pooled", []))) + " pooled from other prints of its family, where they match (last)" if desc.get("pooled") else ""}'
                     f'{" (one photo: as it is)" if desc.get("single") else ""}{"" if desc.get("paper") else "; no paper found: median colours"}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
                     f'<div class="sources">{sources}</div></figure>')
     with open(os.path.join(out_dir, "index.html"), "w") as f:
