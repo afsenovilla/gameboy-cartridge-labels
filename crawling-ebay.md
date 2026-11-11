@@ -195,3 +195,10 @@ The queues were made from the pipeline's outputs as they were before that day's 
 - Jauce, pass "short2", 504 short queries: Japanese releases with fewer than 3 usable label photos at 10 px/mm (Yahoo's photos are at most 1200 px, so 20 px/mm is out of reach there). Not those already searched in short1. Order: never searched on Jauce (31, by romanized title), then 0 usable (133), then 1–2 usable (340); within each, releases with no photo at all first. A query now carries its own pass name ("pass"), so one queue can mix passes.
 - eBay, pass 3, 2959 queries: other releases with fewer than 3 usable label photos at 20 px/mm, not searched in pass 2. Order: some photo but none usable at 20 px/mm, then 1–2 usable, then no photo at all.
 - Both now keep only photos of at least 1200 px on the longest side (was 1000). At 1000 px most labels came out under 10 px/mm.
+
+## 2026-11-12: Mercari
+
+- Mercari Japan (jp.mercari.com): searches work in a tab (the site's own search box; Japanese titles), but its photos are at most 1080 px (`static.mercdn.net/item/detail/orig/…`, as its own listing pages show them), and `u-mercari-images` refuses them (HTTP 403). Under the 1200 px minimum: not used. ZenMarket's Mercari pages refuse script fetches (HTTP 403) and show machine-translated titles.
+- Vinted: at most 800 px. Not used.
+- Mercari US (www.mercari.com): src/mercari_photos.py. The tab script types each query into the search box and presses Enter (the page stays, so the script survives), then reads the listings. Photos from `u-mercari-images.mercdn.net/photos/<item>_1.jpg` without parameters: 1600 px, or 1080 px for some uploads (a larger width parameter only scales up). Sample, Pokemon Pinball: 9 of 10 at 1200 px or more.
+- Run 1 (pass "us1"), 3400 queries: eBay pass 3's releases (2959), then the Japanese releases of Jauce run 4 by romanized title (441). eBay's queries without "cartridge"; eBay's filters in the tab.

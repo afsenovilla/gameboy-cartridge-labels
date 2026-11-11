@@ -64,11 +64,12 @@ def query_title(title):
     return re.sub(r"\s+", " ", t.replace(" - ", " ")).strip()
 
 
-def queries(region, releases=None, pass_name=None):
+def queries(region, releases=None, pass_name=None, searched=None):
     """The queries for the region's releases no label photo has (missing.json), not yet searched; or for the given
-    releases (a list of database ids, in that order), not yet searched in the named pass."""
+    releases (a list of database ids, in that order), not yet searched in the named pass. searched: the record of
+    searches done (eBay's when not given; mercari_photos gives an empty one and keeps its own)."""
     db = json.load(open(serials.DATABASE))
-    searched = load(SEARCHES)
+    searched = load(SEARCHES) if searched is None else searched
     if releases is None:
         missing = set(json.load(open(MISSING)))
         wanted = [r for r in db if r["id"] in missing and r["id"] not in searched]
