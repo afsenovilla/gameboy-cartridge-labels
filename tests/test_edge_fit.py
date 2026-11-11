@@ -39,3 +39,12 @@ def test_nothing_to_see_no_confidence():
         for part in ("recess", "label"):
             H, conf = edge_fit.refine(photo, np.diag([5.0, 5.0, 1.0]), "dmg", part, rounds=2)
             assert conf == 0
+
+
+def test_runaway_pose_stops_with_no_confidence():
+    photo = np.full((400, 400, 3), 128, np.uint8)
+    huge = np.diag([5000.0, 5000.0, 1.0])  # 5000 px/mm: far beyond any photo
+    H, conf = edge_fit.refine(photo, huge, "dmg", "label")
+    assert conf == 0
+    x, H, conf = edge_fit.fit_params(photo, "dmg", "label", lambda x: np.diag([x[0], x[0], 1.0]), [5000.0])
+    assert conf == 0

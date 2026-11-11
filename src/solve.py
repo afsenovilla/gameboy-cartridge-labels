@@ -596,7 +596,7 @@ EDGE_SIZE_TOLERANCE = 2.0
 def edge_version():
     import hashlib, inspect
     h = hashlib.sha1(inspect.getsource(edge_fit).encode())
-    for name in ("edge_refine", "placement_matrix", "label_to_plastic", "corners_mm"):
+    for name in ("edge_refine", "refine_one", "placement_matrix", "label_to_plastic", "corners_mm"):
         h.update(inspect.getsource(globals()[name]).encode())
     h.update(repr((EDGE_RECESS_SLACK, EDGE_SIZE_TOLERANCE)).encode())
     for f in sorted(os.listdir(edge_fit.MODELS)):
@@ -606,7 +606,21 @@ def edge_version():
 
 
 def edge_refine(job):
-    """(key, what the edge models made of one chosen fit: the poses to use and the measures), None if the photo can't be read."""
+    """(key, what the edge models made of one chosen fit: the poses to use and the measures), None if the photo can't be
+    read. A refinement that fails is neither part used (the label photo then a poor fit), with the error."""
+    try:
+        return refine_one(job)
+    except Exception as e:  # one label photo's failure mustn't end the run
+        key, shape, path, H, placement, width = job
+        H = np.asarray(H, np.float64)
+        cut = H @ placement_matrix(shape, *placement[:2], np.radians(placement[2])) @ label_to_plastic(shape)
+        return key, {"plastic_to_photo": H.tolist(), "cut_to_photo": (cut / cut[2, 2]).tolist(), "placement": list(placement),
+                     "width_mm": float(width), "height_mm": float(shapes.LABEL_MM[shape][1]),
+                     "recess_confidence": 0.0, "recess_used": False, "recess_moved_mm": 0.0,
+                     "label_confidence": 0.0, "label_used": False, "label_moved_mm": 0.0, "error": f"{type(e).__name__}: {e}"[:200]}
+
+
+def refine_one(job):
     key, shape, path, H, placement, width = job
     photo = photos.load(path)
     if photo is None:

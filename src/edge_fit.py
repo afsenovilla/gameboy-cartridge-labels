@@ -12,6 +12,7 @@
 # 0.01 mm. The recess: shift, turn and scale for three rounds, then a full homography; the label: shift, turn, and its
 # width and height each free (stickers are cut as they are; it's flat on the recess's plane, so no more). A pose maps
 # plastic coordinates (mm) to the photo's pixels. fit_params fits any parameters of a pose instead (solve's label).
+# A pose that runs away (not finite, or under 0.5 or over 500 px/mm at the part) stops the fit with no confidence.
 # Confidence: the median over the strips of the probability within 0.3 mm of the edge found, 0 for a strip whose edge
 # is at its window's end (no edge seen; added after the evaluation below, which didn't have it). Below 0.8 every fit
 # tried was off by more than 1 mm; above it 1 to 4 % still were, and label fits can run far off with 0.84 (check that
@@ -128,6 +129,24 @@ def correction(kind, x, center):
     return T2 @ M @ T1
 
 
+SANE_PX_PER_MM = (0.5, 500.0)  # a pose outside this at the part has run away: the fit stops, with no confidence
+
+
+def sane(H, pts):
+    """Whether pose H is still plausible at the points: finite, and its scale there within SANE_PX_PER_MM."""
+    H = np.asarray(H, np.float64)
+    if not np.all(np.isfinite(H)):
+        return False
+    c = pts.mean(0)
+    with np.errstate(all="ignore"):
+        p = project(H, [c, c + [1, 0], c + [0, 1]])
+    if not np.all(np.isfinite(p)):
+        return False
+    u, v = p[1] - p[0], p[2] - p[0]
+    scale = np.sqrt(abs(u[0] * v[1] - u[1] * v[0]))
+    return SANE_PX_PER_MM[0] <= scale <= SANE_PX_PER_MM[1]
+
+
 def refine(photo, H, shape, part, rounds=8):
     """Pose H (plastic mm -> photo px) refined to the part's edges ("recess" or "label"): (pose, confidence)."""
     rect = SHAPES[shape][part]
@@ -139,6 +158,8 @@ def refine(photo, H, shape, part, rounds=8):
     conf = np.zeros(len(pts))
     for rnd in range(rounds):
         kind = ("homography" if rnd >= 3 else "similarity") if part == "recess" else "rectangle"
+        if not sane(H, pts):
+            return H, 0.0
         pos, conf = peaks(session, strips(photo, H, pts, normals), part_id, sides, nearest=rnd >= 2)
         q = pts + pos[:, None] * normals
         w = np.sqrt(np.clip(conf, 0.02, 1)) * (conf >= MIN_CONFIDENCE)
@@ -152,7 +173,7 @@ def refine(photo, H, shape, part, rounds=8):
         moved = np.abs(project(C, corners_of(rect)) - corners_of(rect)).max()
         if moved < 0.01 and (part == "label" or rnd >= 3):
             break
-    return H, float(np.median(conf))
+    return H, float(np.median(conf)) if sane(H, pts) else 0.0
 
 
 def fit_params(photo, shape, part, pose_of, x0, rounds=8):
@@ -166,6 +187,8 @@ def fit_params(photo, shape, part, pose_of, x0, rounds=8):
     conf = np.zeros(len(pts))
     for rnd in range(rounds):
         H = pose_of(x)
+        if not sane(H, pts):
+            return x, H, 0.0
         pos, conf = peaks(session, strips(photo, H, pts, normals), part_id, sides, nearest=rnd >= 2)
         q = pts + pos[:, None] * normals
         w = np.sqrt(np.clip(conf, 0.02, 1)) * (conf >= MIN_CONFIDENCE)
@@ -179,7 +202,7 @@ def fit_params(photo, shape, part, pose_of, x0, rounds=8):
         x = x_new
         if moved < 0.01:
             break
-    return x, pose_of(x), float(np.median(conf))
+    return x, pose_of(x), float(np.median(conf)) if sane(pose_of(x), pts) else 0.0
 
 
 def corner_error(H, H_ref, rect):
