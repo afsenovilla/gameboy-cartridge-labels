@@ -12,10 +12,14 @@
 #     and its inliers spread over at least MIN_AREA of the smaller photo.
 # Each pair is stored once, in one photo's file, and a file never changes once written: in a run, the photos with an
 # up-to-date file come first, then the others in SHA-1 order; a photo's file holds its pairs with the photos before
-# it. A photo is done again when its file is missing or older than this file (all are then redone: pairs may move).
+# it. All are done again when the matching changes (VERSION: a fingerprint of the settings and the functions that decide
+# the matches, kept in version.json; pairs may move between files); a photo's file missing, it's done. How the index is
+# searched (build_index, knn) isn't part of it: the index is split into parts of at most INDEX_ROWS keypoints (OpenCV's
+# FLANN takes under 2^31 numbers in one array: 13183 photos' 1500 keypoints of 128 numbers didn't fit, 2026-11-12),
+# each part searched and their nearest neighbours merged.
 # The page, <generated>/match/index.html: the counts, the photos matching nothing, the weakest matches.
 # Usage: match.py [--sample] [--workers N]
-import argparse, multiprocessing, os, sys
+import argparse, json, multiprocessing, os, sys
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -31,7 +35,9 @@ MIN_INLIERS = 15
 MAX_PER_PAIR = 4
 MIN_AREA = 0.002   # of the smaller photo's area
 
-_index = None  # set before forking the workers: (flann, owner, keypoint number, shas, order, features_dir)
+INDEX_ROWS = 8_000_000  # keypoints per part of the index (see above)
+
+_index = None  # set before forking the workers: (index parts, owner, keypoint number, shas, features_dir)
 
 
 def load_features(features_dir, sha1):
@@ -40,20 +46,60 @@ def load_features(features_dir, sha1):
 
 
 def build_index(features_dir, shas):
-    """FLANN over the INDEXED strongest keypoints of every photo: (matcher, the photo of each row, its keypoint)."""
-    rows, owner, which = [], [], []
+    """FLANN over the INDEXED strongest keypoints of every photo, in parts of at most INDEX_ROWS: ([(matcher, first
+    row)], the photo of each row, its keypoint)."""
+    parts, chunk, start, rows, owner, which = [], [], 0, 0, [], []
+
+    def close():
+        nonlocal chunk, start, rows
+        if chunk:
+            flann = cv2.FlannBasedMatcher({"algorithm": 1, "trees": 4}, {"checks": 64})
+            flann.add([np.ascontiguousarray(np.concatenate(chunk))])
+            flann.train()
+            parts.append((flann, start))
+            start += rows
+        chunk, rows = [], 0
+
     for i, s in enumerate(shas):
         f = load_features(features_dir, s)
         keep = np.argsort(-f["responses"])[:INDEXED]
-        rows.append(f["descriptors"][keep].astype(np.float32))
+        if rows + len(keep) > INDEX_ROWS:
+            close()
+        chunk.append(f["descriptors"][keep].astype(np.float32))
+        rows += len(keep)
         owner.append(np.full(len(keep), i, np.int32))
         which.append(keep.astype(np.int32))
-    des = np.concatenate(rows) if rows else np.zeros((0, 128), np.float32)
-    flann = cv2.FlannBasedMatcher({"algorithm": 1, "trees": 4}, {"checks": 64})
-    if len(des):
-        flann.add([des])
-        flann.train()
-    return flann, np.concatenate(owner) if owner else np.zeros(0, np.int32), np.concatenate(which) if which else np.zeros(0, np.int32)
+    close()
+    return parts, np.concatenate(owner) if owner else np.zeros(0, np.int32), np.concatenate(which) if which else np.zeros(0, np.int32)
+
+
+class Neighbour:
+    __slots__ = ("trainIdx", "distance")
+
+    def __init__(self, train_idx, distance):
+        self.trainIdx, self.distance = train_idx, distance
+
+
+def knn(parts, des, k):
+    """Each descriptor's k nearest among all parts of the index: [[Neighbour, nearest first]]."""
+    found = [[] for _ in range(len(des))]
+    for flann, start in parts:
+        for q, ms in enumerate(flann.knnMatch(des, k=k)):
+            found[q].extend(Neighbour(start + m.trainIdx, m.distance) for m in ms)
+    return [sorted(f, key=lambda m: m.distance)[:k] for f in found]
+
+
+VERSION_FUNCTIONS = ["load_features", "plausible", "homographies", "match_photo"]
+
+
+def version():
+    """A fingerprint of what decides the matches: the settings and the functions in VERSION_FUNCTIONS."""
+    import hashlib, inspect
+    h = hashlib.sha1(repr((INDEXED, NEIGHBOURS, RATIO, SELF_EXTRA, CANDIDATES, RANSAC_PX, MIN_INLIERS, MAX_PER_PAIR,
+                           MIN_AREA)).encode())
+    for name in VERSION_FUNCTIONS:
+        h.update(inspect.getsource(globals()[name]).encode())
+    return h.hexdigest()[:16]
 
 
 def plausible(H, size_a):
@@ -98,13 +144,13 @@ def homographies(pa, pb, size_a, size_b):
 def match_photo(job):
     """The matches of photo i with the photos before it in the order."""
     i, out = job
-    flann, owner, which, shas, features_dir = _index
+    parts, owner, which, shas, features_dir = _index
     a = load_features(features_dir, shas[i])
     if len(a["descriptors"]) < MIN_INLIERS:
         steps.write_npz(out, others=np.array([], "U40"), a_to_b=np.zeros((0, 3, 3)), inliers=np.zeros((0, 4), np.float32), starts=np.zeros(1, np.int64))
         return i
     # the photo's own keypoints are in the index too (it's every photo's): extra neighbours looked up, its own skipped
-    nn = flann.knnMatch(a["descriptors"].astype(np.float32), k=NEIGHBOURS + SELF_EXTRA)
+    nn = knn(parts, a["descriptors"].astype(np.float32), NEIGHBOURS + SELF_EXTRA)
     # per other photo, Lowe's ratio test among the neighbours in that photo: my keypoint's nearest there must be
     # clearly nearer than its second nearest there (or than the farthest neighbour looked up, if none other is there)
     corr = {}  # other photo -> [(my keypoint, its keypoint)]
@@ -190,18 +236,24 @@ def main():
     if missing:
         sys.exit(f"{len(missing)} photos have no features: run make features first")
     out = lambda s: os.path.join(out_dir, s + ".npz")
-    done = [s for s in chosen if not steps.stale(out(s), __file__)]
-    if len(done) < len(chosen) and any(steps.stale(out(s), __file__) and os.path.exists(out(s)) for s in chosen):
-        for s in chosen:  # older than the code: pairs may move between files, so all are redone
+    version_file = os.path.join(out_dir, "version.json")
+    current = version()
+    if not os.path.exists(version_file):
+        # the files from before the fingerprint (2026-11-12) were made by this matching: kept
+        steps.write_json(version_file, {"version": current})
+    if json.load(open(version_file)).get("version") != current:
+        for s in chosen:  # the matching changed: pairs may move between files, so all are redone
             if os.path.exists(out(s)):
                 os.remove(out(s))
-        done = []
+        steps.write_json(version_file, {"version": current})
+    done = [s for s in chosen if os.path.exists(out(s))]
     todo = [s for s in sorted(chosen) if s not in set(done)]
     shas = done + todo
     if todo:
         print(f"indexing {len(shas)} photos", flush=True)
-        flann, owner, which = build_index(features_dir, shas)
-        _index = (flann, owner, which, shas, features_dir)
+        parts, owner, which = build_index(features_dir, shas)
+        print(f"index: {len(owner)} keypoints in {len(parts)} parts", flush=True)
+        _index = (parts, owner, which, shas, features_dir)
         jobs = [(len(done) + k, out(s)) for k, s in enumerate(todo)]
         ctx = multiprocessing.get_context("fork")  # the workers share the index built here
         with ctx.Pool(args.workers) as pool:

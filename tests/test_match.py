@@ -70,3 +70,21 @@ def test_matches_a_pasted_patch_and_not_another_photo(tmp_path):
     H = next(H for x, y, H, _ in found if (x, y) == ("b", "a"))
     # b's patch corner (300, 200) is a's (100, 80); b's (900, 650) is a's (500, 380)
     assert np.abs(warp_points(H, [[300, 200], [900, 650]]) - [[100, 80], [500, 380]]).max() < 3
+
+
+def test_an_index_in_parts_finds_the_nearest_neighbours(tmp_path, monkeypatch):
+    rng = np.random.default_rng(0)
+    shas = [f"{i:040x}" for i in range(6)]
+    for s in shas:
+        d = rng.normal(0, 1, (300, 128)).astype(np.float32)
+        np.savez(tmp_path / (s + ".npz"), points=np.zeros((300, 2)), responses=rng.random(300), descriptors=d, size=np.array([100, 100]))
+    monkeypatch.setattr(match, "INDEX_ROWS", 650)   # 2 photos per part: 3 parts
+    parts, owner, which = match.build_index(str(tmp_path), shas)
+    assert len(parts) == 3 and len(owner) == 1800
+    whole = np.concatenate([match.load_features(str(tmp_path), s)["descriptors"][np.argsort(-match.load_features(str(tmp_path), s)["responses"])] for s in shas])
+    q = whole[::37] + rng.normal(0, 0.05, whole[::37].shape).astype(np.float32)
+    found = match.knn(parts, q, 3)
+    exact = cv2.BFMatcher(cv2.NORM_L2).knnMatch(q, whole, k=3)
+    same = np.mean([f[0].trainIdx == e[0].trainIdx for f, e in zip(found, exact)])
+    assert same > 0.95
+    assert all(f[0].distance <= f[1].distance <= f[2].distance for f in found)
