@@ -175,6 +175,8 @@ done
 - First run: the 567 Japanese releases of the second pass's list with a Japanese title, all searched (2026-11-11): 1608 photos, never blocked.
 - Second run (2026-11-11), done the same day (1174 searches, 2266 photos, never blocked): the worst Japanese prints first (the user: raising the worst existing prints' quality is the top priority): the 21 Japanese releases with only poor fits (no restored image), then the 958 with good label photos but none at 20 px/mm, the lowest resolution first, then the 289 with no label photo; 1174 of them with a Japanese title. Still 5 photos per release (the user: if not enough, the next pass shows it). Batches `jauce2-batch-<n>.json`.
 
+- After two runs (2026-11-11): of 1741 searches, 449 kept 5 photos, 817 kept 0 or 1 (373 had no candidates): the long query (the whole title, subtitles and taglines too, and ゲームボーイアドバンス) needs every word in a listing's title, and sellers write the main title and GBA. Third run, pass "short1": the 462 Japanese releases with a single label photo (no median possible, so damage stays), those Jauce found 0-1 photos for first (396), then those never searched (66, by their romanized title); the short query: the title's first word (split at spaces and "/"; Latin words until 6 letters, romanized titles at least two words) and the numbers in the rest, with GBA, GBC or GB (`queries releases.json short1 short`). Its title check needs those words only: more listings, and more of a series' other games, which read-serials files under their own release. "ソフト無し" (no cartridge) listings left out too.
+
 ## Mercari (www.mercari.com, tried 2026-11-10)
 
 - Photos: `u-mercari-images.mercdn.net/photos/<item>_1.jpg`, curl works, 1600 x 1200.
