@@ -139,15 +139,17 @@ def match_photo(job):
 
 
 def read_matches(out_dir, shas):
-    """Every match: [(sha1 a, sha1 b, a_to_b, inliers)], from all the photos' files."""
-    found = []
+    """Every match: [(sha1 a, sha1 b, a_to_b, inliers)], from all the photos' files; a match with a photo not among
+    shas (deleted since match ran: remove-photos) is left out."""
+    found, wanted = [], set(shas)
     for s in shas:
         p = os.path.join(out_dir, s + ".npz")
         if not os.path.exists(p):
             continue
         f = np.load(p)
         for k, other in enumerate(f["others"]):
-            found.append((s, str(other), f["a_to_b"][k], f["inliers"][f["starts"][k]:f["starts"][k + 1]]))
+            if str(other) in wanted:
+                found.append((s, str(other), f["a_to_b"][k], f["inliers"][f["starts"][k]:f["starts"][k + 1]]))
     return found
 
 
