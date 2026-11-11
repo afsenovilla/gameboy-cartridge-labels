@@ -523,6 +523,38 @@ def load_candidates(cache_dir, lp, version, edges_dir):
     return cands, d["why"]
 
 
+def own_candidates(all_cands, lps):
+    """In a photo with several label photos, each keeps only the candidates whose label centre is nearer its own centre
+    (find's) than any other label photo's of the photo: every label photo gets all the photo's outline starts (see
+    fit_label_photo), and without this the best supported cartridge won for all of them (2026-11-11: 273 of 609 label
+    photos in such photos fitted over a radius from their own centre, against 147 of 10534 alone in theirs).
+    -> (key -> candidates, the keys left with none)."""
+    by_photo = {}
+    for lp in lps:
+        by_photo.setdefault(lp["photo"], []).append(lp)
+    out, emptied = dict(all_cands), []
+    for group in by_photo.values():
+        if len(group) < 2:
+            continue
+        centres = np.array([lp["centre"] for lp in group], np.float64)
+        for i, lp in enumerate(group):
+            cands = all_cands.get(lp["key"])
+            if not cands:
+                continue
+            mm = corners_mm(lp["shape"]).mean(0)
+            mine = []
+            for c in cands:
+                at = project(np.array(c["cut_to_photo"]), [mm])[0]
+                if np.all(np.isfinite(at)) and int(np.argmin(np.linalg.norm(centres - at, axis=1))) == i:
+                    mine.append(c)
+            if mine:
+                out[lp["key"]] = mine
+            else:
+                del out[lp["key"]]
+                emptied.append(lp["key"])
+    return out, emptied
+
+
 def stage1(lps, edges_dir, pairs, workers=8):
     """The fits: round 1 (every candidate, in parallel), then the choice learned from its confident label photos:
     key -> fit; key -> why for those that failed; the choice model's description."""
@@ -552,6 +584,9 @@ def stage1(lps, edges_dir, pairs, workers=8):
                 failed[key] = why
             if n % 100 == 0 or n == len(todo):
                 print(f"stage 1: fitted {n} of {len(todo)}", flush=True)
+    all_cands, taken = own_candidates(all_cands, lps)
+    for key in taken:
+        failed[key] = "no candidate on this label: the photo's other label photos are nearer every one"
     feats, examples, labels, first, sure = {}, [], [], {}, 0
     for key, cands in all_cands.items():
         X, apart = features(cands, shape_of[key])
