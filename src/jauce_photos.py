@@ -39,7 +39,7 @@ PROXY = "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions
 SYSTEM = {"agb": "ゲームボーイアドバンス", "cgb": "ゲームボーイカラー", "dmg": "ゲームボーイ"}
 # Listing titles left out: lots and sets, boxes and manuals (but not "box: none"), guides, consoles, other systems
 # (ファミコン, but not the GBA's ファミコンミニ series).
-NOT_A_CARTRIDGE = (r"まとめ|セット|\d+本|外箱|空箱|箱(?!なし|無)|説明書(?!なし|無)|攻略本|ガイドブック|ケース|ポスター|チラシ|"
+NOT_A_CARTRIDGE = (r"まとめ|セット|\d+本|外箱|空箱|箱(?!なし|無)|説明書(?!なし|無)|ソフト(なし|無し)|攻略本|ガイドブック|ケース|ポスター|チラシ|"
                    r"本体|アダプタ|ケーブル|リプロ|互換")
 NOT_GAME_BOY = (r"(?<![A-Za-z0-9])(N?DS|DSi|DS ?Lite|3DS|PSP|PS[1-5]|SFC|N64|Wii|Switch)(?![A-Za-z0-9])|プレイステーション|プレステ|スーパーファミコン|ファミコン(?!ミニ)|"
                 r"ゲームキューブ|セガ|サターン|メガドライブ|PCエンジン|ネオジオ|ワンダースワン|ニンテンドー64|スイッチ")
