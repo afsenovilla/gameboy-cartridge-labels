@@ -187,3 +187,11 @@ done
 - 39 USA releases not searched (the block). Resume slower, after a pause.
 - Other regions: not started.
 - Listing pages (all photos of a listing, not only the first) weren't needed; the listing's own gallery is its `s-l140` thumbnails, and the page also holds other listings' images.
+
+## 2026-11-11: Jauce run 4 (short2) and eBay pass 3, after deleting the photos under 10 px/mm
+
+The queues were made from the pipeline's outputs as they were before that day's add-photos. Releases with photos waiting from add-photos are left out. A label photo counts as usable when its fit isn't poor.
+
+- Jauce, pass "short2", 504 short queries: Japanese releases with fewer than 3 usable label photos at 10 px/mm (Yahoo's photos are at most 1200 px, so 20 px/mm is out of reach there). Not those already searched in short1. Order: never searched on Jauce (31, by romanized title), then 0 usable (133), then 1–2 usable (340); within each, releases with no photo at all first. A query now carries its own pass name ("pass"), so one queue can mix passes.
+- eBay, pass 3, 2959 queries: other releases with fewer than 3 usable label photos at 20 px/mm, not searched in pass 2. Order: some photo but none usable at 20 px/mm, then 1–2 usable, then no photo at all.
+- Both now keep only photos of at least 1200 px on the longest side (was 1000). At 1000 px most labels came out under 10 px/mm.

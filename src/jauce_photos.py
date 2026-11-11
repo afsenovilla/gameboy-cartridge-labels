@@ -34,7 +34,7 @@ LISTING = os.path.join(DROP, "listing.json")
 SOURCES = os.path.join(OUT, "jauce-sources.json")
 SEARCHES = os.path.join(OUT, "jauce-searches.json")
 PER_RELEASE = 5
-MIN_SIDE = 1000  # px, longest side (Yahoo's photo names say their size: i-img1200x900-...)
+MIN_SIDE = 1200  # px, longest side (Yahoo's photo names say their size: i-img1200x900-...)
 PROXY = "https://www.jauce.com/read_yafile/https://auc-pctr.c.yimg.jp/i/auctions.c.yimg.jp/"
 SYSTEM = {"agb": "ゲームボーイアドバンス", "cgb": "ゲームボーイカラー", "dmg": "ゲームボーイ"}
 # Listing titles left out: lots and sets, boxes and manuals (but not "box: none"), guides, consoles, other systems
@@ -110,7 +110,8 @@ def queries(releases, pass_name=None, short=False):
             q = {"parts": [w.lower() for w in words], "query": f"{' '.join(words)} {SHORT_SYSTEM[r['system']]}"}
         else:
             q = {"parts": parts(title), "query": f"{query_title(title)} {SYSTEM[r['system']]}"}
-        out.append({"release": i, "serial": serial, "title": title, **q, "exclude": NOT_GAME_BOY, "bad": NOT_A_CARTRIDGE})
+        out.append({"release": i, "serial": serial, "title": title, **q, "exclude": NOT_GAME_BOY, "bad": NOT_A_CARTRIDGE,
+                    "pass": pass_name})
     return out
 
 
@@ -121,10 +122,14 @@ def ingest(results_file, queries_file, pass_name=None):
     query_of = {q["release"]: q for q in json.load(open(queries_file))}
     have = {v["auction"] for v in sources.values()}
     today = datetime.date.today().isoformat()
+    given = pass_name
     for release, items in json.load(open(results_file)).items():
-        if searched_in(searches, release, pass_name) or release not in query_of:
+        if release not in query_of:
             continue
         q = query_of[release]
+        pass_name = q.get("pass", given)
+        if searched_in(searches, release, pass_name):
+            continue
         kept, small = 0, 0
         for it in items:
             if kept >= PER_RELEASE:

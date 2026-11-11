@@ -31,7 +31,7 @@ SOURCES = os.path.join(OUT, "sources.json")
 SEARCHES = os.path.join(OUT, "searches.json")
 MISSING = "generated/read-serials/missing.json"
 PER_RELEASE = 5
-MIN_SIDE = 1000  # px, longest side
+MIN_SIDE = 1200  # px, longest side (2026-11-11: at 1000 px most labels came out under 10 px/mm)
 OTHER_REGIONS = {  # listing titles naming another region than the release's
     "USA": r"\b(japan|japanese|jpn|jp|ntsc-j|pal|eur|europe|european|uk|german|deutsch|french|fran[cç]ais|spanish|italian|import|chinese|korean)\b|AGB-P-\w{3}[^E\W]"}
 # Regions for the searches of given releases (queries with a release list): the release's group, from its cartridge
