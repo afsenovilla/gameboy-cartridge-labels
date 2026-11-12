@@ -22,7 +22,9 @@
 # The family (solve: label photos joined by links whose points and pixels agree) only settles a label photo's own
 # doubt: families can hold a series' games sharing a layout, and nearly-same prints have serials of their own.
 # Done again when serials.json is older than this file, solve.json or find's label-photos.json; the OCR of a
-# straightened label photo is cached in <generated>/read-serials/ocr/<file>.json (redone when older than its image).
+# straightened label photo is cached in <generated>/read-serials/ocr/<file>.json, the fit it was read from beside it
+# (<file>.fit.json); redone when read_text is newer, or its fit has moved the straightened image by REREAD_MM or more
+# since (the user, 2026-11-12: text isn't in the label's outer mm, and the image has straighten.MARGIN around it).
 # The page, <generated>/read-serials/index.html.
 # Usage: read_serials.py [--sample] [--workers N]
 import argparse, html, json, os, re, sys
@@ -36,12 +38,29 @@ import photos, serials, steps, read_text, straighten
 CORRECTIONS = "serial-corrections.json"
 
 
+REREAD_MM = 1.0
+
+
+def fit_file(ocr_path):
+    return ocr_path[:-5] + ".fit.json"
+
+
 def ocr_job(job):
-    image_path, out = job
+    image_path, out, photo_to_ink = job
     img = cv2.imread(image_path)
     lines = read_text.read(img) if img is not None else []
     steps.write_json(out, lines)
+    steps.write_json(fit_file(out), {"photo_to_ink": photo_to_ink})
     return out
+
+
+def reread(ocr_path, r, code_time):
+    """Whether a label photo's OCR is to be done (again): missing, older than read_text, or its fit moved REREAD_MM or
+    more since."""
+    if not os.path.exists(ocr_path) or os.path.getmtime(ocr_path) < code_time or not os.path.exists(fit_file(ocr_path)):
+        return True
+    old = json.load(open(fit_file(ocr_path)))["photo_to_ink"]
+    return straighten.moved_px(old, r["photo_to_ink"], r["shape"]) / straighten.PX_PER_MM >= REREAD_MM
 
 
 PLATFORMS = {"dmg": ("DMG", "CGB"), "cgb": ("CGB",), "agb": ("AGB",)}  # the serial prefixes a shape's labels carry
@@ -177,11 +196,12 @@ def main():
     if missing_images:
         sys.exit(f"{len(missing_images)} straightened images missing: run make straighten first")
     ocr_out = {k: os.path.join(ocr_dir, straighten.file_name(k)[:-5] + ".json") for k in solved}
+    keep = {os.path.basename(f) for p in ocr_out.values() for f in (p, fit_file(p))}
     for f in os.listdir(ocr_dir):
-        if f not in {os.path.basename(p) for p in ocr_out.values()}:
+        if f not in keep:
             os.remove(os.path.join(ocr_dir, f))
-    jobs = [(images[k], ocr_out[k]) for k in solved
-            if not os.path.exists(ocr_out[k]) or os.path.getmtime(ocr_out[k]) < max(os.path.getmtime(images[k]), os.path.getmtime(read_text.__file__))]
+    code_time = os.path.getmtime(read_text.__file__)
+    jobs = [(images[k], ocr_out[k], solved[k]["photo_to_ink"]) for k in solved if reread(ocr_out[k], solved[k], code_time)]
     threads = max(1, (os.cpu_count() or 4) // args.workers)
     steps.run(ocr_job, jobs, args.workers, read_text.init_worker, (threads,), "straightened label photos read:")
     out = os.path.join(out_dir, "serials.json")
