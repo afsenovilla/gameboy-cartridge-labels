@@ -13,7 +13,14 @@
 #   subfolder's name and listing.json) in photo-sources.json (src/add_photos.py).
 #
 #   make all
-#   Runs every step below in order, read-text through publish (not add-photos), each skipping what it has already done.
+#   Runs every step below in order, remove-low-resolution through publish (not add-photos), each skipping what it has
+#   already done.
+#
+#   make remove-low-resolution
+#   Deletes from photos/ every photo whose label photos all have under 10 px per mm, by the last solve
+#   (generated/solve/solve.json; nothing before the first), each recorded in
+#   generated/remove-low-resolution/deleted.json. First, so a photo measured in one run is gone before the next run's
+#   find and solve (src/remove_low_resolution.py).
 #
 #   make read-text
 #   Reads the text on every photo (RapidOCR) into generated/read-text/<sha1>.json; the page generated/read-text/index.html.
@@ -72,7 +79,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all todo-report add-photos read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
+.PHONY: help setup test all todo-report add-photos remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -89,10 +96,13 @@ add-photos:
 todo-report:
 	$(PYTHON) src/todo_report.py $(if $(NAME),$(NAME) --note "$(NOTE)",--page)
 
-STEPS := read-text features edges match find solve straighten read-serials prints restore publish
+STEPS := remove-low-resolution read-text features edges match find solve straighten read-serials prints restore publish
 
 all:
 	set -e; for step in $(STEPS); do $(MAKE) $$step; done
+
+remove-low-resolution:
+	$(PYTHON) src/remove_low_resolution.py $(SAMPLE_FLAG)
 
 read-text:
 	$(PYTHON) src/read_text.py $(SAMPLE_FLAG)
