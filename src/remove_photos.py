@@ -6,7 +6,7 @@
 #     page's photos not OK-ed. No confirm(): they're unused, though prints.json may list them (a family of approximate
 #     cuts). (Before 2026-11-12 only the photos find found no label photo in; on the full set, 48 of the 71 matched
 #     nothing.)
-#   - Restored prints: every print's restored image (restore), 6 x 3 at a time, the unmarked first, each to mark Good or
+#   - Restored prints: every print's restored image (restore), 18 at a time in 2 columns, the unmarked first, each to mark Good or
 #     Bad (MARKS_FILE). A mark is of that image file (its SHA-1): a print restored differently is unmarked again. An
 #     image the pipeline has changed since the page loaded is not shown, nor can it be marked (restart the tool).
 # The tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
@@ -386,9 +386,9 @@ figure .buttons { display: flex; gap: 4px }
 figure .buttons button { padding: 4px 6px; font-size: 12px }
 .poor { color: #c62828 }
 .legend { color: #555; margin: 4px 0 }
-#marks { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); gap: 6px; padding: 6px; height: calc(100% - 48px) }
-#marks .cell { position: relative; min-height: 0; background: #ddd; display: flex; align-items: center; justify-content: center; overflow: hidden; padding-bottom: 34px }
-#marks img { max-width: 100%; max-height: 100%; object-fit: contain }
+#marks { display: grid; grid-template-columns: repeat(2, 1fr); align-content: start; gap: 6px; padding: 6px; height: calc(100% - 48px); overflow-y: auto }
+#marks .cell { position: relative; background: #ddd; display: flex; align-items: center; justify-content: center; padding: 24px 0 40px }
+#marks img { max-width: 100%; max-height: 80vh; object-fit: contain; display: block }
 #marks .name { position: absolute; left: 4px; top: 4px; background: #fffc; padding: 0 4px; font: 11px ui-monospace, monospace }
 #marks .buttons { position: absolute; left: 4px; right: 4px; bottom: 4px; display: flex; gap: 4px; justify-content: center }
 #marks .cell.good, .print.good { outline: 4px solid #2e7d32; outline-offset: -4px }
@@ -447,8 +447,8 @@ function renderMarks() {
   const marked = markList.filter(p => S.marks[p.image_sha1]).length;
   $("#count").textContent = `${markList.length} restored prints, ${marked} marked, the unmarked first (as when the page was loaded); page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
-  $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); }),
-                        button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); }));
+  $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); $("#marks").scrollTop = 0; }),
+                        button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); $("#marks").scrollTop = 0; }));
   const box = $("#marks");
   box.innerHTML = "";
   for (const p of markList.slice(page * MARKS_PER, page * MARKS_PER + MARKS_PER)) {
