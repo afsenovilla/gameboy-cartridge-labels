@@ -92,7 +92,8 @@ def badness_of(job):
         dmgs = against_others([e for _, e in loaded])
         return [result(k, e[1], d, "others") for (k, e), d in zip(loaded, dmgs)]
     ref_id = job[4] if kind == "print" else None
-    ref = cv2.imread(restored(ref_id) + ".avif") if ref_id else None
+    # a print restore made no image for (fewer than restore.MIN_PHOTOS): no reference (and no OpenCV warning per photo)
+    ref = cv2.imread(restored(ref_id) + ".avif") if ref_id and os.path.exists(restored(ref_id) + ".avif") else None
     for k, (img, valid) in loaded:
         dmg = None
         if ref is not None and ref.shape[:2] == img.shape[:2]:
