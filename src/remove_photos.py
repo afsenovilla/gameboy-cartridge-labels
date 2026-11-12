@@ -6,7 +6,8 @@
 #     confirm(): they're unused, though prints.json may list them (a family of approximate cuts). (Before 2026-11-12
 #     only the photos find found no label photo in; on the full set, 48 of the 71 matched nothing.)
 #   - Restored prints: every print's restored image (restore), 6 x 3 at a time, the unmarked first, each to mark Good or
-#     Bad (MARKS_FILE). A mark is of that image file (its SHA-1): a print restored differently is unmarked again.
+#     Bad (MARKS_FILE). A mark is of that image file (its SHA-1): a print restored differently is unmarked again. An
+#     image the pipeline has changed since the page loaded is not shown, nor can it be marked (restart the tool).
 # The tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
@@ -282,7 +283,7 @@ class Tool:
         """Marks print pid's restored image good or bad (None: unmarks it); False if it has no image now."""
         import datetime
         p = next((p for p in self.prints if p["id"] == pid), None)
-        if p is None or not p["image_sha1"]:
+        if p is None or not p["image_sha1"] or self.current_image(pid) is None:
             return False
         with lock:
             if mark is None:
@@ -293,6 +294,15 @@ class Tool:
                                                "date": datetime.date.today().isoformat()}
             steps.write_json(MARKS_FILE, dict(sorted(self.marks.items())))
         return True
+
+    def current_image(self, pid):
+        """Print pid's restored image file if it's still the one the page loaded (the pipeline may have restored it
+        again since, or given its id to another print), else None."""
+        p = next((p for p in self.prints if p["id"] == pid), None)
+        file = restored(pid) + ".avif"
+        if p is None or not p["image_sha1"] or not os.path.exists(file) or sha1_file(file) != p["image_sha1"]:
+            return None
+        return file
 
     def delete(self, sha1s):
         """Deletes those of sha1s still in photos/; returns all of sha1s no longer there."""
@@ -592,8 +602,8 @@ class Handler(BaseHTTPRequestHandler):
             img = publish.cut(img, *tool.crops[name])
             return self.send(cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 88])[1].tobytes(), "image/jpeg", cache=True)
         if part == "print":
-            file = restored(name) + ".avif"
-            return self.send(open(file, "rb").read(), "image/avif", cache=True) if os.path.exists(file) else self.send_error(404)
+            file = tool.current_image(name)
+            return self.send(open(file, "rb").read(), "image/avif") if file else self.send_error(404)
         self.send_error(404)
 
     def do_POST(self):
@@ -603,7 +613,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/mark":
             mark = data.get("mark")
             if mark not in ("good", "bad", None) or not tool.set_mark(data.get("print"), mark):
-                return self.send_error(400)
+                return self.send(b"This print's restored image changed since the page loaded (the pipeline restored it"
+                                 b" again): reload the tool to mark the new image.", "text/plain", 409)
             return self.send({"marked": data.get("print")})
         if self.path == "/ok":
             if not isinstance(data.get("photo"), str):
