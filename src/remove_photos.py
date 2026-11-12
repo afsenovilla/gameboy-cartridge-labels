@@ -12,15 +12,20 @@
 #     reference: its straightened image, colours evened to the reference (restore.even_to), both blurred over BLUR_MM,
 #     within DAMAGE_DE (Oklab) of it. Damage, glare, dirt, blur and a part off the photo all count against it.
 #   resolution: the photo's pixels per mm at the label (from solve's fit) over FULL_PX_PER_MM, at most 1.
-# The reference: the restored print of the print with the most label photos in its family (restore's image), its own
-#   print on a tie or if it has REFERENCE_MIN or more; none if that is the label photo alone (then only the part off the
-#   photo or the cut counts).
-# Measured on the full set (25 prints of 4 or more label photos): over DAMAGE_DE, 0.1 % of the label for the cleanest,
-#   5 % at the median, 38 % for the worst; at 0.05 the clean ones already differed on 10-20 % (noise, slight blur).
+# The reference, never including the label photo itself (leave-one-out, 2026-11-12; the restored print it was before
+#   holds the label photo's own damage, which then hid part of it): in a print of REFERENCE_MIN or more label photos, the
+#   median of the print's other label photos (up to REFERENCE_MAX of them; each straightened, its colours evened to the
+#   median of all, filled from its nearest valid pixel outside its cut), compared only where at least one of them is on
+#   its photo; otherwise the restored print of the print with the most label photos in its family; none if there's
+#   neither (then only the part off the photo or the cut counts).
+# Measured on the full set (25 prints of 4 or more label photos, against the restored print, before leave-one-out):
+#   over DAMAGE_DE, 0.1 % of the label for the cleanest, 5 % at the median, 38 % for the worst; at 0.05 the clean ones
+#   already differed on 10-20 % (noise, slight blur). Against the user's deletions (2026-11-12, the 113 compared photos
+#   deleted from the first pages): 84 % over 0.1 damage, 62 % over 0.2.
 # Computed when the page starts, kept in generated/remove-photos/badness.json until prints.json, solve.json, a restored
-# print is newer, or the settings (BLUR_MM, DAMAGE_DE, REFERENCE_MIN) changed.
+# print is newer, or the settings (BLUR_MM, DAMAGE_DE, REFERENCE_MIN, REFERENCE_MAX, the method) changed.
 # Usage: remove_photos.py [port]
-import json, os, sys, threading, urllib.parse
+import json, os, sys, threading, urllib.parse, warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from multiprocessing import Pool
 
@@ -32,7 +37,8 @@ GEN = "generated"
 BLUR_MM = 0.15          # what a slightly misregistered or less sharp label photo still matches
 DAMAGE_DE = 0.08        # Oklab distance to the reference over which a pixel is damaged
 FULL_PX_PER_MM = 10     # a photo this sharp at the label or more loses nothing by its resolution
-REFERENCE_MIN = 3       # a print with this many label photos is its own label photos' reference
+REFERENCE_MIN = 3       # a print with this many label photos: each compared with the median of its others
+REFERENCE_MAX = 30      # the others in that median, at most
 THUMB_PX = 600
 CACHE = os.path.join(GEN, "remove-photos", "badness.json")
 lock = threading.Lock()
@@ -42,48 +48,91 @@ def restored(pid):
     return os.path.join(GEN, "restore", straighten.file_name(pid)[:-5])
 
 
-def badness_of(job):
-    """(key, {usable, coverage, damage}) for one label photo against its reference print's restored image."""
-    key, shape, ref_id, crop = job
+def load_label(key, shape, crop):
+    """A label photo's straightened image cropped (BGR 0..1) and where it counts (on the photo, inside its cut), or None."""
     img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
     if img is None:
-        return key, None
+        return None
     size, px_to_mm = straighten.canvas(shape)
     valid = img.max(2) > 1
     cut = straighten.load_cut(GEN, key)
     if cut is not None:
         valid &= cuts.mask(cut, shape, size, px_to_mm)
     x, y, w, h = publish.crop_box(shape, crop)
-    img, valid = img[y:y + h, x:x + w].astype(np.float32) / 255, valid[y:y + h, x:x + w]
+    return img[y:y + h, x:x + w].astype(np.float32) / 255, valid[y:y + h, x:x + w]
+
+
+def damage(img, valid, ref, ref_valid):
+    """The share of the label where img differs from ref by over DAMAGE_DE (both blurred over BLUR_MM), counted where
+    both are valid; img's colours evened to ref first."""
+    both = valid & ref_valid
+    if both.sum() < 100:
+        return None
+    s = BLUR_MM * straighten.PX_PER_MM
+    a = restore.to_oklab(cv2.GaussianBlur(restore.filled(restore.even_to(img, ref, both), valid), (0, 0), s))
+    b = restore.to_oklab(cv2.GaussianBlur(restore.filled(ref, ref_valid), (0, 0), s))
+    return float(((np.linalg.norm(a - b, axis=2) > DAMAGE_DE) & both).mean())
+
+
+def result(key, valid, dmg, ref):
     coverage = float(valid.mean())
-    damage = 0.0
+    return key, {"coverage": round(coverage, 3), "damage": round(dmg or 0.0, 3), "usable": round(coverage - (dmg or 0.0), 3),
+                 "reference": ref if dmg is not None else None}
+
+
+def badness_of(job):
+    """[(key, {usable, coverage, damage, reference})] for one job: ("others", keys, shape, crop): each label photo against
+    the median of the others; ("print", keys, shape, crop, ref_id): each against that print's restored image."""
+    kind, keys, shape, crop = job[:4]
+    loaded = [(k, load_label(k, shape, crop)) for k in keys]
+    loaded = [(k, e) for k, e in loaded if e is not None]
+    out = []
+    if kind == "others" and len(loaded) >= REFERENCE_MIN:
+        dmgs = against_others([e for _, e in loaded])
+        return [result(k, e[1], d, "others") for (k, e), d in zip(loaded, dmgs)]
+    ref_id = job[4] if kind == "print" else None
     ref = cv2.imread(restored(ref_id) + ".avif") if ref_id else None
-    if ref is not None and ref.shape[:2] == img.shape[:2] and valid.sum() >= 100:
-        ref = ref.astype(np.float32) / 255
-        s = BLUR_MM * straighten.PX_PER_MM
-        a = restore.to_oklab(cv2.GaussianBlur(restore.even_to(img, ref, valid), (0, 0), s))
-        b = restore.to_oklab(cv2.GaussianBlur(ref, (0, 0), s))
-        damage = float(((np.linalg.norm(a - b, axis=2) > DAMAGE_DE) & valid).mean())
-    else:
-        ref_id = None
-    return key, {"coverage": round(coverage, 3), "damage": round(damage, 3), "usable": round(coverage - damage, 3),
-                 "reference": ref_id}
+    for k, (img, valid) in loaded:
+        dmg = None
+        if ref is not None and ref.shape[:2] == img.shape[:2]:
+            dmg = damage(img, valid, ref.astype(np.float32) / 255, np.ones(valid.shape, bool))
+        out.append(result(k, valid, dmg, ref_id))
+    return out
 
 
-def references(prints):
-    """key -> the id of the print whose restored image it's compared with, or None."""
+def against_others(entries):
+    """Each label photo's damage (image, valid) against the median of the others (up to REFERENCE_MAX), all evened to the
+    median of all first."""
+    imgs = np.stack([e[0] for e in entries])
+    valids = np.stack([e[1] for e in entries])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # pixels no label photo covers
+        median = lambda idx: np.nan_to_num(np.nanmedian(np.where(valids[idx][..., None], imgs_e[idx], np.nan), axis=0))
+        imgs_e = imgs
+        median_all = median(list(range(len(entries))))
+        imgs_e = np.stack([restore.filled(restore.even_to(i, median_all, v), v) for i, v in zip(imgs, valids)])
+        out = []
+        for n, (img, valid) in enumerate(entries):
+            others = [m for m in range(len(entries)) if m != n][:REFERENCE_MAX]
+            out.append(damage(img, valid, median(others), valids[others].any(0)))
+    return out
+
+
+def jobs_of(prints):
+    """badness_of's jobs: a print of REFERENCE_MIN or more label photos compared within itself; another against the
+    print with the most label photos in its family (none if that is itself)."""
     by_family = {}
     for p in prints:
         by_family.setdefault(p["family"], []).append(p)
-    out = {}
+    jobs = []
     for p in prints:
         if len(p["keys"]) >= REFERENCE_MIN:
-            ref = p
+            jobs.append(("others", p["keys"], p["shape"], crop_of(p["id"])))
         else:
             ref = max(by_family[p["family"]], key=lambda q: (len(q["keys"]), q is p))
-        for k in p["keys"]:
-            out[k] = None if ref["keys"] == [k] else ref["id"]
-    return out
+            jobs.append(("print", p["keys"], p["shape"], crop_of(ref["id"]) if ref is not p else crop_of(p["id"]),
+                         None if ref is p else ref["id"]))
+    return jobs
 
 
 def crop_of(pid):
@@ -95,7 +144,7 @@ def crop_of(pid):
 def badness(prints):
     """key -> {coverage, damage, usable, reference}, from the cache where it's still good."""
     inputs = [os.path.join(GEN, "prints", "prints.json"), os.path.join(GEN, "solve", "solve.json")]
-    settings = [BLUR_MM, DAMAGE_DE, REFERENCE_MIN]
+    settings = [BLUR_MM, DAMAGE_DE, REFERENCE_MIN, REFERENCE_MAX, "leave-one-out"]
     newest = max(os.path.getmtime(f) for f in inputs)
     restore_dir = os.path.join(GEN, "restore")
     newest = max([newest] + [os.path.getmtime(os.path.join(restore_dir, f)) for f in os.listdir(restore_dir)])
@@ -103,16 +152,19 @@ def badness(prints):
         cached = json.load(open(CACHE))
         if cached.get("settings") == settings:
             return cached["badness"]
-    refs = references(prints)
-    jobs = [(k, p["shape"], refs[k], crop_of(p["id"])) for p in prints for k in p["keys"]]
+    jobs = jobs_of(prints)
+    jobs.sort(key=lambda j: -len(j[1]))  # the biggest prints first, so the pool ends evenly
     out = {}
-    print(f"comparing {len(jobs)} label photos with their restored prints", flush=True)
+    total = sum(len(j[1]) for j in jobs)
+    print(f"comparing {total} label photos ({len(jobs)} prints)", flush=True)
+    done = 0
     with Pool(8) as pool:
-        for n, (key, b) in enumerate(pool.imap_unordered(badness_of, jobs, chunksize=8), 1):
-            if b is not None:
+        for n, res in enumerate(pool.imap_unordered(badness_of, jobs), 1):
+            for key, b in res:
                 out[key] = b
-            if n % 500 == 0 or n == len(jobs):
-                print(f"compared {n} of {len(jobs)}", flush=True)
+            done += len(res)
+            if n % 200 == 0 or n == len(jobs):
+                print(f"compared {n} of {len(jobs)} prints", flush=True)
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
     steps.write_json(CACHE, {"settings": settings, "badness": out})
     return out
