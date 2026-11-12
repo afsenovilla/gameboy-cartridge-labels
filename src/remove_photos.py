@@ -144,7 +144,7 @@ class Tool:
                 entries.append({"key": k, "photo": k.split("@")[0], "badness": round(1 - b["usable"] * resolution, 3),
                                 "damage": b["damage"], "off": round(1 - b["coverage"], 3), "px_per_mm": round(ppm, 1),
                                 "compared": b["reference"] is not None,
-                                "poor_fit": (r.get("fallback") or "").startswith("a poor")})
+                                "poor_fit": solve_step.poor_fit(r)})
                 self.crops[k] = (p["shape"], crop)
             entries.sort(key=lambda e: -e["badness"])
             self.prints.append({"id": p["id"], "serial": p.get("serial") or p.get("release") or "?",

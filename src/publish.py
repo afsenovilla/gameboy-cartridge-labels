@@ -3,8 +3,8 @@
 #     colours), its file name prefixed with its serial (else its release, else "unknown"; characters other than letters,
 #     digits and "-" made "-")
 #   No label photo images (the user, 2026-11-10: the straightened photos aren't worth distributing, over 1 GB): each
-#     label photo is in index.json, with where it came from. Poor fits (solve's "a poor" fallbacks) are listed with
-#     poor_fit true; a print of poor fits only has no image (restore leaves it out).
+#     label photo is in index.json, with where it came from. Poor fits (solve.poor_fit) are listed with
+#     poor_fit true; restore leaves them out.
 #   index.json: {"prints": {id: {serial, release, title (the database's), shape, image, size (its w, h px), paper,
 #     label_photos}}, "label_photos": {key: {print,
 #     serial, source, page_url, image_url, poor_fit}}}. Ids and keys hold within a run only.
@@ -48,7 +48,8 @@ def sources(path=SOURCES):
 
 
 def poor_fits(solved):
-    return {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
+    import solve as solve_step
+    return {k for k, r in solved.items() if solve_step.poor_fit(r)}
 
 
 def file_prefix(p):

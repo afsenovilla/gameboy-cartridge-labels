@@ -4,10 +4,14 @@
 #     the family); its colours scaled so its paper is white (see paper_white) where paper is found, else the label
 #     photos' evened to their median (the user: one image per print)
 #   <print>.json: {"crop" (cuts.crop's: x, y, w, h px in the straightened images, mm), "keys" (its label photos used),
+#     "approximate" (those of them with an approximate cut),
 #     "bands" (how many label photos count in each band, finest first), "paper" (the paper's colour found, or null)}
-# The label photos: the print's own only, poor fits left out; a print with fewer than MIN_PHOTOS of them gets no image
-# (the user, 2026-11-12: only prints of three or more label photos restored; one used as it is and two averaged were
-# removed). (Pooling the
+# The label photos: the print's own only, poor fits left out (solve.poor_fit); a print with fewer than MIN_PHOTOS of
+# them, or fewer than MIN_PRECISE that aren't approximate cuts (solve.approximate_cut), gets no image (the user,
+# 2026-11-12: only prints of three or more label photos restored; one used as it is and two averaged were removed).
+# An approximate cut's label photo counts only APPROXIMATE_INSET mm further inside its cut (the cut found by
+# straighten around the nested fit's: 0.16 mm from it at the median, 0.41 at 90 %, against 0.04 and 0.14 for the edge
+# models' cuts; the edge models moved the nested fit's label 0.49 mm at the median, 1.31 at 90 %). (Pooling the
 # label photos of the family's other prints where they matched the print's own was removed, 2026-11-11: the user found
 # it very broken.) Each straightened label photo's colours evened per channel to the
 # median of the print's own (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
@@ -33,6 +37,8 @@ from scipy import ndimage
 
 QUALITY = 90
 MIN_PHOTOS = 3         # a print with fewer label photos isn't restored
+MIN_PRECISE = 2        # nor one with fewer label photos that aren't approximate cuts
+APPROXIMATE_INSET = 1.0  # mm, an approximate cut moved this much further inward than cuts.INSET
 MAX_PHOTOS = 30        # the sharpest kept, if a print has more
 
 
@@ -203,7 +209,7 @@ def filled(img, where):
 
 def restore_print(job):
     """Restores one print: (print id, the result's description)."""
-    pid, shape, own, px_per_mm, crop, out_base = job
+    pid, shape, own, px_per_mm, approximate, crop, out_base = job
     P = straighten.PX_PER_MM
     x0, y0, w, h = crop["x"], crop["y"], crop["w"], crop["h"]
     size, px_to_mm = straighten.canvas(shape)
@@ -215,13 +221,13 @@ def restore_print(job):
         valid = img.max(2) > 1    # straighten's border outside the photo is black
         cut = straighten.load_cut(os.path.dirname(os.path.dirname(path)), key)
         if cut is not None:
-            valid &= cuts.mask(cut, shape, size, px_to_mm)
+            valid &= cuts.mask(cut, shape, size, px_to_mm, cuts.INSET + (APPROXIMATE_INSET if key in approximate else 0))
         img = img[y0:y0 + h, x0:x0 + w].astype(np.float32) / 255
         return img, valid[y0:y0 + h, x0:x0 + w], px_per_mm.get(key, P)
 
     loaded = [(k, load(k, path)) for k, path in own]
     loaded = [(k, e) for k, e in loaded if e is not None]
-    if len(loaded) < MIN_PHOTOS:
+    if len(loaded) < MIN_PHOTOS or sum(k not in approximate for k, _ in loaded) < MIN_PRECISE:
         return pid, None
     if len(loaded) > MAX_PHOTOS:
         loaded = sorted(loaded, key=lambda ke: -ke[1][2])[:MAX_PHOTOS]
@@ -264,7 +270,7 @@ def restore_print(job):
     for old in (out_base + "-median.avif", out_base + "-paper.avif"):
         if os.path.exists(old):
             os.remove(old)
-    return pid, {"crop": crop, "keys": own_keys, "bands": counts,
+    return pid, {"crop": crop, "keys": own_keys, "approximate": [k for k in own_keys if k in approximate], "bands": counts,
                  "paper": None if paper is None else [round(float(v), 3) for v in paper]}
 
 
@@ -383,30 +389,34 @@ def main():
 
 def print_jobs(gen, result, solved):
     """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], px per mm {key: ...},
-    crop). Poor fits are left out; a print with fewer than MIN_PHOTOS others isn't restored at all (the user:
-    fewer prints, all of them good, rather than bad ones among them)."""
+    the approximate cuts {key}, crop). Poor fits are left out; a print with fewer than MIN_PHOTOS others, or
+    MIN_PRECISE that aren't approximate cuts, isn't restored at all (the user: fewer prints, all of them good, rather
+    than bad ones among them)."""
     import solve as solve_step
     px_per_mm = {}
     for k, r in solved.items():  # the photo's pixels per mm at the label, from the fit
         lw, lh = shapes.LABEL_MM[r["shape"]]
         px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
-    poor = {k for k, r in solved.items() if (r.get("fallback") or "").startswith("a poor")}
+    poor = {k for k, r in solved.items() if solve_step.poor_fit(r)}
+    approximate = {k for k, r in solved.items() if solve_step.approximate_cut(r)}
     image = lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
     by_family = {}
     for p in result["prints"]:
         by_family.setdefault(p["family"], []).append(p)
     crops = {}
     for fam, ps in by_family.items():
-        keys = [k for p in ps for k in p["keys"] if k not in poor] or [k for p in ps for k in p["keys"]]
+        # the crop from the precise cuts where there are any
+        keys = ([k for p in ps for k in p["keys"] if k not in poor and k not in approximate]
+                or [k for p in ps for k in p["keys"] if k not in poor] or [k for p in ps for k in p["keys"]])
         found = [c for c in (straighten.load_cut(gen, k) for k in keys) if c is not None]
         crops[fam] = (cuts.crop(found, ps[0]["shape"], straighten.PX_PER_MM, straighten.MARGIN) if found
                       else canonical_crop(ps[0]["shape"]))
     jobs = {}
     for p in result["prints"]:
         own = [(k, image(k)) for k in p["keys"] if k not in poor]
-        if len(own) < MIN_PHOTOS:
+        if len(own) < MIN_PHOTOS or sum(k not in approximate for k, _ in own) < MIN_PRECISE:
             continue
-        jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, crops[p["family"]])
+        jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, approximate & {k for k, _ in own}, crops[p["family"]])
     return jobs
 
 
@@ -430,7 +440,7 @@ def page(out_dir, result, gen):
                           f'margin:{-c["y"] * scale:.0f}px 0 0 {-c["x"] * scale:.0f}px"></div>')
         sources = "".join(crop(k) for k in desc.get("keys", []))
         figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif"></div>'
-                    f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos'
+                    f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos ({len(desc.get("approximate", []))} approximate cuts)'
                     f'{"" if desc.get("paper") else "; no paper found: median colours"}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
                     f'<div class="sources">{sources}</div></figure>')
     with open(os.path.join(out_dir, "index.html"), "w") as f:
