@@ -133,12 +133,15 @@ FOUND_BY = ["serial", "near serial", "detail", "string and match", "match"]
 def merge_overlapping(lps):
     """Label photos of one photo whose outlines share MERGE_OVERLAP of the smaller are merged: strings, points and
     links combined; the centre and circle of the one with strings (else the first); found by the strongest."""
-    out = []
+    out, of_photo = [], {}  # of_photo: photo -> indices in out (by identity: == on these dicts compares numpy arrays)
     for lp in lps:
-        same = next((o for o in out if o["photo"] == lp["photo"] and overlap(o["outline"], lp["outline"]) >= MERGE_OVERLAP), None)
-        if same is None:
+        here = of_photo.setdefault(lp["photo"], [])
+        i = next((i for i in here if overlap(out[i]["outline"], lp["outline"]) >= MERGE_OVERLAP), None)
+        if i is None:
+            here.append(len(out))
             out.append(lp)
             continue
+        same = out[i]
         keep, other = (same, lp) if same["strings"] or not lp["strings"] else (lp, same)
         keep["strings"] = keep["strings"] + other["strings"]
         keep["points"] = keep["points"] + other["points"]
@@ -151,7 +154,7 @@ def merge_overlapping(lps):
         keep["links"] = [(o, n) for o, n in keep.get("links", []) + other.get("links", []) if o is not keep and o is not other]
         keep["outline"] = outline(keep)
         if keep is lp:
-            out[out.index(same)] = lp
+            out[i] = lp
     return out
 
 
@@ -247,7 +250,12 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
                     w, h = sizes[b]
                     if not (0 <= centre[0] < w and 0 <= centre[1] < h):
                         centre = qb.mean(0)
-                    other = {"photo": b, "centre": centre, "radius": float(np.hypot(*(edge - centre))), "strings": [],
+                    radius = float(np.hypot(*(edge - centre)))
+                    # it must hold where the match lands, or the next pass doesn't find it and adds it again, every
+                    # pass, forever (the full set, 2026-11-12: one more per pass from the third on, 342 passes and on)
+                    if not np.hypot(*(qb.mean(0) - centre)) < radius:
+                        centre, radius = qb.mean(0), max(radius, 1.0)
+                    other = {"photo": b, "centre": centre, "radius": radius, "strings": [],
                              "details": [], "points": [], "found_by": "match"}
                     add(other)
                     changed = True
