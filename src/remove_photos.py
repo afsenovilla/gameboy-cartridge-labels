@@ -152,6 +152,7 @@ def badness(prints):
     if os.path.exists(CACHE) and os.path.getmtime(CACHE) >= newest:
         cached = json.load(open(CACHE))
         if cached.get("settings") == settings:
+            print("badness: from the cache", flush=True)
             return cached["badness"]
     jobs = jobs_of(prints)
     jobs.sort(key=lambda j: -len(j[1]))  # the biggest prints first, so the pool ends evenly
@@ -205,14 +206,19 @@ def unused(all_photos, found, solved):
 class Tool:
     def __init__(self):
         import solve as solve_step
+        say = lambda m: print(m, flush=True)
+        say("loading photos/, find's, solve's and prints' results")
         self.photos = photos.all_photos()
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
         self.why = unused(self.photos, found, solved)
+        say(f"{len(self.why)} unused photos of {len(self.photos)}; counting their matched features")
         self.matched = matched_features(set(self.why))
         self.unused = sorted(self.why, key=lambda s: self.matched[s])
+        say("the label photos' badness")
         bad = badness(prints)
+        say(f"listing {len(prints)} prints")
         self.crops = {}
         self.prints = []
         for p in prints:
@@ -262,9 +268,10 @@ def matched_features(wanted):
     """sha1 -> how many distinct points of the photo are inliers of its matches with other photos, for those wanted."""
     points = {s: [] for s in wanted}
     folder = os.path.join(GEN, "match")
-    for f in os.listdir(folder):
-        if not f.endswith(".npz"):
-            continue
+    files = [f for f in os.listdir(folder) if f.endswith(".npz")]
+    for n, f in enumerate(files, 1):
+        if n % 1000 == 0 or n == len(files):
+            print(f"matched features: {n} of {len(files)} match files read", flush=True)
         a = f[:-4]
         z = np.load(os.path.join(folder, f))
         others = z["others"]
