@@ -631,7 +631,7 @@ EDGE_SIZE_TOLERANCE = 2.0
 
 
 def approximate_cut(r):
-    """Whether a label photo's record in solve.json has an approximate cut: the edge models found no plausible label."""
+    """Whether a label photo's record in solve.json has an approximate cut: the label edges could not be precisely located."""
     return bool(r.get("edge")) and not r["edge"].get("label_used", True)
 
 
@@ -1250,7 +1250,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "candidates": f["candidates"], "probability": f["probability"] and round(f["probability"], 3),
                   "changed_by_choice": not f["round1_same"],
                   "fallback": "a poor fit: its links disagree" if k in poor else
-                              "approximate cut: the edge models found no plausible label" if f.get("edge") and not f["edge"]["label_used"] else
+                              "approximate cut: the label edges could not be precisely located" if f.get("edge") and not f["edge"]["label_used"] else
                               ("found by the pose search" if f["start"].startswith("search") else None),
                   "family": family_of[k][0], "family_size": family_of[k][1],
                   "correction_mm": None if moved is None else round(moved, 3),
