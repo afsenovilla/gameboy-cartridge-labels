@@ -5,8 +5,12 @@
 # isn't aliased.
 # Beside each image, <key>.json: the sticker's cut edges found in it (cuts.find: {side: {position, turn, strength,
 # found}}, ink mm), from the image as drawn.
-# An image is drawn again when it's missing or older than solve.json or this file; its cut found again when that's
-# missing or older than the image or cuts.py. Those of label photos no longer solved are removed.
+# Beside it, <key>.drawn.json: the fit it was drawn from (photo_to_ink) and the fitted cut and recess its cut was found
+# around, and a fingerprint of the drawing code (draw_version). An image is drawn again when it's missing, drawn by
+# other drawing code, or its fit moves any of its pixels by
+# REDRAW_PX or more (a solve run that leaves a fit nearly as it was draws nothing: the image, and read-serials' OCR of
+# it, stay); its cut found again when the image was, or cuts.py is newer, or the fitted cut or recess moved by
+# REFIND_MM or more. Those of label photos no longer solved are removed.
 # The page, <generated>/straighten/index.html: every image, the label's nominal rectangle, the recess and the cut
 # found drawn on it, the fits with the largest leftover error first. <generated>/straighten/cuts.html: each label photo
 # with CUTS_MARGIN mm around the nominal label, the cut found, its INSET and the fitted cut drawn.
@@ -64,6 +68,7 @@ def find_cut(img, r):
 
 def do_one(job):
     key, path, r, out, draw = job
+    record = {"version": draw_version(), "photo_to_ink": r["photo_to_ink"], **cut_inputs(r)}
     if draw:
         photo = photos.load(path)
         if photo is None:
@@ -75,6 +80,7 @@ def do_one(job):
     img = cv2.imread(out)
     if img is not None:
         steps.write_json(cut_file(out), find_cut(img, r))
+        steps.write_json(drawn_file(out), record)
     return key
 
 
@@ -84,6 +90,46 @@ def file_name(key):
 
 def cut_file(image_path):
     return image_path[:-5] + ".json"
+
+
+def drawn_file(image_path):
+    return image_path[:-5] + ".drawn.json"
+
+
+REDRAW_PX = 0.05
+REFIND_MM = 0.01
+
+
+def draw_version():
+    """A fingerprint of what an image's drawing depends on but its fit: the drawing code and its settings."""
+    import hashlib, inspect
+    h = hashlib.sha1(inspect.getsource(straightened).encode() + inspect.getsource(canvas).encode())
+    h.update(repr((PX_PER_MM, MARGIN, QUALITY)).encode())
+    h.update(inspect.getsource(photos.load).encode())
+    return h.hexdigest()[:16]
+
+
+def cut_inputs(r):
+    """What a label photo's cut is found around, in ink mm: the fitted cut's corners, the recess's (or None)."""
+    fitted = cuts.corners_in_ink(np.float64(r["photo_to_ink"]) @ np.float64(r["cut_to_photo"]), r["shape"], r.get("width_mm"), r.get("height_mm"))
+    recess = recess_in_ink(r) if r.get("plastic_to_photo") is not None else None
+    return {"fitted": np.round(fitted, 4).tolist(), "recess": None if recess is None else np.round(recess, 4).tolist()}
+
+
+def moved_px(old_photo_to_ink, new_photo_to_ink, shape):
+    """How far the image's pixels move (straightened px) from one fit to the other: the most over the canvas's
+    corners and centre."""
+    (w, h), px_to_mm = canvas(shape)
+    pts_mm = cv2.perspectiveTransform(np.float64([[[0, 0]], [[w, 0]], [[0, h]], [[w, h]], [[w / 2, h / 2]]]), px_to_mm).reshape(-1, 2)
+    there = cv2.perspectiveTransform(pts_mm.reshape(-1, 1, 2), np.linalg.inv(np.float64(old_photo_to_ink)))
+    back = cv2.perspectiveTransform(there, np.float64(new_photo_to_ink)).reshape(-1, 2)
+    return float(np.hypot(*(back - pts_mm).T).max() * PX_PER_MM)
+
+
+def moved_mm(a, b):
+    if (a is None) != (b is None):
+        return float("inf")
+    return 0.0 if a is None else float(np.abs(np.float64(a) - np.float64(b)).max())
 
 
 def load_cut(gen, key):
@@ -177,21 +223,30 @@ def main():
     solved = json.load(open(solve_file))["label_photos"]
     out_dir = os.path.join(gen, "straighten")
     os.makedirs(out_dir, exist_ok=True)
-    wanted = {file_name(k) for k in solved} | {file_name(k)[:-5] + ".json" for k in solved}
+    wanted = {file_name(k) for k in solved} | {file_name(k)[:-5] + e for k in solved for e in (".json", ".drawn.json")}
     for f in os.listdir(out_dir):
         if (f.endswith(".avif") or f.endswith(".json")) and f not in wanted:
             os.remove(os.path.join(out_dir, f))
-    newest = max(os.path.getmtime(solve_file), os.path.getmtime(__file__))
+    version = draw_version()
     cuts_code = os.path.getmtime(cuts.__file__)
     out = lambda k: os.path.join(out_dir, file_name(k))
     stale = lambda p, t: not os.path.exists(p) or os.path.getmtime(p) < t
-    jobs = []
+    jobs, kept = [], 0
     for k, r in solved.items():
         if r["photo"] not in chosen:
             continue
-        draw = stale(out(k), newest)
-        if draw or stale(cut_file(out(k)), max(cuts_code, os.path.getmtime(out(k)))):
+        drawn = json.load(open(drawn_file(out(k)))) if os.path.exists(drawn_file(out(k))) else None
+        draw = (not os.path.exists(out(k)) or drawn is None or drawn.get("version") != version
+                or moved_px(drawn["photo_to_ink"], r["photo_to_ink"], r["shape"]) >= REDRAW_PX)
+        refind = draw or stale(cut_file(out(k)), max(cuts_code, os.path.getmtime(out(k))))
+        if not refind:
+            now = cut_inputs(r)
+            refind = moved_mm(drawn["fitted"], now["fitted"]) >= REFIND_MM or moved_mm(drawn["recess"], now["recess"]) >= REFIND_MM
+        if refind:
             jobs.append((k, chosen[r["photo"]], r, out(k), draw))
+        else:
+            kept += 1
+    print(f"{kept} straightened images and cuts kept (their fits as when drawn), {sum(j[4] for j in jobs)} to draw", flush=True)
     steps.run(do_one, jobs, args.workers, what="straightened or cut found")
     page(out_dir, solved)
     cuts_page(out_dir, solved)
