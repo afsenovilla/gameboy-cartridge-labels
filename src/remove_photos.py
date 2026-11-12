@@ -1,8 +1,9 @@
 # remove-photos: a tool, not a step: a local page for deleting photos from photos/ (the file and its record in
 # photo-sources.json, photos.delete). The steps drop what they made from a deleted photo on their next run. Two tabs:
-#   - No labels: the photos in which find found no label photo, 5 x 4 at a time, the fewest matched features first
-#     (its distinct points among the inliers of its matches with other photos, match's): delete one, delete the page's
-#     20, or go on to the next 20. (On the full set, 48 of the 71 matched nothing.)
+#   - Unused: the photos none of whose label photos is used (unused), 5 x 4 at a time, the fewest matched features
+#     first (its distinct points among the inliers of its matches with other photos, match's), each with why: delete
+#     one, delete the page's 20, or go on to the next 20. (Before 2026-11-12 only the photos find found no label photo
+#     in; on the full set, 48 of the 71 matched nothing.)
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
 #     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
@@ -170,17 +171,47 @@ def badness(prints):
     return out
 
 
+def unused(all_photos, found, solved):
+    """sha1 -> why, for the photos none of whose label photos is used: find found none in it, or each is unsolved, a
+    poor fit, or an approximate cut whose family has no precise fit (alone in its family, or among approximate cuts
+    only: a box's art matching other photos of the box, 2026-11-12). A label photo merged into another (solve: the
+    same sticker) is that one."""
+    import solve as solve_step
+    precise_families = {r["family"] for r in solved.values() if not solve_step.poor_fit(r) and not solve_step.approximate_cut(r)}
+    def why_not(k):
+        r = solved.get(k)
+        if r is None:
+            return "unsolved"
+        if solve_step.poor_fit(r):
+            return "poor fit"
+        if solve_step.approximate_cut(r) and r["family"] not in precise_families:
+            return "approximate cut alone" if r["family_size"] <= 1 else "approximate cuts only in its family"
+        return None
+    merged = {d for r in solved.values() for d in r.get("merged", [])}
+    of_photo = {}
+    for lp in found:
+        if lp["key"] not in merged:
+            of_photo.setdefault(lp["photo"], []).append(why_not(lp["key"]))
+    out = {}
+    for s in all_photos:
+        whys = of_photo.get(s)
+        if not whys:
+            out[s] = "no label photo found"
+        elif all(whys):
+            out[s] = ", ".join(sorted(set(whys)))
+    return out
+
+
 class Tool:
     def __init__(self):
         import solve as solve_step
         self.photos = photos.all_photos()
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
-        with_labels = {lp["photo"] for lp in found}
-        no_labels = [s for s in self.photos if s not in with_labels]
-        self.matched = matched_features(set(no_labels))
-        self.no_labels = sorted(no_labels, key=lambda s: self.matched[s])
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
+        self.why = unused(self.photos, found, solved)
+        self.matched = matched_features(set(self.why))
+        self.unused = sorted(self.why, key=lambda s: self.matched[s])
         bad = badness(prints)
         self.crops = {}
         self.prints = []
@@ -210,7 +241,7 @@ class Tool:
         for p in self.prints:
             for e in p["label_photos"]:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
-        return {"no_labels": [s for s in self.no_labels if s in have], "matched": self.matched,
+        return {"unused": [s for s in self.unused if s in have], "matched": self.matched, "why": self.why,
                 "prints": self.prints, "photo_prints": photo_prints,
                 "deleted": sorted((set(self.photos) | set(photo_prints)) - have)}  # gone, also before the page started
 
@@ -291,7 +322,7 @@ figure .buttons button { padding: 4px 6px; font-size: 12px }
 .legend { color: #555; margin: 4px 0 }
 </style></head><body>
 <header>
-  <button class="tab on" data-tab="nolabels">No labels</button>
+  <button class="tab on" data-tab="nolabels">Unused</button>
   <button class="tab" data-tab="bad">Bad photos</button>
   <span class="info" id="count"></span>
   <span class="spacer"></span>
@@ -336,11 +367,11 @@ function render() {
 }
 
 function renderNoLabels() {
-  const left = S.no_labels.filter(s => !deleted.has(s));
+  const left = S.unused.filter(s => !deleted.has(s));
   const pages = Math.max(1, Math.ceil(left.length / PER));
   page = Math.min(page, pages - 1);
   const shown = left.slice(page * PER, page * PER + PER);
-  $("#count").textContent = `${left.length} photos without label photos, the fewest matched features first; page ${page + 1} of ${pages}`;
+  $("#count").textContent = `${left.length} unused photos (no label photo used), the fewest matched features first; page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
   const all = button("Delete these " + shown.length, "danger", () => remove(shown));
   all.disabled = !shown.length;
@@ -351,7 +382,7 @@ function renderNoLabels() {
   for (const s of shown) {
     const cell = document.createElement("div");
     cell.className = "cell";
-    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} matched ${S.matched[s]}</span>`;
+    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} matched ${S.matched[s]}<br>${S.why[s]}</span>`;
     cell.append(button("Delete", "danger", () => remove([s])));
     grid.append(cell);
   }
@@ -457,7 +488,7 @@ if __name__ == "__main__":
     print(f"remove photos at http://localhost:{PORT}/ (ctrl-C to stop); the page waits until the photos are loaded",
           flush=True)
     tool = Tool()
-    print(f"loaded: {len(tool.no_labels)} photos without label photos, {len(tool.prints)} prints", flush=True)
+    print(f"loaded: {len(tool.unused)} unused photos, {len(tool.prints)} prints", flush=True)
     try:
         threading.Event().wait()
     except KeyboardInterrupt:
