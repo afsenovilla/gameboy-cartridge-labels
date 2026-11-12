@@ -5,7 +5,9 @@
 #     one, OK one (a good photo: kept in OK_FILE, never listed again), or delete the page's photos not OK-ed. No
 #     confirm(): they're unused, though prints.json may list them (a family of approximate cuts). (Before 2026-11-12
 #     only the photos find found no label photo in; on the full set, 48 of the 71 matched nothing.)
-# Both tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
+#   - Restored prints: every print's restored image (restore), 6 x 3 at a time, the unmarked first, each to mark Good or
+#     Bad (MARKS_FILE). A mark is of that image file (its SHA-1): a print restored differently is unmarked again.
+# The tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
 #     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
@@ -44,8 +46,14 @@ REFERENCE_MIN = 3       # a print with this many label photos: each compared wit
 REFERENCE_MAX = 30      # the others in that median, at most
 THUMB_PX = 600
 CACHE = os.path.join(GEN, "remove-photos", "badness.json")
+MARKS_FILE = "print-marks.json"  # {image sha1: {mark: good|bad, serial, print, label_photos, date}}: restored prints judged
 OK_FILE = "ok-photos.json"  # {sha1: date OK-ed}: photos the user judged good in Unused, not listed there again
 lock = threading.Lock()
+
+
+def sha1_file(path):
+    import hashlib
+    return hashlib.sha1(open(path, "rb").read()).hexdigest()
 
 
 def restored(pid):
@@ -214,6 +222,7 @@ class Tool:
         say("loading photos/, find's, solve's and prints' results")
         self.photos = photos.all_photos()
         self.ok = json.load(open(OK_FILE)) if os.path.exists(OK_FILE) else {}
+        self.marks = json.load(open(MARKS_FILE)) if os.path.exists(MARKS_FILE) else {}
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
@@ -241,8 +250,10 @@ class Tool:
                                 "poor_fit": solve_step.poor_fit(r)})
                 self.crops[k] = (p["shape"], crop)
             entries.sort(key=lambda e: -e["badness"])
+            image = restored(p["id"]) + ".avif"
             self.prints.append({"id": p["id"], "serial": p.get("serial") or p.get("release") or "?",
-                                "has_image": os.path.exists(restored(p["id"]) + ".avif"),
+                                "has_image": os.path.exists(image),
+                                "image_sha1": sha1_file(image) if os.path.exists(image) else None,
                                 "score": round(sum(e["badness"] for e in entries), 3), "label_photos": entries})
         self.prints.sort(key=lambda p: -p["score"])
 
@@ -252,7 +263,8 @@ class Tool:
         for p in self.prints:
             for e in p["label_photos"]:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
-        return {"unused": [s for s in self.unused if s in have], "ok": sorted(self.ok), "matched": self.matched,
+        return {"unused": [s for s in self.unused if s in have], "ok": sorted(self.ok),
+                "marks": {k: v["mark"] for k, v in self.marks.items()}, "matched": self.matched,
                 "why": self.why,
                 "prints": self.prints, "photo_prints": photo_prints,
                 "deleted": sorted((set(self.photos) | set(photo_prints)) - have)}  # gone, also before the page started
@@ -265,6 +277,22 @@ class Tool:
             else:
                 self.ok.pop(sha1, None)
             steps.write_json(OK_FILE, dict(sorted(self.ok.items())))
+
+    def set_mark(self, pid, mark):
+        """Marks print pid's restored image good or bad (None: unmarks it); False if it has no image now."""
+        import datetime
+        p = next((p for p in self.prints if p["id"] == pid), None)
+        if p is None or not p["image_sha1"]:
+            return False
+        with lock:
+            if mark is None:
+                self.marks.pop(p["image_sha1"], None)
+            else:
+                self.marks[p["image_sha1"]] = {"mark": mark, "serial": p["serial"], "print": pid,
+                                               "label_photos": [e["key"] for e in p["label_photos"]],
+                                               "date": datetime.date.today().isoformat()}
+            steps.write_json(MARKS_FILE, dict(sorted(self.marks.items())))
+        return True
 
     def delete(self, sha1s):
         """Deletes those of sha1s still in photos/; returns all of sha1s no longer there."""
@@ -346,18 +374,29 @@ figure .buttons { display: flex; gap: 4px }
 figure .buttons button { padding: 4px 6px; font-size: 12px }
 .poor { color: #c62828 }
 .legend { color: #555; margin: 4px 0 }
+#marks { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); gap: 6px; padding: 6px; height: calc(100% - 48px) }
+#marks .cell { position: relative; min-height: 0; background: #ddd; display: flex; align-items: center; justify-content: center; overflow: hidden; padding-bottom: 34px }
+#marks img { max-width: 100%; max-height: 100%; object-fit: contain }
+#marks .name { position: absolute; left: 4px; top: 4px; background: #fffc; padding: 0 4px; font: 11px ui-monospace, monospace }
+#marks .buttons { position: absolute; left: 4px; right: 4px; bottom: 4px; display: flex; gap: 4px; justify-content: center }
+#marks .cell.good, .print.good { outline: 4px solid #2e7d32; outline-offset: -4px }
+#marks .cell.bad, .print.bad { outline: 4px solid #c62828; outline-offset: -4px }
+button.bad { background: #c62828; color: #fff }
 </style></head><body>
 <header>
   <button class="tab on" data-tab="nolabels">Unused</button>
   <button class="tab" data-tab="bad">Bad photos</button>
+  <button class="tab" data-tab="marks">Restored prints</button>
   <span class="info" id="count"></span>
   <span class="spacer"></span>
   <span id="controls"></span>
 </header>
 <div id="grid"></div>
 <div id="prints" hidden></div>
+<div id="marks" hidden></div>
 <script>
-let S = null, tab = "nolabels", page = 0, unusedList = [], printList = [];
+let S = null, tab = "nolabels", page = 0, unusedList = [], printList = [], markList = [];
+const MARKS_PER = 18;
 const deleted = new Set(), ok = new Set();
 const PER = 20, PRINTS_PER = 25;
 const $ = s => document.querySelector(s);
@@ -372,7 +411,41 @@ async function load() {
   unusedList = S.unused.filter(s => !deleted.has(s) && !ok.has(s));
   printList = S.prints.map(p => ({...p, label_photos: p.label_photos.filter(e => !deleted.has(e.photo))}))
                       .filter(p => p.label_photos.length);
+  const withImage = S.prints.filter(p => p.image_sha1);
+  markList = [...withImage.filter(p => !S.marks[p.image_sha1]), ...withImage.filter(p => S.marks[p.image_sha1])];
   render();
+}
+
+async function setMark(p, mark) {
+  const r = await fetch("/mark", {method: "POST", body: JSON.stringify({print: p.id, mark})});
+  if (!r.ok) { alert(await r.text()); return; }
+  if (mark) S.marks[p.image_sha1] = mark; else delete S.marks[p.image_sha1];
+  render();
+}
+
+function markButtons(p) {
+  const m = S.marks[p.image_sha1];
+  return [button(m === "good" ? "Good ✓" : "Good", m === "good" ? "ok" : "", () => setMark(p, m === "good" ? null : "good")),
+          button(m === "bad" ? "Bad ✓" : "Bad", m === "bad" ? "bad" : "", () => setMark(p, m === "bad" ? null : "bad"))];
+}
+
+function renderMarks() {
+  const pages = Math.max(1, Math.ceil(markList.length / MARKS_PER));
+  page = Math.min(page, pages - 1);
+  const marked = markList.filter(p => S.marks[p.image_sha1]).length;
+  $("#count").textContent = `${markList.length} restored prints, ${marked} marked, the unmarked first (as when the page was loaded); page ${page + 1} of ${pages}`;
+  $("#controls").innerHTML = "";
+  $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); }),
+                        button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); }));
+  const box = $("#marks");
+  box.innerHTML = "";
+  for (const p of markList.slice(page * MARKS_PER, page * MARKS_PER + MARKS_PER)) {
+    const cell = document.createElement("div");
+    cell.className = "cell " + (S.marks[p.image_sha1] || "");
+    cell.innerHTML = `<a href="/print/${encodeURIComponent(p.id)}" target="_blank"><img src="/print/${encodeURIComponent(p.id)}"></a><span class="name">${p.serial} (${p.label_photos.length} photos)</span><span class="buttons"></span>`;
+    cell.querySelector(".buttons").append(...markButtons(p));
+    box.append(cell);
+  }
 }
 
 async function setOk(s, value) {
@@ -401,7 +474,8 @@ function render() {
   document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
   $("#grid").hidden = tab !== "nolabels";
   $("#prints").hidden = tab !== "bad";
-  tab === "nolabels" ? renderNoLabels() : renderPrints();
+  $("#marks").hidden = tab !== "marks";
+  tab === "nolabels" ? renderNoLabels() : tab === "bad" ? renderPrints() : renderMarks();
 }
 
 function renderNoLabels() {
@@ -450,9 +524,10 @@ function renderPrints() {
   box.innerHTML = `<div class="legend">Badness = 1 - usable × resolution. Usable: the label's share in the photo and the cut, and within reach of the restored print's colours (0.15 mm blur). Resolution: the photo's px/mm at the label over 10, at most 1. "not compared": no other label photo of its family to compare with.</div>`;
   for (const p of prints.slice(page * PRINTS_PER, page * PRINTS_PER + PRINTS_PER)) {
     const div = document.createElement("div");
-    div.className = "print";
+    div.className = "print " + (p.image_sha1 && S.marks[p.image_sha1] || "");
     div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.serial}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
     const list = div.querySelector(".photos");
+    if (p.image_sha1) { const b = document.createElement("div"); b.className = "buttons"; b.append(...markButtons(p)); div.querySelector(".restored").append(b); }
     p.label_photos.forEach((e, i) => {
       const fig = document.createElement("figure");
       if (deleted.has(e.photo)) {
@@ -522,9 +597,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/delete", "/ok") or tool is None:
+        if self.path not in ("/delete", "/ok", "/mark") or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.path == "/mark":
+            mark = data.get("mark")
+            if mark not in ("good", "bad", None) or not tool.set_mark(data.get("print"), mark):
+                return self.send_error(400)
+            return self.send({"marked": data.get("print")})
         if self.path == "/ok":
             if not isinstance(data.get("photo"), str):
                 return self.send_error(400)
