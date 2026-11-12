@@ -8,7 +8,8 @@
 #                            degrees: the sticker's cut -> ink), "start" (how it was started), "support" (the share of
 #                            the face, recess and label samples along segments), "fallback" (null, or why the pose is weak),
 #                            "error_mm" (the fit's leftover), "family" and "family_size" (label photos joined by
-#                            counting links, anchored together)},
+#                            counting links, anchored together), "merged" (label photos of the same sticker merged
+#                            into it: see merge_fitted)},
 #                     ...},
 #    "links": the counts of link candidates, judged, pixel-agreeing and counting; poor fits; the largest families,
 #    "unsolved": {key: why}}
@@ -742,6 +743,67 @@ def stage1_edges(lps, fits, photo_paths, workers=8):
     return out
 
 
+# One sticker, one label photo: find tells label photos of one photo apart by rough outlines (find.MERGE_OVERLAP), and a
+# label photo spread there through a match could sit beside one found by its serial, both then fitted to the same
+# sticker (the full set, 2026-11-12: 327 of 381 pairs of label photos in one photo had fits overlapping, 315 by over 90 %
+# of the smaller; none between 0 and 10 %). Stickers can't overlap, so after the fits are final in the photo (stage 1b),
+# label photos of one photo whose fitted cuts share over FIT_OVERLAP of the smaller are merged (the user: 25 %): the one
+# kept is the precise fit over an approximate cut, then the one found by the strongest means (find.FOUND_BY), then the
+# first key; it takes the others' strings and their link candidates (per match, the one with the most points between
+# two label photos), and lists them in solve.json ("merged").
+FIT_OVERLAP = 0.25
+
+
+def fit_quad(f, shape):
+    """A fit's cut (its width and height) in the photo: 4 x 2 float32."""
+    lw, lh = shapes.LABEL_MM[shape]
+    w, h = f.get("width_mm") or lw, f.get("height_mm") or lh
+    a, b = (lw - w) / 2, (lh - h) / 2
+    return project(np.asarray(f["cut_to_photo"], np.float64), np.float64([[a, b], [lw - a, b], [lw - a, lh - b], [a, lh - b]])).astype(np.float32)
+
+
+def merge_fitted(lps, fits):
+    """{dropped key: kept key} for label photos of one photo whose fits overlap (see above); the kept ones' strings
+    combined."""
+    by_photo = {}
+    for lp in lps:
+        if lp["key"] in fits:
+            by_photo.setdefault(lp["photo"], []).append(lp)
+    merged = {}
+    for group in by_photo.values():
+        if len(group) < 2:
+            continue
+        quads = [fit_quad(fits[lp["key"]], lp["shape"]) for lp in group]
+        parent = list(range(len(group)))
+        def root(i):
+            while parent[i] != i:
+                i = parent[i]
+            return i
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                try:
+                    shared = cv2.intersectConvexConvex(quads[i], quads[j])[0]
+                except cv2.error:
+                    shared = 0.0
+                smaller = min(abs(cv2.contourArea(quads[i])), abs(cv2.contourArea(quads[j])))
+                if smaller > 0 and shared / smaller > FIT_OVERLAP:
+                    parent[root(j)] = root(i)
+        sets = {}
+        for i, lp in enumerate(group):
+            sets.setdefault(root(i), []).append(lp)
+        for members in sets.values():
+            if len(members) < 2:
+                continue
+            rank = lambda lp: (approximate_cut(fits[lp["key"]]), find.FOUND_BY.index(lp["found_by"]), lp["key"])
+            members.sort(key=rank)
+            keep = members[0]
+            for lp in members[1:]:
+                merged[lp["key"]] = keep["key"]
+                keep["strings"] = keep["strings"] + lp["strings"]
+    print(f"one sticker, one label photo: {len(merged)} label photos merged into another of their photo", flush=True)
+    return merged
+
+
 # Stage 2: each link candidate is one match homography between two label photos (not pooled: a match between prints
 # with offset art finds one alignment for the text and another for the art). A link counts where
 #   - its matched points, mapped into each sticker's frame, agree within LINK_FIT_MM after the best shift and turn
@@ -766,20 +828,26 @@ MIN_TEXTURED_TILES = 20
 TUKEY_MM = 0.5
 
 
-def link_candidates(lps, matches):
+def link_candidates(lps, matches, merged=None):
     """One link candidate per match homography: [(key a, key b, points in a, points in b)], the points those in both
-    label photos' circles."""
+    label photos' circles. A merged label photo's (merged: {dropped: kept}) count as the kept one's: per match, the
+    one with the most points between two label photos; none within one."""
+    merged = merged or {}
     by_photo = {}
     for lp in lps:
         by_photo.setdefault(lp["photo"], []).append(lp)
     out = []
     for a, b, H, inl in matches:
+        best = {}
         for la in by_photo.get(a, []):
             ina = np.hypot(*(inl[:, :2] - la["centre"]).T) < la["radius"]
             for lb in by_photo.get(b, []):
                 ok = ina & (np.hypot(*(inl[:, 2:] - lb["centre"]).T) < lb["radius"])
                 if ok.sum() >= MIN_LINK_POINTS:
-                    out.append((la["key"], lb["key"], inl[ok, :2], inl[ok, 2:]))
+                    ka, kb = merged.get(la["key"], la["key"]), merged.get(lb["key"], lb["key"])
+                    if ka != kb and ((ka, kb) not in best or ok.sum() > len(best[(ka, kb)][2])):
+                        best[(ka, kb)] = (ka, kb, inl[ok, :2], inl[ok, 2:])
+        out += best.values()
     return out
 
 
@@ -1216,7 +1284,14 @@ def solve(found, matches, edges_dir, photo_paths=None):
     _GEN_DIR = os.path.dirname(edges_dir)
     fits, failed, choice = stage1(lps, edges_dir, None)
     fits = stage1_edges(lps, fits, photo_paths or {})
-    offsets, family_of, poor, links_info, corrections, groups = stage2(lps, fits, link_candidates(lps, matches), photo_paths or {})
+    merged = merge_fitted(lps, fits)
+    candidates = link_candidates(lps, matches, merged)
+    lps = [lp for lp in lps if lp["key"] not in merged]
+    fits = {k: f for k, f in fits.items() if k not in merged}
+    merged_into = {}
+    for d, k in merged.items():
+        merged_into.setdefault(k, []).append(d)
+    offsets, family_of, poor, links_info, corrections, groups = stage2(lps, fits, candidates, photo_paths or {})
     coarse = {}
     for k, f in fits.items():
         C, _ = corrections.get(k, (np.eye(3), None))
@@ -1255,7 +1330,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "family": family_of[k][0], "family_size": family_of[k][1],
                   "correction_mm": None if moved is None else round(moved, 3),
                   "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3),
-                  "edge": f.get("edge")}
+                  "edge": f.get("edge"), "merged": sorted(merged_into.get(k, []))}
     print("writing solve.json and the page", flush=True)
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
 

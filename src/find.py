@@ -50,7 +50,7 @@ DETAIL_REACH = 0.75  # of a label's diagonal: a detail and a serial at opposite 
 PLACED_RADIUS = 1.15  # a placed label's circle: its half diagonal, and a little
 INSIDE = 0.5        # the share of a match's points that must lie in a label photo's circle for it to spread
 MIN_POINTS = 15
-MERGE_OVERLAP = 0.5  # label photos of one photo sharing this much of the smaller outline are one
+MERGE_OVERLAP = 0.25  # label photos of one photo sharing this much of the smaller outline are one (the user: 25 %; was 50 %)
 
 
 def seeds(lines, release_of, regions):
