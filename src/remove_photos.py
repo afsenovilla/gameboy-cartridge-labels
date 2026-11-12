@@ -1,10 +1,11 @@
 # remove-photos: a tool, not a step: a local page for deleting photos from photos/ (the file and its record in
-# photo-sources.json, photos.delete). The steps drop what they made from a deleted photo on their next run. Two tabs:
+# photo-sources.json, photos.delete). The steps drop what they made from a deleted photo on their next run. Three tabs:
 #   - Unused: the photos none of whose label photos is used (unused), 5 x 4 at a time, the fewest matched features
 #     first (its distinct points among the inliers of its matches with other photos, match's), each with why: delete
-#     one, OK one (a good photo: kept in OK_FILE, never listed again), or delete the page's photos not OK-ed. No
-#     confirm(): they're unused, though prints.json may list them (a family of approximate cuts). (Before 2026-11-12
-#     only the photos find found no label photo in; on the full set, 48 of the 71 matched nothing.)
+#     one, OK one (a good photo: kept in OK_FILE, never listed again), mark the page's photos all OK, or delete the
+#     page's photos not OK-ed. No confirm(): they're unused, though prints.json may list them (a family of approximate
+#     cuts). (Before 2026-11-12 only the photos find found no label photo in; on the full set, 48 of the 71 matched
+#     nothing.)
 #   - Restored prints: every print's restored image (restore), 6 x 3 at a time, the unmarked first, each to mark Good or
 #     Bad (MARKS_FILE). A mark is of that image file (its SHA-1): a print restored differently is unmarked again. An
 #     image the pipeline has changed since the page loaded is not shown, nor can it be marked (restart the tool).
@@ -270,13 +271,14 @@ class Tool:
                 "prints": self.prints, "photo_prints": photo_prints,
                 "deleted": sorted((set(self.photos) | set(photo_prints)) - have)}  # gone, also before the page started
 
-    def set_ok(self, sha1, ok):
+    def set_ok(self, sha1s, ok):
         import datetime
         with lock:
-            if ok:
-                self.ok[sha1] = datetime.date.today().isoformat()
-            else:
-                self.ok.pop(sha1, None)
+            for sha1 in sha1s:
+                if ok:
+                    self.ok[sha1] = datetime.date.today().isoformat()
+                else:
+                    self.ok.pop(sha1, None)
             steps.write_json(OK_FILE, dict(sorted(self.ok.items())))
 
     def set_mark(self, pid, mark):
@@ -458,10 +460,10 @@ function renderMarks() {
   }
 }
 
-async function setOk(s, value) {
-  const r = await fetch("/ok", {method: "POST", body: JSON.stringify({photo: s, ok: value})});
+async function setOk(sha1s, value) {
+  const r = await fetch("/ok", {method: "POST", body: JSON.stringify({photos: sha1s, ok: value})});
   if (!r.ok) { alert(await r.text()); return; }
-  value ? ok.add(s) : ok.delete(s);
+  sha1s.forEach(s => value ? ok.add(s) : ok.delete(s));
   render();
 }
 
@@ -498,8 +500,10 @@ function renderNoLabels() {
   $("#controls").innerHTML = "";
   const all = button(`Delete the ${doomed.length} not OK`, "danger", () => remove(doomed, null, false));
   all.disabled = !doomed.length;
+  const allOk = button(`Mark all ${doomed.length} OK`, "ok", () => setOk(doomed, true));
+  allOk.disabled = !doomed.length;
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); }),
-                        button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); }), " ", all);
+                        button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); }), " ", allOk, all);
   const grid = $("#grid");
   grid.innerHTML = "";
   for (const s of shown) {
@@ -513,7 +517,7 @@ function renderNoLabels() {
     cell.className = "cell" + (ok.has(s) ? " ok" : "");
     cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} matched ${S.matched[s]}<br>${S.why[s]}</span><span class="buttons"></span>`;
     cell.querySelector(".buttons").append(
-      ok.has(s) ? button("OK ✓", "ok", () => setOk(s, false)) : button("OK", "", () => setOk(s, true)),
+      ok.has(s) ? button("OK ✓", "ok", () => setOk([s], false)) : button("OK", "", () => setOk([s], true)),
       button("Delete", "danger", () => remove([s], null, false)));
     grid.append(cell);
   }
@@ -617,10 +621,11 @@ class Handler(BaseHTTPRequestHandler):
                                  b" again): reload the tool to mark the new image.", "text/plain", 409)
             return self.send({"marked": data.get("print")})
         if self.path == "/ok":
-            if not isinstance(data.get("photo"), str):
+            sha1s = data.get("photos")
+            if not isinstance(sha1s, list) or not all(isinstance(x, str) for x in sha1s):
                 return self.send_error(400)
-            tool.set_ok(data["photo"], bool(data.get("ok")))
-            return self.send({"ok": data["photo"]})
+            tool.set_ok(sha1s, bool(data.get("ok")))
+            return self.send({"ok": sha1s})
         done = tool.delete([s for s in data.get("photos", []) if isinstance(s, str)])
         self.send({"deleted": done})
 
