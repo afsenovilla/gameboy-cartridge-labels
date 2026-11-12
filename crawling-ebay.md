@@ -202,3 +202,104 @@ The queues were made from the pipeline's outputs as they were before that day's 
 - Vinted: at most 800 px. Not used.
 - Mercari US (www.mercari.com): src/mercari_photos.py. The tab script types each query into the search box and presses Enter (the page stays, so the script survives), then reads the listings. Photos from `u-mercari-images.mercdn.net/photos/<item>_1.jpg` without parameters: 1600 px, or 1080 px for some uploads (a larger width parameter only scales up). Sample, Pokemon Pinball: 9 of 10 at 1200 px or more.
 - Run 1 (pass "us1"), 3400 queries: eBay pass 3's releases (2959), then the Japanese releases of Jauce run 4 by romanized title (441). eBay's queries without "cartridge"; eBay's filters in the tab.
+
+## 2026-11-12: eBay pass 4 and Mercari US run 2 (us2), for the entries with 1–3 decent photos
+
+- The goal (the user): at least one print with 5 decent label photos per database entry. Decent: a fit restore uses (precise, or an approximate cut in a print with 2 precise) at 10 px/mm or more. Counted per serial-id entry by its best print; the numbered entries (agb-1468 and the like) left out, their gameId unreliable (releases.json, see the database notes).
+- From the run before the 1177 new photos (Konsolenkost, Jauce run 4, eBay pass 3's first batches): 3061 entries with 1–3 decent, 1151 of them Japanese. After those photos: 1753 with 1, 839 with 2, 474 with 3, 344 with 4, 470 with 5 or more, 1692 with no label photo.
+- eBay, pass "pass4", 2152 queries: the 1–3 entries never searched on eBay (Japanese by romanized title with "Japan", as in pass 2), fewest decent first, never searched anywhere before the rest. It takes over pass 3's remaining queue for those entries; pass 3's tab was closed (two eBay crawls at once double the rate that got the first pass blocked). One search every 35–50 s, half-hour waits on a block (last night's script, pass 4's names). Batches `~/Downloads/ebay-batch-pass4-<n>.json`.
+- Mercari US, pass "us2", 1894 queries: the non-Japanese 1–3 entries, the same order. Run 1 (us1) had stalled after 3 searches recorded (its tab kept searching, its batches no longer reached Downloads); closed. One search every 20–30 s. Batches `~/Downloads/mercari-us2-batch-<n>.json`.
+- Both tabs now also leave out fan-made, homebrew and bootleg listings (Mercari's first test search found a fan-made Pokemon Pinball).
+- Taken in by a shell loop (`ingest <batch> <queries> pass4`, `mercari_photos.py ingest <batch> <queries>`), as before.
+
+### Mercari's tab script
+
+Run in a www.mercari.com tab with javascript_tool; a file input appears top left, and `file_upload` of the query file starts it. `MC.stop = true` stops it, `MC.run()` resumes. It types each query into the search box and presses Enter: the page stays (only the URL changes), so the script survives. A search counts as loaded when the URL's keyword and the page title are the new query's and the "(N results)" count is shown; only the first N listings of the SearchResults block are results (a search with 0 results still shows 30 suggestions there).
+
+```js
+window.MC = {results: {}, queue: [], running: false, pass: 'us2'};
+try { MC.results = JSON.parse(localStorage.getItem('MC.results.us2') || '{}'); } catch (e) {}
+MC.BAD = /\b(box|boxed|cib|complete|manual|manuals|lot|bundle|case|sealed|repro|reproduction|custom|sticker|replacement|label only|poster|guide|strategy|insert|cover art|empty|shell only|artwork|fan ?made|fan-made|homebrew|bootleg)\b/i;
+MC.STOP = new Set(['the','a','an','of','and','in','to','gba','game','boy','color','advance','cartridge','vs','&','japan','pal']);
+MC.words = s => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w && !MC.STOP.has(w));
+MC.sleep = ms => new Promise(r => setTimeout(r, ms));
+MC.search = async function (q) {
+  const box = document.querySelector('input[data-testid="SearchInput"]');
+  if (!box) throw new Error('no search box');
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  box.focus(); setter.call(box, q.query); box.dispatchEvent(new Event('input', {bubbles: true}));
+  box.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true}));
+  const want_kw = q.query.trim();
+  let count = null;
+  for (let i = 0; i < 40; i++) {
+    await MC.sleep(500);
+    const kw = new URLSearchParams(location.search).get('keyword');
+    if (kw !== want_kw || !document.title.includes(want_kw)) continue;
+    const el = [...document.querySelectorAll('h1, h2, h3, p, span, div')].find(e => e.children.length === 0 && /^\(\d[\d,]*\+? results?\)$/.test(e.textContent.trim()));
+    if (el) { count = parseInt(el.textContent.replace(/[^\d]/g, ''), 10); break; }
+  }
+  if (count === null) throw new Error('no result count (blocked or changed?)');
+  await MC.sleep(1500);
+  const sr = document.querySelector('[data-testid="SearchResults"]');
+  const links = sr ? [...sr.querySelectorAll('a[data-testid="ProductThumbWrapper"]')].slice(0, count) : [];
+  const want = MC.words(q.title), other = new RegExp(q.exclude, 'i');
+  const req = q.require_region ? new RegExp(q.require_region, 'i') : null, notreg = q.exclude_region ? new RegExp(q.exclude_region, 'i') : null;
+  const out = [];
+  for (const a of links) {
+    const id = ((a.getAttribute('href') || '').match(/\/item\/(m\d+)/) || [])[1]; if (!id) continue;
+    const title = ((a.querySelector('[data-testid="ItemName"]') || {}).textContent || '').trim();
+    if (MC.BAD.test(title) || other.test(title)) continue;
+    if (req && !req.test(title)) continue;
+    if (notreg && notreg.test(title)) continue;
+    const have = new Set(MC.words(title));
+    if (want.filter(w => have.has(w)).length / Math.max(1, want.length) < 0.75) continue;
+    if (out.some(o => o.id === id)) continue;
+    out.push({id, title});
+    if (out.length >= 10) break;
+  }
+  return out;
+};
+MC.flushed = new Set(); MC.batch = 0;
+MC.flush = function () {
+  const part = {};
+  for (const [r, v] of Object.entries(MC.results)) if (!MC.flushed.has(r)) { part[r] = v; MC.flushed.add(r); }
+  if (!Object.keys(part).length) return 0;
+  MC.batch++;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(part)], {type: 'application/json'}));
+  a.download = 'mercari-us2-batch-' + String(MC.batch).padStart(3, '0') + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  return Object.keys(part).length;
+};
+MC.run = async function () {
+  if (MC.running) return; MC.running = true; MC.error = null; MC.stop = false; MC.retries = MC.retries || 0;
+  try {
+    for (const q of MC.queue) {
+      if (MC.stop) break;
+      if (q.release in MC.results) continue;
+      MC.current = q.release;
+      let tries = 0, ok = false;
+      while (!ok && !MC.stop) {
+        try { MC.results[q.release] = await MC.search(q); ok = true; }
+        catch (e) {
+          if (tries < 3) { tries++; MC.retries++; await MC.sleep(60000); continue; }
+          MC.error = q.release + ': ' + e.message; MC.errorAt = new Date().toISOString(); break;
+        }
+      }
+      if (!ok) break;
+      try { localStorage.setItem('MC.results.us2', JSON.stringify(MC.results)); } catch (e) {}
+      await MC.sleep(20000 + Math.random() * 10000);
+    }
+  } finally { MC.running = false; MC.flush(); }
+};
+MC.flushTimer = setInterval(MC.flush, 120000);
+const inp = document.createElement('input'); inp.type = 'file'; inp.setAttribute('aria-label', 'MC queries file');
+inp.style.cssText = 'position:fixed;top:0;left:0;z-index:99999';
+inp.onchange = async () => { MC.queue = JSON.parse(await inp.files[0].text()); MC.loaded = MC.queue.length; MC.run(); };
+document.body.prepend(inp);
+```
+
+## 2026-11-12: the Konsolenkost photos
+
+- 549 photos (labels cut out and pasted on two template cartridge photos): 551 label photos found, 508 solved: 410 precise, 93 approximate cuts, 5 poor fits. 182 joined families with photos of other sources, 316 alone, 10 in families of Konsolenkost photos only (the shared template linked no different games).
+- Their pixel alignment: the family correction 0.34 mm at the median, 0.70 at 90 % (others 0.22, 0.48); the fine correction 0.08 and 0.22 (others 0.06, 0.14): the pasted labels' scale a little off, well within the 2 mm limit.
+- Resolution: 11.1 px/mm at the median (the template's), 14.2 at 90 %. Their fine detail at 10–15 px/mm matches other sources' at the same px/mm (0.100 against 0.103, Laplacian over contrast): the measured px/mm isn't overstated by upscaled labels.
