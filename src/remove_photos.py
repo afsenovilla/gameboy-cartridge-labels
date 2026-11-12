@@ -2,12 +2,14 @@
 # photo-sources.json, photos.delete). The steps drop what they made from a deleted photo on their next run. Two tabs:
 #   - Unused: the photos none of whose label photos is used (unused), 5 x 4 at a time, the fewest matched features
 #     first (its distinct points among the inliers of its matches with other photos, match's), each with why: delete
-#     one, delete the page's 20, or go on to the next 20. (Before 2026-11-12 only the photos find found no label photo
-#     in; on the full set, 48 of the 71 matched nothing.)
+#     one, OK one (a good photo: kept in OK_FILE, never listed again), or delete the page's photos not OK-ed. No
+#     confirm(): they're unused, though prints.json may list them (a family of approximate cuts). (Before 2026-11-12
+#     only the photos find found no label photo in; on the full set, 48 of the 71 matched nothing.)
+# Both tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
 #     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
-# Deleting a photo that also holds label photos of other prints asks first (confirm()).
+# In Bad photos, deleting a photo that also holds label photos of other prints asks first (confirm()).
 # Badness of a label photo: 1 - usable x resolution, both 0..1:
 #   usable: the share of the label (restore's crop) that is in the photo, inside the sticker's cut, and matches the
 #     reference: its straightened image, colours evened to the reference (restore.even_to), both blurred over BLUR_MM,
@@ -42,6 +44,7 @@ REFERENCE_MIN = 3       # a print with this many label photos: each compared wit
 REFERENCE_MAX = 30      # the others in that median, at most
 THUMB_PX = 600
 CACHE = os.path.join(GEN, "remove-photos", "badness.json")
+OK_FILE = "ok-photos.json"  # {sha1: date OK-ed}: photos the user judged good in Unused, not listed there again
 lock = threading.Lock()
 
 
@@ -210,6 +213,7 @@ class Tool:
         say = lambda m: print(m, flush=True)
         say("loading photos/, find's, solve's and prints' results")
         self.photos = photos.all_photos()
+        self.ok = json.load(open(OK_FILE)) if os.path.exists(OK_FILE) else {}
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
@@ -248,9 +252,19 @@ class Tool:
         for p in self.prints:
             for e in p["label_photos"]:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
-        return {"unused": [s for s in self.unused if s in have], "matched": self.matched, "why": self.why,
+        return {"unused": [s for s in self.unused if s in have], "ok": sorted(self.ok), "matched": self.matched,
+                "why": self.why,
                 "prints": self.prints, "photo_prints": photo_prints,
                 "deleted": sorted((set(self.photos) | set(photo_prints)) - have)}  # gone, also before the page started
+
+    def set_ok(self, sha1, ok):
+        import datetime
+        with lock:
+            if ok:
+                self.ok[sha1] = datetime.date.today().isoformat()
+            else:
+                self.ok.pop(sha1, None)
+            steps.write_json(OK_FILE, dict(sorted(self.ok.items())))
 
     def delete(self, sha1s):
         """Deletes those of sha1s still in photos/; returns all of sha1s no longer there."""
@@ -313,7 +327,11 @@ button.danger:hover { background: #a31f1f }
 #grid { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); gap: 6px; padding: 6px; height: calc(100% - 48px) }
 #grid .cell { position: relative; min-height: 0; background: #ddd; display: flex; align-items: center; justify-content: center; overflow: hidden }
 #grid img { max-width: 100%; max-height: 100%; object-fit: contain }
-#grid .cell button { position: absolute; right: 4px; bottom: 4px }
+#grid .cell .buttons { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 4px }
+#grid .cell.ok { outline: 4px solid #2e7d32; outline-offset: -4px }
+button.ok { background: #2e7d32; color: #fff }
+.hole { background: #eee !important; color: #999; border: 2px dashed #ccc }
+figure.hole { min-height: 120px; display: flex; align-items: center; justify-content: center }
 #grid .cell .name { position: absolute; left: 4px; top: 4px; background: #fffc; padding: 0 4px; font: 11px ui-monospace, monospace }
 #prints { padding: 6px 12px; height: calc(100% - 48px); overflow-y: auto }
 .print { background: #fff; margin: 8px 0; padding: 8px; display: flex; gap: 10px; align-items: flex-start }
@@ -339,8 +357,8 @@ figure .buttons button { padding: 4px 6px; font-size: 12px }
 <div id="grid"></div>
 <div id="prints" hidden></div>
 <script>
-let S = null, tab = "nolabels", page = 0;
-const deleted = new Set();
+let S = null, tab = "nolabels", page = 0, unusedList = [], printList = [];
+const deleted = new Set(), ok = new Set();
 const PER = 20, PRINTS_PER = 25;
 const $ = s => document.querySelector(s);
 
@@ -349,14 +367,26 @@ async function load() {
   if (r.status === 503) { $("#count").textContent = "loading (comparing label photos with their prints, see the console)"; setTimeout(load, 2000); return; }
   S = await r.json();
   S.deleted.forEach(s => deleted.add(s));
+  S.ok.forEach(s => ok.add(s));
+  // the lists as loaded: a photo deleted or OK-ed from here on leaves its place
+  unusedList = S.unused.filter(s => !deleted.has(s) && !ok.has(s));
+  printList = S.prints.map(p => ({...p, label_photos: p.label_photos.filter(e => !deleted.has(e.photo))}))
+                      .filter(p => p.label_photos.length);
   render();
 }
 
-async function remove(sha1s, here) {
+async function setOk(s, value) {
+  const r = await fetch("/ok", {method: "POST", body: JSON.stringify({photo: s, ok: value})});
+  if (!r.ok) { alert(await r.text()); return; }
+  value ? ok.add(s) : ok.delete(s);
+  render();
+}
+
+async function remove(sha1s, here, ask = true) {
   sha1s = [...new Set(sha1s)].filter(s => !deleted.has(s));
   if (!sha1s.length) return;
   const others = new Set();
-  for (const s of sha1s) for (const p of S.photo_prints[s] || []) if (p !== here) others.add(p);
+  if (ask) for (const s of sha1s) for (const p of S.photo_prints[s] || []) if (p !== here) others.add(p);
   if (others.size) {
     const names = [...others].map(id => (S.prints.find(p => p.id === id) || {}).serial + " (" + id.slice(0, 10) + ")");
     if (!confirm(`${sha1s.length === 1 ? "This photo also holds" : "These photos also hold"} label photos of ${others.size} other print${others.size > 1 ? "s" : ""}:\n${names.join("\n")}\n\nDelete anyway?`)) return;
@@ -375,23 +405,32 @@ function render() {
 }
 
 function renderNoLabels() {
-  const left = S.unused.filter(s => !deleted.has(s));
-  const pages = Math.max(1, Math.ceil(left.length / PER));
+  const left = unusedList.filter(s => !deleted.has(s) && !ok.has(s)).length;
+  const pages = Math.max(1, Math.ceil(unusedList.length / PER));
   page = Math.min(page, pages - 1);
-  const shown = left.slice(page * PER, page * PER + PER);
-  $("#count").textContent = `${left.length} unused photos (no label photo used), the fewest matched features first; page ${page + 1} of ${pages}`;
+  const shown = unusedList.slice(page * PER, page * PER + PER);
+  const doomed = shown.filter(s => !deleted.has(s) && !ok.has(s));
+  $("#count").textContent = `${left} unused photos left to judge (no label photo used; OK-ed ones aren't listed), the fewest matched features first; page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
-  const all = button("Delete these " + shown.length, "danger", () => remove(shown));
-  all.disabled = !shown.length;
+  const all = button(`Delete the ${doomed.length} not OK`, "danger", () => remove(doomed, null, false));
+  all.disabled = !doomed.length;
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); }),
                         button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); }), " ", all);
   const grid = $("#grid");
   grid.innerHTML = "";
   for (const s of shown) {
     const cell = document.createElement("div");
-    cell.className = "cell";
-    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} matched ${S.matched[s]}<br>${S.why[s]}</span>`;
-    cell.append(button("Delete", "danger", () => remove([s])));
+    if (deleted.has(s)) {
+      cell.className = "cell hole";
+      cell.textContent = "deleted";
+      grid.append(cell);
+      continue;
+    }
+    cell.className = "cell" + (ok.has(s) ? " ok" : "");
+    cell.innerHTML = `<a href="/photo/${s}" target="_blank"><img src="/thumb/${s}"></a><span class="name">${s.slice(0, 10)} matched ${S.matched[s]}<br>${S.why[s]}</span><span class="buttons"></span>`;
+    cell.querySelector(".buttons").append(
+      ok.has(s) ? button("OK ✓", "ok", () => setOk(s, false)) : button("OK", "", () => setOk(s, true)),
+      button("Delete", "danger", () => remove([s], null, false)));
     grid.append(cell);
   }
 }
@@ -399,9 +438,8 @@ function renderNoLabels() {
 function pct(x) { return (100 * x).toFixed(0).padStart(3) + " %"; }
 
 function renderPrints() {
-  const prints = S.prints.map(p => ({...p, label_photos: p.label_photos.filter(e => !deleted.has(e.photo))}))
-                         .filter(p => p.label_photos.length);
-  prints.forEach(p => p.left = p.label_photos.reduce((a, e) => a + e.badness, 0));  // the order stays as loaded
+  const prints = printList;  // as loaded: a deleted label photo leaves a hole
+  prints.forEach(p => p.left = p.label_photos.filter(e => !deleted.has(e.photo)).reduce((a, e) => a + e.badness, 0));
   const pages = Math.max(1, Math.ceil(prints.length / PRINTS_PER));
   page = Math.min(page, pages - 1);
   $("#count").textContent = `${prints.length} prints, the worst first (as when the page was loaded); page ${page + 1} of ${pages}`;
@@ -413,10 +451,16 @@ function renderPrints() {
   for (const p of prints.slice(page * PRINTS_PER, page * PRINTS_PER + PRINTS_PER)) {
     const div = document.createElement("div");
     div.className = "print";
-    div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.serial}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.length} label photo${p.label_photos.length > 1 ? "s" : ""}</div></div><div class="photos"></div>`;
+    div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.serial}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
     const list = div.querySelector(".photos");
     p.label_photos.forEach((e, i) => {
       const fig = document.createElement("figure");
+      if (deleted.has(e.photo)) {
+        fig.className = "hole";
+        fig.textContent = "deleted";
+        list.append(fig);
+        return;
+      }
       fig.innerHTML = `<a href="/photo/${e.photo}" target="_blank"><img loading="lazy" src="/label/${encodeURIComponent(e.key)}"></a>
         <figcaption>badness ${e.badness.toFixed(2)}<br>damage ${pct(e.damage)} off ${pct(e.off)}<br>${e.px_per_mm.toFixed(1).padStart(4)} px/mm${e.compared ? "" : " not compared"}${e.poor_fit ? '<br><span class="poor">poor fit</span>' : ""}</figcaption><div class="buttons"></div>`;
       const worse = p.label_photos.slice(i).map(x => x.photo);
@@ -478,9 +522,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        if self.path != "/delete" or tool is None:
+        if self.path not in ("/delete", "/ok") or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.path == "/ok":
+            if not isinstance(data.get("photo"), str):
+                return self.send_error(400)
+            tool.set_ok(data["photo"], bool(data.get("ok")))
+            return self.send({"ok": data["photo"]})
         done = tool.delete([s for s in data.get("photos", []) if isinstance(s, str)])
         self.send({"deleted": done})
 
