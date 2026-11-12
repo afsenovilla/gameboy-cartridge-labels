@@ -303,3 +303,9 @@ document.body.prepend(inp);
 - 549 photos (labels cut out and pasted on two template cartridge photos): 551 label photos found, 508 solved: 410 precise, 93 approximate cuts, 5 poor fits. 182 joined families with photos of other sources, 316 alone, 10 in families of Konsolenkost photos only (the shared template linked no different games).
 - Their pixel alignment: the family correction 0.34 mm at the median, 0.70 at 90 % (others 0.22, 0.48); the fine correction 0.08 and 0.22 (others 0.06, 0.14): the pasted labels' scale a little off, well within the 2 mm limit.
 - Resolution: 11.1 px/mm at the median (the template's), 14.2 at 90 %. Their fine detail at 10–15 px/mm matches other sources' at the same px/mm (0.100 against 0.103, Laplacian over contrast): the measured px/mm isn't overstated by upscaled labels.
+
+## 2026-11-12: downloads wait in downloaded-photos/
+
+- The downloaders (ebay_photos, mercari_photos, jauce_photos) save photos to downloaded-photos/<site>-search/ (with listing.json), no longer to save-new-images-here/: a download running meanwhile landed in an add-photos run (the user: move them when ready to add them). `make move-downloads` moves the photos whose listing entry is written, with their entries, to save-new-images-here/<site>-search/; the downloaders and the move take turns on each folder's listing.json (a lock file).
+- Their records moved there too, the default for all three: downloaded-photos/sources.json, searches.json (eBay), mercari-sources.json, mercari-searches.json, jauce-sources.json, jauce-searches.json. No `EBAY_OUT` needed any more.
+- downloaded-photos/ is not in git, as save-new-images-here/.

@@ -9,6 +9,8 @@ generated-eval/
 # Python caches.
 __pycache__/
 .pytest_cache/
+# Photos the downloaders saved, until make move-downloads.
+downloaded-photos/
 # Photos waiting for make add-photos.
 save-new-images-here/*
 !save-new-images-here/README.md

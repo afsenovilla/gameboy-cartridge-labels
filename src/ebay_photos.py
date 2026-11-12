@@ -8,11 +8,15 @@ query list and takes in the search results, downloading each listing's first pho
     python3 src/ebay_photos.py queries USA releases.json <pass> > queries.json   (given releases, a named pass)
     python3 src/ebay_photos.py ingest results.json queries.json <pass>
 
-Photos go to save-new-images-here/ebay-search/ with a listing.json there, for make add-photos.
-ebay-photos/sources.json: one record per downloaded file (kept, or deleted by hand afterwards: never downloaded again) (release, query, listing, image URL, size, date).
-ebay-photos/searches.json: every release searched, so a run can be stopped and resumed.
+Photos go to downloaded-photos/ebay-search/ with a listing.json there; make move-downloads moves them to save-new-images-here/
+for make add-photos, when the user is ready to add them (the user, 2026-11-12: a running download must not land in an
+add-photos run).
+downloaded-photos/sources.json: one record per downloaded file (kept, or deleted by hand afterwards: never downloaded again) (release, query, listing, image URL, size, date).
+downloaded-photos/searches.json: every release searched, so a run can be stopped and resumed.
 """
+import contextlib
 import datetime
+import fcntl
 import json
 import os
 import re
@@ -24,8 +28,9 @@ import unicodedata
 sys.path.insert(0, os.path.dirname(__file__))
 import serials  # noqa: E402
 
-OUT = os.environ.get("EBAY_OUT", "ebay-photos")  # the downloader's own records
-DROP = os.environ.get("EBAY_DROP", "save-new-images-here/ebay-search")  # the photos, for make add-photos
+DOWNLOADED = "downloaded-photos"  # the downloaders' photos (until make move-downloads) and records
+OUT = os.environ.get("EBAY_OUT", DOWNLOADED)  # the downloader's own records
+DROP = os.environ.get("EBAY_DROP", os.path.join(DOWNLOADED, "ebay-search"))
 LISTING = os.path.join(DROP, "listing.json")
 SOURCES = os.path.join(OUT, "sources.json")
 SEARCHES = os.path.join(OUT, "searches.json")
@@ -57,6 +62,16 @@ def save(path, data):
     with open(tmp, "w") as f:
         json.dump(data, f, indent=1, ensure_ascii=False)
     os.replace(tmp, path)
+
+
+@contextlib.contextmanager
+def locked(folder):
+    """Holds folder's lock, so a downloader adding to its listing.json and make move-downloads taking from it don't
+    overwrite each other's changes."""
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, ".lock"), "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        yield
 
 
 def query_title(title):
@@ -162,11 +177,12 @@ def ingest(results_file, queries_file, pass_name=None):
             sources[name] = {"release": res["release"], "serial": res["serial"], "query": res["query"],
                              "listing": f"https://www.ebay.com/itm/{it['item']}", "listing_title": it["title"],
                              "image": url, "size": wh, "fetched": today}
-            listing = load(LISTING)
-            listing[name] = {"page_url": sources[name]["listing"], "image_url": url, "title_on_page": it["title"],
-                             "searched_release": res["release"], "searched_serial": res["serial"],
-                             "query": res["query"], "fetched": today}
-            save(LISTING, listing)
+            with locked(DROP):
+                listing = load(LISTING)
+                listing[name] = {"page_url": sources[name]["listing"], "image_url": url, "title_on_page": it["title"],
+                                 "searched_release": res["release"], "searched_serial": res["serial"],
+                                 "query": res["query"], "fetched": today}
+                save(LISTING, listing)
             have_items.add(it["item"])
             kept += 1
         record = {"query": res["query"], "candidates": len(res["items"]), "kept": kept, "too_small": small, "date": today}

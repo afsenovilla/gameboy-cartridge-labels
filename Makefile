@@ -12,6 +12,10 @@
 #   Files the photos left in save-new-images-here/ into photos/ as <sha1>.<ext>, with where each came from (a
 #   subfolder's name and listing.json) in photo-sources.json (src/add_photos.py).
 #
+#   make move-downloads
+#   Moves the photos the eBay, Mercari and Yahoo (Jauce) downloaders saved in downloaded-photos/ to
+#   save-new-images-here/, with their listing.json entries, for make add-photos (src/move_downloads.py).
+#
 #   make all
 #   Runs every step below in order, remove-low-resolution through publish (not add-photos), each skipping what it has
 #   already done.
@@ -79,7 +83,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all todo-report add-photos remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
+.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -92,6 +96,9 @@ test:
 
 add-photos:
 	$(PYTHON) src/add_photos.py
+
+move-downloads:
+	$(PYTHON) src/move_downloads.py
 
 todo-report:
 	$(PYTHON) src/todo_report.py $(if $(NAME),$(NAME) --note "$(NOTE)",--page)

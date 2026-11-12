@@ -12,10 +12,10 @@ for some uploads; asking for a larger width only scales it up). A photo under MI
     python3 src/mercari_photos.py queries releases.json <pass> > queries.json
     python3 src/mercari_photos.py ingest results.json queries.json
 
-Photos go to save-new-images-here/mercari-search/ with a listing.json there (page_url: the listing), for make
-add-photos. Records: <out>/mercari-sources.json (every listing whose photo was downloaded or found too small, also
-those deleted by hand afterwards: never downloaded again), <out>/mercari-searches.json (every release searched, per
-pass).
+Photos go to downloaded-photos/mercari-search/ with a listing.json there (page_url: the listing), moved to
+save-new-images-here/ by make move-downloads for make add-photos. Records: downloaded-photos/mercari-sources.json
+(every listing whose photo was downloaded or found too small, also those deleted by hand afterwards: never downloaded
+again), downloaded-photos/mercari-searches.json (every release searched, per pass).
 """
 import datetime
 import json
@@ -26,10 +26,10 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import ebay_photos  # noqa: E402
-from ebay_photos import load, save, size  # noqa: E402
+from ebay_photos import load, locked, save, size  # noqa: E402
 
-OUT = os.environ.get("MERCARI_OUT", "save-new-images-here")
-DROP = os.path.join(OUT, "mercari-search")
+OUT = os.environ.get("MERCARI_OUT", ebay_photos.DOWNLOADED)
+DROP = os.environ.get("MERCARI_DROP", os.path.join(ebay_photos.DOWNLOADED, "mercari-search"))
 LISTING = os.path.join(DROP, "listing.json")
 SOURCES = os.path.join(OUT, "mercari-sources.json")
 SEARCHES = os.path.join(OUT, "mercari-searches.json")
@@ -85,11 +85,12 @@ def ingest(results_file, queries_file):
             sources[name] = {"release": release, "serial": q["serial"], "query": q["query"], "item": it["id"],
                              "listing": page_url, "listing_title": it["title"], "image": image_url, "size": wh,
                              "fetched": today}
-            listing = load(LISTING)
-            listing[name] = {"page_url": page_url, "image_url": image_url, "title_on_page": it["title"],
-                             "searched_release": release, "searched_serial": q["serial"], "query": q["query"],
-                             "fetched": today}
-            save(LISTING, listing)
+            with locked(DROP):
+                listing = load(LISTING)
+                listing[name] = {"page_url": page_url, "image_url": image_url, "title_on_page": it["title"],
+                                 "searched_release": release, "searched_serial": q["serial"], "query": q["query"],
+                                 "fetched": today}
+                save(LISTING, listing)
             kept += 1
         searches.setdefault(release, {})[q["pass"]] = {"query": q["query"], "candidates": len(items), "kept": kept,
                                                         "too_small": small, "date": today}
