@@ -4,9 +4,10 @@
 #     the family); its colours scaled so its paper is white (see paper_white) where paper is found, else the label
 #     photos' evened to their median (the user: one image per print)
 #   <print>.json: {"crop" (cuts.crop's: x, y, w, h px in the straightened images, mm), "keys" (its label photos used),
-#     "single" (from one label photo), "bands" (how many label photos count in each band, finest first), "paper" (the
-#     paper's colour found, or null)}
-# The label photos: the print's own only (poor fits left out: a print of poor fits only gets no image). (Pooling the
+#     "bands" (how many label photos count in each band, finest first), "paper" (the paper's colour found, or null)}
+# The label photos: the print's own only, poor fits left out; a print with fewer than MIN_PHOTOS of them gets no image
+# (the user, 2026-11-12: only prints of three or more label photos restored; one used as it is and two averaged were
+# removed). (Pooling the
 # label photos of the family's other prints where they matched the print's own was removed, 2026-11-11: the user found
 # it very broken.) Each straightened label photo's colours evened per channel to the
 # median of the print's own (a scale and offset), then split into frequency bands in Oklab (a Laplacian pyramid, halving until
@@ -16,8 +17,7 @@
 # coarser bands, only where the whole pixel
 # counts. Outside where it counts, each is filled from its nearest pixel that counts before it's split into bands (so
 # neither black nor plastic leaks into the coarse bands). Before combining, the label photos are registered finely at
-# full resolution (register). Combined per band: one
-# label photo as it is; two averaged; three or more by the median.
+# full resolution (register). Combined per band by the median.
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
 # leave out clearly blurred regions.)
@@ -32,6 +32,7 @@ import photos, steps, straighten, shapes, cuts, prints as prints_step
 from scipy import ndimage
 
 QUALITY = 90
+MIN_PHOTOS = 3         # a print with fewer label photos isn't restored
 MAX_PHOTOS = 30        # the sharpest kept, if a print has more
 
 
@@ -85,7 +86,7 @@ def even_to(img, ref, valid):
         A = np.c_[x, np.ones_like(x)]
         coef = np.linalg.lstsq(A, y, rcond=None)[0]
         r = np.abs(A @ coef - y)
-        ok = r <= np.percentile(r, 80)  # <=: with residuals all zero (one label photo, its own reference), < kept none
+        ok = r <= np.percentile(r, 80)  # <=: with residuals all zero (a photo evened to itself), < kept none
         coef = np.linalg.lstsq(A[ok], y[ok], rcond=None)[0]
         out[..., c] = img[..., c] * coef[0] + coef[1]
     return np.clip(out, 0, 1)
@@ -176,8 +177,8 @@ def finest_band(photo_px_per_mm):
 # local detail is its band's lightness magnitude averaged over SHARP_MM; it counts only where that is at least
 # SHARP_SHARE of the second most detailed label photo's there (the second: dirt or noise on one photo has detail too,
 # and mustn't push the others out). Only to leave out what's clearly blurred, never to favour the most detailed (the
-# energy-weighted median favoured noise and dirt). Needs three or more label photos: with two, which is blurred and
-# which is dirty can't be told; so per pixel, a label photo is left out only where three or more still count (a
+# energy-weighted median favoured noise and dirt). With two, which is blurred and which is dirty can't be told; so
+# per pixel, a label photo is left out only where three or more still count (a
 # watermark on one of three came through where the softest was left out: 1b32d2a69c…_68_34, 2026-11-10).
 SHARP_MM = 1.0
 SHARP_SHARE = 0.5
@@ -188,7 +189,7 @@ def sharp_enough(L, counts, lv):
     where each label photo counts at all)."""
     sigma = max(1.0, SHARP_MM * straighten.PX_PER_MM / 2 ** lv)
     detail = np.stack([cv2.GaussianBlur(np.abs(l).astype(np.float32), (0, 0), sigma) for l in L]) * counts
-    second = np.sort(detail, axis=0)[-2] if len(L) >= 2 else detail[0]
+    second = np.sort(detail, axis=0)[-2]
     return detail >= SHARP_SHARE * second
 
 
@@ -220,18 +221,15 @@ def restore_print(job):
 
     loaded = [(k, load(k, path)) for k, path in own]
     loaded = [(k, e) for k, e in loaded if e is not None]
-    if not loaded:
+    if len(loaded) < MIN_PHOTOS:
         return pid, None
     if len(loaded) > MAX_PHOTOS:
         loaded = sorted(loaded, key=lambda ke: -ke[1][2])[:MAX_PHOTOS]
     own_keys = [k for k, _ in loaded]
-    entries = [e for _, e in loaded]
-    if len(entries) >= 2:
-        entries = register(entries)
+    entries = register([e for _, e in loaded])
     ref = np.median(np.stack([e[0] for e in entries]), 0)
     evened = [even_to(e[0], ref, e[1]) for e in entries]
     valids = [e[1] for e in entries]
-    n = len(entries)
     pyrs = [pyramid(to_oklab(filled(img, v))) for img, v in zip(evened, valids)]
     levels = len(pyrs[0])
     out_levels, out_median, counts = [], [], []
@@ -247,22 +245,16 @@ def restore_print(job):
                 wgt[:] = 0
             weights.append(wgt)
         W = np.stack(weights)
-        if n >= 3 and lv < levels - 1:
+        if lv < levels - 1:
             sharp = W * sharp_enough(vals[..., 0], W > 0, lv)
             # only where three or more still count: with two left, the dirty one isn't outvoted (a watermark on one
             # of three came through at half strength where the third, softest, was left out)
             W = np.where(((sharp > 0).sum(0) >= 3)[None], sharp, W)
         total = W.sum(0)
-        Wn = W / np.maximum(total, 1e-12)
         counts.append(int(np.median((W > 0).sum(0))))
-        if n == 1:
-            est = vals[0]
-        elif n == 2:
-            est = (Wn[..., None] * vals).sum(0)
-        else:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", RuntimeWarning)  # pixels no label photo covers
-                est = np.nan_to_num(np.nanmedian(np.where((W > 0)[..., None], vals, np.nan), axis=0))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # pixels no label photo covers
+            est = np.nan_to_num(np.nanmedian(np.where((W > 0)[..., None], vals, np.nan), axis=0))
         # where nothing counts in this band (finer than every photo): no detail
         est = np.where((total > 1e-12)[..., None], est, 0 if lv < levels - 1 else vals.mean(0))
         out_levels.append(est.astype(np.float32))
@@ -272,8 +264,7 @@ def restore_print(job):
     for old in (out_base + "-median.avif", out_base + "-paper.avif"):
         if os.path.exists(old):
             os.remove(old)
-    return pid, {"crop": crop, "keys": own_keys, "single": n == 1,
-                 "bands": counts,
+    return pid, {"crop": crop, "keys": own_keys, "bands": counts,
                  "paper": None if paper is None else [round(float(v), 3) for v in paper]}
 
 
@@ -392,7 +383,7 @@ def main():
 
 def print_jobs(gen, result, solved):
     """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], px per mm {key: ...},
-    crop). Poor fits are left out; a print with nothing else isn't restored at all (the user:
+    crop). Poor fits are left out; a print with fewer than MIN_PHOTOS others isn't restored at all (the user:
     fewer prints, all of them good, rather than bad ones among them)."""
     import solve as solve_step
     px_per_mm = {}
@@ -413,7 +404,7 @@ def print_jobs(gen, result, solved):
     jobs = {}
     for p in result["prints"]:
         own = [(k, image(k)) for k in p["keys"] if k not in poor]
-        if not own:
+        if len(own) < MIN_PHOTOS:
             continue
         jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, crops[p["family"]])
     return jobs
@@ -440,7 +431,7 @@ def page(out_dir, result, gen):
         sources = "".join(crop(k) for k in desc.get("keys", []))
         figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif"></div>'
                     f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos'
-                    f'{" (one photo: as it is)" if desc.get("single") else ""}{"" if desc.get("paper") else "; no paper found: median colours"}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
+                    f'{"" if desc.get("paper") else "; no paper found: median colours"}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
                     f'<div class="sources">{sources}</div></figure>')
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>restore</title>
