@@ -181,7 +181,9 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
     sizes = {s: texts[s]["size"] or [1, 1] for s in chosen}
     lps, rejected = [], []  # label photos: dicts with "photo", "centre" (array), "radius", "strings", "found_by"
     unknown = {}            # photo -> candidates with only unknown strings, decided after the matches are known
-    for s in chosen:
+    for n, s in enumerate(chosen, 1):
+        if n % 1000 == 0 or n == len(chosen):
+            print(f"seeds found in {n} of {len(chosen)} photos", flush=True)
         found = (seeds(texts[s]["lines"], release_of, regions) if use_strings else []) + detail_seeds((detections or {}).get(s, []))
         for g in group(found):
             centre = np.mean([t["centre"] for t in g], 0)
@@ -196,7 +198,14 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
                 lps.append(cand)
             else:
                 unknown.setdefault(s, []).append(cand)
-    by_photo = lambda s: [lp for lp in lps if lp["photo"] == s]
+    # the label photos per photo, kept as lps grows (a scan of lps per match was quadratic: an hour and more on 13k photos)
+    of_photo = {}
+    for lp in lps:
+        of_photo.setdefault(lp["photo"], []).append(lp)
+    def add(lp):
+        lps.append(lp)
+        of_photo.setdefault(lp["photo"], []).append(lp)
+    by_photo = lambda s: list(of_photo.get(s, []))
     # both directions of every match: (photo a, photo b, a -> b, points in a, points in b)
     both = []
     for a, b, H, inl in matches:
@@ -210,17 +219,20 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
             others = by_photo(b) + unknown.get(b, [])
             if any(inside(pb, o).mean() >= INSIDE for o in others):
                 cand["found_by"] = "string and match"
-                lps.append(cand)
+                add(cand)
     for cands in unknown.values():
         rejected += [{"photo": c["photo"], "centre": c["centre"].tolist(), "strings": c["strings"],
                       "why": "only strings the database doesn't know, and no match to a serial elsewhere"}
                      for c in cands if not c["found_by"]]
     # spreading, until nothing changes
     links = set()
-    changed = True
+    changed, passes = True, 0
     while changed:
         changed = False
-        for a, b, H, pa, pb in both:
+        passes += 1
+        for n, (a, b, H, pa, pb) in enumerate(both, 1):
+            if n % 100000 == 0:
+                print(f"spreading, pass {passes}: {n} of {len(both)} match directions", flush=True)
             for lp in by_photo(a):
                 ins = inside(pa, lp)
                 if ins.sum() < MIN_POINTS or ins.mean() < INSIDE:
@@ -237,7 +249,7 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
                         centre = qb.mean(0)
                     other = {"photo": b, "centre": centre, "radius": float(np.hypot(*(edge - centre))), "strings": [],
                              "details": [], "points": [], "found_by": "match"}
-                    lps.append(other)
+                    add(other)
                     changed = True
                 link = (id(lp), id(other)) if id(lp) < id(other) else (id(other), id(lp))
                 if link not in links:
@@ -246,6 +258,7 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
                     other.setdefault("links", []).append((lp, len(qa)))
                     lp["points"].append(qa)
                     other["points"].append(qb)
+        print(f"spreading, pass {passes} done: {len(lps)} label photos, {len(links)} links", flush=True)
     # outlines; label photos of one photo whose outlines mostly overlap are one (spreading's circles are rough)
     for lp in lps:
         lp["outline"] = outline(lp)
