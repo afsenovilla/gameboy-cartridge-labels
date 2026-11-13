@@ -27,14 +27,20 @@ These go against rules marked settled, so they need the user's yes first:
 
 ## Stage 1: persistent print ids
 
-**The id:** `p` and a number, given in order of creation: `p1`, `p2` … (short, easy to say and type; never reused). (Alternative: keep the key of the first label photo as the id; rejected: it reads like a key, and that label photo may later leave the print.)
+**The id:** the serial as printed on the label, a hyphen, and a short English first name: `DMG-APSJ-JPN-lisa` (the user, 2026-11-13: names imply no order or hierarchy, unlike numbers, and are easy to remember). The name is picked at random from the list below, among those not yet used with that serial (in print-ids.json, gone ones included: never reused), so two prints of one serial differ by their names. The serial is the one read-serials settled when the print got its id; the name part is always lowercase letters, the serial never is, so the two can't be confused.
+
+The names (50; a serial with more prints than names gets two names: `-lisa-bob`):
+
+amy, ann, ben, bob, carl, dan, dave, dora, ed, ella, eve, fay, fred, gail, greg, gus, hal, jack, jane, jeff, jill, joe, june, karl, kate, kim, lee, lisa, liz, lou, mae, max, meg, mike, ned, nora, pam, pat, paul, peg, rex, rose, roy, ruth, sam, sue, ted, tess, tom, vera
+
+- **No serial read:** the release read instead if any (`DMG-APSJ-jeff`), else `UNKNOWN-jeff`.
+- **The serial read differently later** (a misread corrected): proposed, the id stays as it is (it's a name, not a claim; prints.json carries the serial read now); the alternative, renaming it, recorded in "gone" with "renamed" and the new id.
 
 **The file:** print-ids.json, in the repo root, written by the prints step only, committed like the data files:
 
 ```
-{"next": 1845,
- "prints": {"p17": {"keys": ["<sha1>@48,55", …], "created": "<datetime>"}},
- "gone": {"p23": {"why": "merged", "into": "p17", "datetime": "<datetime>"}}}
+{"prints": {"DMG-APSJ-JPN-lisa": {"keys": ["<sha1>@48,55", …], "created": "<datetime>"}},
+ "gone": {"DMG-APSJ-JPN-bob": {"why": "merged", "into": "DMG-APSJ-JPN-lisa", "datetime": "<datetime>"}}}
 ```
 
 **How a run keeps them:** after the tile comparison, each of this run's prints is matched to last run's by the label photos they share (a label photo is the same between runs when it's in the same photo and its centre lies in last run's outline, as keys work now):
@@ -48,7 +54,7 @@ These go against rules marked settled, so they need the user's yes first:
 
 **Who uses the ids:** prints.json, restore's and publish's file names, publish's index.json, print-marks.json (by id and image SHA-1), todo.md. A restored print's file becomes:
 
-generated/restore/p17.avif
+generated/restore/DMG-APSJ-JPN-lisa.avif
 
 **Measured before keeping:** over two consecutive runs with nothing changed, every id kept; after the 2026-11-13 not-labels and hand fits, how many merges, splits and gone, each listed on the prints page for the user to look at.
 
@@ -61,7 +67,7 @@ generated/restore/p17.avif
 frozen-prints.json, in the repo root, hand input:
 
 ```
-{"p17": {"datetime": "<datetime>",
+{"DMG-APSJ-JPN-lisa": {"datetime": "<datetime>",
          "serial": "DMG-APSJ-JPN", "shape": "dmg",
          "image": "<sha1 of the image>",
          "crop": {…, as restore's},
@@ -70,7 +76,7 @@ frozen-prints.json, in the repo root, hand input:
 
 the image itself, copied from restore:
 
-frozen/p17.avif
+frozen/DMG-APSJ-JPN-lisa.avif
 
 (The images are about 130 KB each: 1000 frozen prints would add about 130 MB to the repository. If that's too much: keep them outside git, or in Git LFS.)
 
@@ -96,7 +102,7 @@ Built into stage 2's match and solve (above); listed apart because it's measured
 2. **May anything change a frozen print?** For example a better colour method later. Proposed: no, frozen until unfrozen by hand.
 3. **The 153 prints marked Good whose image is still current:** freeze them as the first batch? (The other 80 have changed since they were marked: shown again unmarked.)
 4. **The images in git** (130 KB each), or elsewhere?
-5. **The id format** `p17`: or another?
+5. **A serial read differently later:** keep the id as it is (proposed), or rename it?
 
 ## Order of work
 
