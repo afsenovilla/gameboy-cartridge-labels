@@ -73,11 +73,13 @@ def same_label_photo(old_key, new_keys_of_photo, outlines, sizes):
     return None
 
 
-def assign(prints, registry, key_map, when=None):
+def assign(prints, registry, key_map, when=None, forced=None):
     """Ids for this run's prints (list of {keys, serial, release}; "id" set on each) and the registry updated, from the
-    last run's (registry) and key_map (old key -> new key or None). Returns (registry, changes): changes lists
-    {"kind": new|kept|split|merged|renamed|gone, ...} for the page."""
+    last run's (registry) and key_map (old key -> new key or None); forced: {print index: id} (frozen prints: their id
+    as it is, never renamed). Returns (registry, changes): changes lists {"kind": new|kept|split|merged|renamed|gone|
+    frozen, ...} for the page."""
     when = when or now()
+    forced = forced or {}
     old = registry.get("prints", {})
     gone = dict(registry.get("gone", {}))
     new_of_key = {k: i for i, p in enumerate(prints) for k in p["keys"]}
@@ -88,7 +90,7 @@ def assign(prints, registry, key_map, when=None):
             if nk is not None and nk in new_of_key:
                 pair = (pid, new_of_key[nk])
                 shared[pair] = shared.get(pair, 0) + 1
-    taken_old, taken_new, kept = set(), set(), {}
+    taken_old, taken_new, kept = set(forced.values()), set(forced), {}
     for (pid, i), n in sorted(shared.items(), key=lambda x: (-x[1], old[x[0][0]].get("created", ""), x[0][0])):
         if pid not in taken_old and i not in taken_new:
             taken_old.add(pid); taken_new.add(i); kept[i] = pid
@@ -104,7 +106,12 @@ def assign(prints, registry, key_map, when=None):
         return f"{part}-{name}"
     out, changes = {}, []
     for i, p in enumerate(prints):
-        if i in kept:
+        if i in forced:
+            pid = forced[i]
+            entry = {k: v for k, v in old.get(pid, {"created": when}).items() if k != "keys"}
+            gone.pop(pid, None)
+            changes.append({"kind": "frozen", "id": pid})
+        elif i in kept:
             pid = kept[i]
             entry = {k: v for k, v in old[pid].items() if k != "keys"}
             part, name = split_id(pid)

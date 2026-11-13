@@ -25,6 +25,7 @@
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
 # leave out clearly blurred regions.)
+# A frozen print (src/frozen.py) isn't restored: its image is the one frozen (publish copies it).
 # Done again when an image is older than this file, cuts.py, prints.json, solve.json or its family's straightened
 # images and cuts.
 # Usage: restore.py [--sample] [--workers N]
@@ -413,6 +414,8 @@ def print_jobs(gen, result, solved):
                       else canonical_crop(ps[0]["shape"]))
     jobs = {}
     for p in result["prints"]:
+        if p.get("frozen"):  # its image is the frozen one (src/frozen.py): never restored again
+            continue
         own = [(k, image(k)) for k in p["keys"] if k not in poor]
         if len(own) < MIN_PHOTOS or sum(k not in approximate for k, _ in own) < MIN_PRECISE:
             continue

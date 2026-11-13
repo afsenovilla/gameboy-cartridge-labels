@@ -9,6 +9,9 @@
 #   - Restored prints: every print's restored image (restore), 18 at a time in 2 columns, the unmarked first, each to mark Good or
 #     Bad (MARKS_FILE). A mark is of that image file (its SHA-1): a print restored differently is unmarked again. An
 #     image the pipeline has changed since the page loaded is not shown, nor can it be marked (restart the tool).
+#     Freeze (and Unfreeze) beside Good and Bad: a print the user accepts is frozen (src/frozen.py: frozen-prints.json and
+#     frozen/<id>.avif, persistent-prints.md stage 2): its label photos, poses and image are kept as they are and no
+#     step recomputes them. A button only, no key (the user: keys next to S are too easy to hit).
 # The tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
@@ -38,7 +41,7 @@ from multiprocessing import Pool
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cv2, numpy as np
-import photos, steps, straighten, cuts, restore, shapes, publish
+import photos, steps, straighten, cuts, restore, shapes, publish, frozen
 
 GEN = "generated"
 BLUR_MM = 0.15          # what a slightly misregistered or less sharp label photo still matches
@@ -59,6 +62,9 @@ def sha1_file(path):
 
 
 def restored(pid):
+    """A print's restored image (without .avif): restore's, or a frozen print's frozen one."""
+    if os.path.exists(frozen.image_path(pid)):
+        return frozen.image_path(pid)[:-5]
     return os.path.join(GEN, "restore", straighten.file_name(pid)[:-5])
 
 
@@ -151,7 +157,10 @@ def jobs_of(prints):
 
 
 def crop_of(pid):
-    """restore's crop of a print (its family's), or None."""
+    """restore's crop of a print (its family's; a frozen print's as frozen), or None."""
+    e = frozen.load().get(pid)
+    if e:
+        return e["crop"]
     path = restored(pid) + ".json"
     return json.load(open(path))["crop"] if os.path.exists(path) else None
 
@@ -228,6 +237,8 @@ class Tool:
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
         prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
         solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
+        self.solved, self.found_outlines = solved, {lp["key"]: lp["outline"] for lp in found}
+        self.prints_json = {p["id"]: p for p in prints}
         self.why = unused(self.photos, found, solved)
         say(f"{len(self.why)} unused photos of {len(self.photos)}; counting their matched features")
         self.matched = matched_features(set(self.why))
@@ -267,6 +278,7 @@ class Tool:
                 photo_prints.setdefault(e["photo"], []).append(p["id"])
         return {"unused": [s for s in self.unused if s in have], "ok": sorted(self.ok),
                 "marks": {k: v["mark"] for k, v in self.marks.items()}, "matched": self.matched,
+                "frozen": sorted(frozen.load()),
                 "why": self.why,
                 "prints": self.prints, "photo_prints": photo_prints,
                 "deleted": sorted((set(self.photos) | set(photo_prints)) - have)}  # gone, also before the page started
@@ -305,6 +317,18 @@ class Tool:
         if p is None or not p["image_sha1"] or not os.path.exists(file) or sha1_file(file) != p["image_sha1"]:
             return None
         return file
+
+    def set_frozen(self, pid, on):
+        """Freezes print pid (its restored image as the page shows it) or unfreezes it; False if it can't be."""
+        with lock:
+            if not on:
+                frozen.unfreeze(pid)
+                return True
+            if pid not in self.prints_json or self.current_image(pid) is None:
+                return False
+            frozen.freeze(pid, self.prints_json[pid], self.solved, self.found_outlines,
+                          os.path.join(GEN, "restore", straighten.file_name(pid)[:-5]))
+        return True
 
     def delete(self, sha1s):
         """Deletes those of sha1s still in photos/; returns all of sha1s no longer there."""
@@ -394,6 +418,7 @@ figure .buttons button { padding: 4px 6px; font-size: 12px }
 #marks .cell.good, .print.good { outline: 4px solid #2e7d32; outline-offset: -4px }
 #marks .cell.bad, .print.bad { outline: 4px solid #c62828; outline-offset: -4px }
 button.bad { background: #c62828; color: #fff }
+button.frozen { background: #1565c0; color: #fff }
 </style></head><body>
 <header>
   <button class="tab on" data-tab="nolabels">Unused</button>
@@ -435,10 +460,19 @@ async function setMark(p, mark) {
   render();
 }
 
+async function setFrozen(p, on) {
+  if (!on && !confirm(`Unfreeze ${p.id}? Its frozen image is deleted; the next run restores it again.`)) return;
+  const r = await fetch("/freeze", {method: "POST", body: JSON.stringify({print: p.id, on})});
+  if (!r.ok) { alert(await r.text()); return; }
+  S.frozen = on ? [...S.frozen, p.id] : S.frozen.filter(x => x !== p.id);
+  render();
+}
+
 function markButtons(p) {
   const m = S.marks[p.image_sha1];
   return [button(m === "good" ? "Good ✓" : "Good", m === "good" ? "ok" : "", () => setMark(p, m === "good" ? null : "good")),
-          button(m === "bad" ? "Bad ✓" : "Bad", m === "bad" ? "bad" : "", () => setMark(p, m === "bad" ? null : "bad"))];
+          button(m === "bad" ? "Bad ✓" : "Bad", m === "bad" ? "bad" : "", () => setMark(p, m === "bad" ? null : "bad")),
+          button(S.frozen.includes(p.id) ? "Frozen ✓" : "Freeze", S.frozen.includes(p.id) ? "frozen" : "", () => setFrozen(p, !S.frozen.includes(p.id)))];
 }
 
 function renderMarks() {
@@ -611,7 +645,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/delete", "/ok", "/mark") or tool is None:
+        if self.path not in ("/delete", "/ok", "/mark", "/freeze") or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if self.path == "/mark":
@@ -620,6 +654,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(b"This print's restored image changed since the page loaded (the pipeline restored it"
                                  b" again): reload the tool to mark the new image.", "text/plain", 409)
             return self.send({"marked": data.get("print")})
+        if self.path == "/freeze":
+            if not tool.set_frozen(data.get("print"), bool(data.get("on"))):
+                return self.send(b"This print's restored image changed since the page loaded, or it has none: reload the tool.",
+                                 "text/plain", 409)
+            return self.send({"frozen": data.get("print")})
         if self.path == "/ok":
             sha1s = data.get("photos")
             if not isinstance(sha1s, list) or not all(isinstance(x, str) for x in sha1s):

@@ -88,3 +88,12 @@ def test_same_label_photo_by_key_or_by_the_old_centre_in_the_outline():
     assert print_ids.same_label_photo("s@51,50", ["s@51,50"], outlines, {}) == "s@51,50"
     assert print_ids.same_label_photo("s@48,49", ["s@51,50"], outlines, {"s": [1000, 1000]}) == "s@51,50"
     assert print_ids.same_label_photo("s@10,10", ["s@51,50"], outlines, {"s": [1000, 1000]}) is None
+
+
+def test_a_frozen_print_keeps_its_id_and_isnt_renamed():
+    old = {"prints": {"DMG-APSJ-JPN-lisa": {"keys": ["a@1,1"], "created": "1"}}, "gone": {}}
+    prints = [pr(["a@1,1", "z@1,1"], serial="DMG-APSJ-USA"), pr(["b@1,1"])]
+    reg, changes = print_ids.assign(prints, old, same(["a@1,1"]), T, forced={0: "DMG-APSJ-JPN-lisa"})
+    assert prints[0]["id"] == "DMG-APSJ-JPN-lisa"
+    assert reg["prints"]["DMG-APSJ-JPN-lisa"]["keys"] == ["a@1,1", "z@1,1"]
+    assert prints[1]["id"] != "DMG-APSJ-JPN-lisa" and "DMG-APSJ-JPN-lisa" not in reg["gone"]

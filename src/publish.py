@@ -5,7 +5,7 @@
 #     label photo is in index.json, with where it came from. Poor fits (solve.poor_fit) are listed with
 #     poor_fit true; restore leaves them out.
 #   index.json: {"prints": {id: {serial, release, title (the database's), shape, image, size (its w, h px), paper,
-#     label_photos}}, "label_photos": {key: {print,
+#     label_photos, frozen, restored_from (the label photos its image was restored from)}}, "label_photos": {key: {print,
 #     serial, source, page_url, image_url, poor_fit}}}. Print ids persist between runs (print-ids.json); keys hold within a run only.
 #   missing.json, unknown-serials.json (read-serials), few-photos.json (prints): the lists, copied as they are.
 #   index.html: per platform (linked from the top, with its image count) every print with an image, by game title,
@@ -18,7 +18,7 @@ import argparse, html, json, os, re, shutil, sys
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, shapes, straighten
+import photos, steps, shapes, straighten, frozen
 import serials as serials_module
 
 SOURCES = "photo-sources.json"
@@ -79,11 +79,16 @@ def main():
 
     index = {"prints": {}, "label_photos": {}}
     copies = []
+    frozen_entries = frozen.load()
     for p in prints["prints"]:
         name = straighten.file_name(p["id"])
         restored = os.path.join(gen, "restore", name)
         desc_file = restored[:-5] + ".json"
         desc = json.load(open(desc_file)) if os.path.exists(desc_file) else {}
+        if p.get("frozen") in frozen_entries:  # the frozen image, as it is
+            restored = frozen.image_path(p["frozen"])
+            e = frozen_entries[p["frozen"]]
+            desc = {"crop": e["crop"], "keys": e["restored_from"], "paper": e.get("paper")}
         image = None
         if os.path.exists(restored):
             image = "prints/" + name  # the id starts with the serial
@@ -92,7 +97,8 @@ def main():
         index["prints"][p["id"]] = {"serial": p["serial"], "release": p["release"], "title": titles.get(p["release"]),
                                     "shape": p["shape"], "image": image,
                                     "size": [crop["w"], crop["h"]] if image and crop else None,
-                                    "paper": desc.get("paper") is not None if desc else None, "label_photos": p["keys"]}
+                                    "paper": desc.get("paper") is not None if desc else None, "label_photos": p["keys"],
+                                    "frozen": bool(p.get("frozen")), "restored_from": desc.get("keys")}
         for k in p["keys"]:
             sha1 = k.split("@")[0]
             s = src.get(sha1, {})
