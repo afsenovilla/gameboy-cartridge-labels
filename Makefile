@@ -76,7 +76,8 @@
 #   A tool, not a step: a local page for placing labels by hand on one shape's approximate cuts (dmg, cgb or agb; cgb by
 #   default), the lowest edge-model label confidence first, each straightened with its margin: drag the label's corners
 #   onto the sticker's; saved to hand-fit-labels.json in the photo's pixels, for training and testing the label edge
-#   model; no step reads it (src/fit_by_hand.py).
+#   model; no step reads it. Not a label: the area goes to not-labels.json, and make find makes no label photo there
+#   (src/fit_by_hand.py).
 #
 #   make todo-report NAME=<name> NOTE="what changed"
 #   A tool, not a step: the prints listed in todo.md restored with the current code as a new version

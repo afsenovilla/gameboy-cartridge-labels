@@ -70,3 +70,19 @@ def test_overlapping_label_photos_of_one_photo_are_merged():
 
 def test_key_is_the_centre_in_percent():
     assert find.key("abc", [512.0, 250.0], [1024, 1000]) == "abc@50,25"
+
+
+def test_an_area_marked_not_a_label_holds_no_label_photo_and_spreads_none():
+    texts = {"a": {"size": [1000, 1000], "lines": [line("DMG-APSJ-JPN", 300, 300)]},
+             "b": {"size": [1000, 1000], "lines": []}}
+    label = points(200, 200, 600, 600)
+    matches = [("a", "b", H_SHIFT, inliers(label, H_SHIFT))]
+    chosen = {s: f"photos/{s}.jpg" for s in texts}
+    around = {"a": [np.float32([[150, 150], [700, 150], [700, 700], [150, 700]])]}
+    result = find.find(chosen, texts, matches, DATABASE, not_labels=around)
+    assert result["label_photos"] == []
+    assert result["rejected"][0]["why"] == "in an area marked not a label"
+    # marked in b only: a's label photo stays, nothing spreads into b
+    shifted = {"b": [np.float32([[250, 200], [800, 200], [800, 750], [250, 750]])]}
+    result = find.find(chosen, texts, matches, DATABASE, not_labels=shifted)
+    assert [lp["photo"] for lp in result["label_photos"]] == ["a"]

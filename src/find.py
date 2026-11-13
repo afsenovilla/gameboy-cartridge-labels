@@ -31,9 +31,12 @@
 #      background, embossing) starts nothing.
 #   4. Label photos of one photo whose outlines (the hull of their evidence) share MERGE_OVERLAP of the smaller are
 #      one: spreading's circles are rough and may land a second label photo on one already there.
+# Not labels: an area a person marked as not a label (NOT_LABELS, from make fit-by-hand: the fitted cut and find's
+# outline of the label photo, in the photo's pixels) holds no label photo: a candidate whose centre lies in either is
+# left out, from the seeds (rejected, with why) and from spreading (none is made there, so none spreads from it).
 # The shape is the serial's platform (DMG-, CGB-, AGB-); a label photo found by matching takes its linked ones' (most).
 # Keys: <sha1>@<x>,<y>, the centre in whole percent of the photo's width and height.
-# Done again when label-photos.json is older than this file or than any of its inputs.
+# Done again when label-photos.json is older than this file or than any of its inputs (NOT_LABELS among them).
 # With --no-strings, the text isn't used at all (details and matches only), into <generated>/find-no-strings/: to
 # compare.
 # Usage: find.py [--sample] [--no-strings]
@@ -92,6 +95,23 @@ def group(seeds):
         merged = [s] + [t for g in near for t in g]
         groups = [g for g in groups if g not in near] + [merged]
     return groups
+
+
+NOT_LABELS = "not-labels.json"  # {label photo key: {"photo", "area", "found" ([[x, y]...] in the photo's pixels), "datetime"}}
+
+
+def load_not_labels(path=NOT_LABELS):
+    """photo -> [polygons (float32)] marked not a label."""
+    out = {}
+    for e in (json.load(open(path)) if os.path.exists(path) else {}).values():
+        for poly in (e.get("area"), e.get("found")):
+            if poly:
+                out.setdefault(e["photo"], []).append(np.float32(poly))
+    return out
+
+
+def not_a_label(not_labels, photo, centre):
+    return any(cv2.pointPolygonTest(p, (float(centre[0]), float(centre[1])), False) >= 0 for p in not_labels.get(photo, []))
 
 
 def key(sha1, centre, size):
@@ -177,9 +197,10 @@ def place(lp, places, photo_seeds=()):
     lp["detail_shape"] = places[best["detail"]]["shape"]
 
 
-def find(chosen, texts, matches, release_of, detections=None, use_strings=True, places=None):
+def find(chosen, texts, matches, release_of, detections=None, use_strings=True, places=None, not_labels=None):
     """The label photos, their sets and the rejected candidates, from the photos' texts (unless not use_strings), the
-    details found in them (sha1 -> detections) and the matches."""
+    details found in them (sha1 -> detections) and the matches; none in the areas not_labels marks (load_not_labels)."""
+    not_labels = not_labels or {}
     regions = serials.by_region(release_of)
     sizes = {s: texts[s]["size"] or [1, 1] for s in chosen}
     lps, rejected = [], []  # label photos: dicts with "photo", "centre" (array), "radius", "strings", "found_by"
@@ -197,6 +218,9 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
             cand = {"photo": s, "centre": centre, "radius": radius, "strings": strings, "details": found_details, "points": [],
                     "found_by": "serial" if "exact" in kinds else "near serial" if "near" in kinds else "detail" if "detail" in kinds else None}
             place(cand, places or {}, found)
+            if not_a_label(not_labels, s, cand["centre"]):
+                rejected.append({"photo": s, "centre": cand["centre"].tolist(), "strings": strings, "why": "in an area marked not a label"})
+                continue
             if cand["found_by"]:
                 lps.append(cand)
             else:
@@ -255,6 +279,8 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
                     # pass, forever (the full set, 2026-11-12: one more per pass from the third on, 342 passes and on)
                     if not np.hypot(*(qb.mean(0) - centre)) < radius:
                         centre, radius = qb.mean(0), max(radius, 1.0)
+                    if not_a_label(not_labels, b, centre):
+                        continue
                     other = {"photo": b, "centre": centre, "radius": radius, "strings": [],
                              "details": [], "points": [], "found_by": "match"}
                     add(other)
@@ -369,11 +395,12 @@ def main():
     found = details.detections(gen, chosen)
     detail_files = [os.path.join(gen, "details", s + ".json") for s in chosen]
     places_file = os.path.join(details.DETAILS, details.PLACES)
-    newest = max(os.path.getmtime(p) for p in list(text_files.values()) + match_files + detail_files + [places_file])
+    newest = max(os.path.getmtime(p) for p in list(text_files.values()) + match_files + detail_files + [places_file]
+                 + ([NOT_LABELS] if os.path.exists(NOT_LABELS) else []))
     texts = {s: json.load(open(p)) for s, p in text_files.items()}
     if steps.stale(out, __file__) or os.path.getmtime(out) < newest:
         result = find(chosen, texts, match.read_matches(os.path.join(gen, "match"), list(chosen)), serials.load_database(),
-                      found, use_strings=not args.no_strings, places=details.load_places())
+                      found, use_strings=not args.no_strings, places=details.load_places(), not_labels=load_not_labels())
         steps.write_json(out, result)
     result = json.load(open(out))
     page(out_dir, chosen, result, texts)

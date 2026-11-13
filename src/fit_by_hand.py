@@ -6,10 +6,11 @@
 # label's cut as a rectangle (cyan, corners rounded as main draws them), starting at solve's fitted cut (or the one saved
 # before): its corners dragged freely (the perspective with them), the dots in its sides sliding one side; a magnifier
 # shows 6 mm around the handle held. Saving writes the corners to HAND_FILE in the photo's own pixels (so a fit stays
-# true whatever solve does later) and goes to the next; saved again, it replaces the one before. Next skips. Delete
-# deletes the photo from photos/ (photos.delete, as remove-photos: the file and its record in photo-sources.json; the
-# steps drop what they made from it on their next run), asking first if it holds other label photos, and its label
-# photos' entries in HAND_FILE; its label photos leave the list.
+# true whatever solve does later) and goes to the next; saved again, it replaces the one before. Next skips. "Not a
+# label" (a button only: a key next to S was too easy to hit, the user) marks the area as not a label in find's
+# NOT_LABELS: the fitted cut and find's outline of it, in the photo's pixels (the outline too: on about 15 % of the
+# approximate cuts find's centre lies outside the fitted cut); find makes no label photo there on its next run, the photo
+# and its other label photos stay. Its entry in HAND_FILE goes, and it leaves the list.
 # No step reads HAND_FILE.
 # Usage: fit_by_hand.py [shape] [port]   (shape: dmg, cgb or agb; cgb by default)
 import json, os, sys, threading, urllib.parse, datetime
@@ -17,11 +18,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cv2, numpy as np
-import solve as solve_step, straighten, cuts, shapes, steps, photos
+import solve as solve_step, straighten, cuts, shapes, steps, find as find_step
 
 GEN = "generated"
-HAND_FILE = "hand-fit-labels.json"  # {label photo key: {"corners": [[x, y] x 4: the cut's top left, top right, bottom right, bottom left, in the photo's pixels], "date"}}
+HAND_FILE = "hand-fit-labels.json"  # {label photo key: {"corners": [[x, y] x 4: the cut's top left, top right, bottom right, bottom left, in the photo's pixels], "datetime"}}
 lock = threading.Lock()
+now = lambda: datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 PX_TO_MM = straighten.canvas("dmg")[1]  # a straightened image's px -> ink mm: the same for every shape (only the size differs)
@@ -48,6 +50,7 @@ class Hand:
                 and os.path.exists(self.base(k) + ".drawn.json")]
         self.order = sorted(keys, key=lambda k: (conf(self.solved[k]), k))
         self.conf = {k: conf(self.solved[k]) for k in keys}
+        self.found = {lp["key"]: lp["outline"] for lp in json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]}
 
     def base(self, key):
         return os.path.join(GEN, "straighten", straighten.file_name(key)[:-5])
@@ -68,9 +71,8 @@ class Hand:
         if r.get("carried"):
             notes.append(f"pose carried from {r['carried']['from']}")
         if key in self.hand:
-            notes.append(f"placed by hand {self.hand[key]['date']}")
-        return {"key": key, "corners": np.round(corners, 2).tolist(), "label_mm": [w, h], "px_per_mm": straighten.PX_PER_MM, "notes": notes,
-                "others": self.others(key)}
+            notes.append(f"placed by hand {self.hand[key]['datetime']}")
+        return {"key": key, "corners": np.round(corners, 2).tolist(), "label_mm": [w, h], "px_per_mm": straighten.PX_PER_MM, "notes": notes}
 
     def image(self, key):
         img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
@@ -79,25 +81,21 @@ class Hand:
     def save(self, key, corners_view):
         corners = view_to_photo(self.drawn(key)["photo_to_ink"], corners_view)
         with lock:
-            self.hand[key] = {"corners": np.round(corners, 2).tolist(), "date": datetime.date.today().isoformat()}
+            self.hand[key] = {"corners": np.round(corners, 2).tolist(), "datetime": now()}
             steps.write_json(HAND_FILE, self.hand)
 
-    def others(self, key):
-        """The photo's other label photos (any shape)."""
-        photo = self.solved[key]["photo"]
-        return [k for k, r in self.solved.items() if r["photo"] == photo and k != key]
-
-    def delete(self, key):
-        photo = self.solved[key]["photo"]
+    def not_a_label(self, key):
+        r, found = self.solved[key], self.found.get(key)
+        w, h = shapes.LABEL_MM[r["shape"]]
+        area = cv2.perspectiveTransform(np.float64([[[0, 0]], [[w, 0]], [[w, h]], [[0, h]]]), np.float64(r["cut_to_photo"])).reshape(-1, 2)
         with lock:
-            if photo in photos.all_photos():
-                photos.delete(photo)
-            gone = [k for k, r in self.solved.items() if r["photo"] == photo]
-            if any(self.hand.pop(k, None) for k in gone):
+            marked = json.load(open(find_step.NOT_LABELS)) if os.path.exists(find_step.NOT_LABELS) else {}
+            marked[key] = {"photo": r["photo"], "area": np.round(area, 1).tolist(), "found": found, "datetime": now()}
+            steps.write_json(find_step.NOT_LABELS, marked)
+            if self.hand.pop(key, None):
                 steps.write_json(HAND_FILE, self.hand)
-            self.order = [k for k in self.order if k not in gone]
-            for k in gone:
-                self.conf.pop(k, None)
+            self.order = [k for k in self.order if k != key]
+            self.conf.pop(key, None)
 
     def listing(self):
         return {"items": [{"key": k, "conf": round(self.conf[k], 2), "placed": k in self.hand} for k in self.order],
@@ -121,15 +119,15 @@ h2{font-size:14px;margin:0;width:30ch;overflow:hidden;text-overflow:ellipsis;whi
 #stage{flex:1;position:relative;overflow:hidden;background:#333}
 canvas#c{position:absolute;left:0;top:0}
 button{font:inherit;padding:4px 10px;border:none;border-radius:0.3em}
-button#save{background:#070;color:#fff}button#delete{background:#b00;color:#fff}
+button#save{background:#070;color:#fff}button#notlabel{background:#b00;color:#fff}
 #status{display:inline-block;width:10ch;color:#070}
 </style>
 <div id="side"><span id="summary"></span><canvas id="loupe" width="240" height="240"></canvas><div id="list"></div></div>
 <div id="main"><header>
 <button id="prev">← prev</button><span id="position"></span><button id="next">next (skip) →</button>
-<h2 id="title"></h2><button id="reset">Reset (R)</button><button id="save">Save (S)</button><button id="delete">Delete photo (D)</button><span id="status"></span>
+<h2 id="title"></h2><button id="reset">Reset (R)</button><button id="save">Save (S)</button><button id="notlabel">Not a label</button><span id="status"></span>
 <p id="notes"></p>
-<p id="help">Drag the label's corners (squares) onto the sticker's; the dots slide a side. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next; N: next without saving; D: delete the photo (not a label, or useless), and go to the next.</p>
+<p id="help">Drag the label's corners (squares) onto the sticker's; the dots slide a side. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next; N: next without saving. Not a label (no key): marks the area as not a label for find, and goes to the next.</p>
 </header><div id="stage"><canvas id="c"></canvas></div></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -267,11 +265,10 @@ async function save() {
   list[i].placed = true;
   if (i + 1 < list.length) go(i + 1); else { showNames(); $("status").textContent = "saved"; }
 }
-async function del() {
+async function notLabel() {
   if (!item) return;
-  if (item.others.length && !confirm(`This photo holds ${item.others.length} other label photo(s): ${item.others.join(", ")}. Delete the photo anyway?`)) return;
-  const response = await fetch("/delete", {method: "POST", body: JSON.stringify({key: item.key})});
-  if (!response.ok) return alert("Not deleted: " + response.status);
+  const response = await fetch("/not-a-label", {method: "POST", body: JSON.stringify({key: item.key})});
+  if (!response.ok) return alert("Not marked: " + response.status);
   const data = await response.json();
   list = data.items; showSummary(data);
   item = null; corners = null;
@@ -283,7 +280,7 @@ $("prev").onclick = () => go(i - 1);
 $("next").onclick = () => go(i + 1);
 $("reset").onclick = () => reset();
 $("save").onclick = () => save();
-$("delete").onclick = () => del();
+$("notlabel").onclick = () => notLabel();
 document.onkeydown = e => {
   if (!corners) return;
   const step = e.shiftKey ? 10 : 1, d = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
@@ -292,7 +289,6 @@ document.onkeydown = e => {
   else if (e.key === "s" || e.key === "S") save();
   else if (e.key === "n" || e.key === "N") go(i + 1);
   else if (e.key === "r" || e.key === "R") reset();
-  else if (e.key === "d" || e.key === "D") del();
 };
 window.onresize = () => { if (img.width) { frame(); draw(); } };
 start();
@@ -323,13 +319,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/save", "/delete"):
+        if self.path not in ("/save", "/not-a-label"):
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-        if self.path == "/delete":
+        if self.path == "/not-a-label":
             if data.get("key") not in hand.conf:
                 return self.send_error(400)
-            hand.delete(data["key"])
+            hand.not_a_label(data["key"])
             return self.send(hand.listing())
         if data.get("key") not in hand.conf or np.shape(data.get("corners")) != (4, 2):
             return self.send_error(400)
