@@ -72,6 +72,12 @@
 #   (badness: the share of the label off the photo or unlike its restored print, and a resolution under 10 px/mm), to
 #   delete one or one and all worse. Asks first if a photo holds label photos of other prints (src/remove_photos.py).
 #
+#   make fit-by-hand SHAPE=cgb
+#   A tool, not a step: a local page for placing labels by hand on one shape's approximate cuts (dmg, cgb or agb; cgb by
+#   default), the lowest edge-model label confidence first, each straightened with its margin: drag the label's corners
+#   onto the sticker's; saved to hand-fit-labels.json in the photo's pixels, for training and testing the label edge
+#   model; no step reads it (src/fit_by_hand.py).
+#
 #   make todo-report NAME=<name> NOTE="what changed"
 #   A tool, not a step: the prints listed in todo.md restored with the current code as a new version
 #   (generated/todo-report/<n>-<name>/, every version kept), and the page generated/todo-report/index.html: each listed
@@ -83,7 +89,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos
+.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos fit-by-hand
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -179,3 +185,7 @@ clean-publish:
 
 remove-photos:
 	$(PYTHON) src/remove_photos.py
+
+SHAPE ?= cgb
+fit-by-hand:
+	$(PYTHON) src/fit_by_hand.py $(SHAPE)
