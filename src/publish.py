@@ -1,13 +1,12 @@
 # publish: the outputs collected into <generated>/publish/:
-#   prints/<serial>_<print>.avif: each restored print, restore's image as it is (paper white where found, else median
-#     colours), its file name prefixed with its serial (else its release, else "unknown"; characters other than letters,
-#     digits and "-" made "-")
+#   prints/<print>.avif: each restored print, restore's image as it is (paper white where found, else median colours),
+#     named by the print's persistent id (it starts with the serial: DMG-APSJ-JPN-lisa.avif)
 #   No label photo images (the user, 2026-11-10: the straightened photos aren't worth distributing, over 1 GB): each
 #     label photo is in index.json, with where it came from. Poor fits (solve.poor_fit) are listed with
 #     poor_fit true; restore leaves them out.
 #   index.json: {"prints": {id: {serial, release, title (the database's), shape, image, size (its w, h px), paper,
 #     label_photos}}, "label_photos": {key: {print,
-#     serial, source, page_url, image_url, poor_fit}}}. Ids and keys hold within a run only.
+#     serial, source, page_url, image_url, poor_fit}}}. Print ids persist between runs (print-ids.json); keys hold within a run only.
 #   missing.json, unknown-serials.json (read-serials), few-photos.json (prints): the lists, copied as they are.
 #   index.html: per platform (linked from the top, with its image count) every print with an image, by game title,
 #     with its label photos' sources.
@@ -52,11 +51,6 @@ def poor_fits(solved):
     return {k for k, r in solved.items() if solve_step.poor_fit(r)}
 
 
-def file_prefix(p):
-    """A print's serial for its file name: its serial, else its release, else "unknown", made safe."""
-    return re.sub(r"[^A-Za-z0-9-]+", "-", str(p["serial"] or p["release"] or "unknown")).strip("-") or "unknown"
-
-
 def newer(out, *ins):
     return os.path.exists(out) and all(os.path.getmtime(out) >= os.path.getmtime(i) for i in ins)
 
@@ -92,7 +86,7 @@ def main():
         desc = json.load(open(desc_file)) if os.path.exists(desc_file) else {}
         image = None
         if os.path.exists(restored):
-            image = "prints/" + file_prefix(p) + "_" + name
+            image = "prints/" + name  # the id starts with the serial
             copies.append((restored, os.path.join(out_dir, image)))
         crop = desc.get("crop") or {}
         index["prints"][p["id"]] = {"serial": p["serial"], "release": p["release"], "title": titles.get(p["release"]),

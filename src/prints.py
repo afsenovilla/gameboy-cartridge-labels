@@ -1,5 +1,5 @@
 # prints: the label photos of each family (solve) split into prints, into <generated>/prints/:
-#   prints.json: {"prints": [{"id" (its smallest key), "keys", "release", "serial", "shape", "family"}], "tile_mm": TILE_MM,
+#   prints.json: {"prints": [{"id" (its persistent id: src/print_ids.py, print-ids.json), "keys", "release", "serial", "shape", "family"}], "tile_mm": TILE_MM,
 #                 "differences": {family: {"grid": [rows, columns], "tiles": [index...]}} (the tiles telling its prints apart)}
 #   few-photos.json: [print ids] of prints with fewer than FEW label photos
 # Comparing, in each family's ink coordinates (straighten's images): the label, 1 mm in from its edges, in TILE_MM
@@ -12,6 +12,8 @@
 # tiles (pairs within a family, by their serials read): 3 or more different tiles on 10 % of same-serial pairs (dirt,
 # misfits: split, then pooled back), 86 % of one release's region variants (many of the rest misread serials of one
 # print: IPN for JPN, a cut-off serial) and 95 % of different releases. At 2 mm tiles a region code hardly showed (one tile, often still correlating).
+#   id-changes.json: this run's id changes ([{"kind": new, kept, split, merged, renamed or gone, "id", ...}]), on the page
+# The ids are kept between runs in print-ids.json (the repo root, committed; with --sample in <generated>/prints/).
 # Done again when prints.json is older than this file, solve.json or serials.json.
 # Usage: prints.py [--sample]
 import argparse, html, itertools, json, os, sys
@@ -19,7 +21,7 @@ from collections import Counter
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, straighten, shapes
+import photos, steps, straighten, shapes, print_ids
 
 TILE_MM = 1
 TEXTURE = 6.0
@@ -97,6 +99,29 @@ def split_family(D):
     return prints, differs
 
 
+def keep_ids(all_prints, ids_file, gen):
+    """Each print's persistent id (print_ids), the registry in ids_file updated; this run's changes."""
+    registry = print_ids.load(ids_file)
+    found = json.load(open(os.path.join(gen, "find", "label-photos.json")))["label_photos"]
+    outlines = {lp["key"]: lp["outline"] for lp in found}
+    new_keys = {k for p in all_prints for k in p["keys"]}
+    of_photo = {}
+    for k in new_keys:
+        of_photo.setdefault(k.split("@")[0], []).append(k)
+    old_keys = {k for e in registry["prints"].values() for k in e["keys"]}
+    sizes = {}
+    for s in {k.split("@")[0] for k in old_keys - new_keys}:
+        f = os.path.join(gen, "read-text", s + ".json")
+        if os.path.exists(f):
+            sizes[s] = json.load(open(f))["size"]
+    key_map = {k: print_ids.same_label_photo(k, of_photo.get(k.split("@")[0], []), outlines, sizes) for k in old_keys}
+    registry, changes = print_ids.assign(all_prints, registry, key_map)
+    print_ids.save(registry, ids_file)
+    counts = Counter(c["kind"] for c in changes)
+    print("print ids: " + ", ".join(f"{n} {kind}" for kind, n in sorted(counts.items())), flush=True)
+    return changes
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true")
@@ -133,12 +158,13 @@ def main():
                 differences[fam] = {"grid": list(views[0][1].shape), "tiles": np.flatnonzero(differs).tolist()}
             all_prints += [{"keys": [keys[i] for i in g], "family": fam} for g in groups]
         for p in all_prints:
-            p["id"] = min(p["keys"])
             rel = Counter(serial.get(k, {}).get("release") for k in p["keys"] if serial.get(k, {}).get("release"))
             p["release"] = rel.most_common(1)[0][0] if rel else None
             ser = Counter(serial.get(k, {}).get("serial") for k in p["keys"] if serial.get(k, {}).get("serial"))
             p["serial"] = ser.most_common(1)[0][0] if ser else None
             p["shape"] = solved[p["keys"][0]]["shape"]
+        ids_file = print_ids.IDS_FILE if not args.sample else os.path.join(out_dir, print_ids.IDS_FILE)
+        changes = keep_ids(all_prints, ids_file, gen)
         for d in os.listdir(out_dir):  # pair images (pooling masks) of earlier versions
             if os.path.isdir(os.path.join(out_dir, d)):
                 for f in os.listdir(os.path.join(out_dir, d)):
@@ -147,6 +173,7 @@ def main():
         steps.write_json(out, {"prints": sorted(all_prints, key=lambda p: p["id"]), "tile_mm": TILE_MM,
                                "differences": differences})
         steps.write_json(os.path.join(out_dir, "few-photos.json"), sorted(p["id"] for p in all_prints if len(p["keys"]) < FEW))
+        steps.write_json(os.path.join(out_dir, "id-changes.json"), changes)
     result = json.load(open(out))
     page(out_dir, result, gen)
     print(f"{len(result['prints'])} prints of {sum(len(p['keys']) for p in result['prints'])} label photos; page: {os.path.join(out_dir, 'index.html')}")
@@ -186,6 +213,14 @@ def page(out_dir, result, gen):
         blocks.append(f'<h3>Family {html.escape(fam[:10])}: {len(ps)} prints{", " + str(len(d["tiles"])) + " tiles differ" if d else ""}</h3>{viewer}{row}')
     n = len(result["prints"])
     multi = sum(1 for ps in by_family.values() if len(ps) > 1)
+    changes_file = os.path.join(out_dir, "id-changes.json")
+    changes = json.load(open(changes_file)) if os.path.exists(changes_file) else []
+    counts = Counter(c["kind"] for c in changes)
+    words = {"split": lambda c: f'{c["id"]} split from {c["from"]}', "merged": lambda c: f'{c["id"]} merged into {c["into"]}',
+             "renamed": lambda c: f'{c["from"]} renamed {c["id"]}', "gone": lambda c: f'{c["id"]}: no label photo left'}
+    listed = "".join(f"<li>{html.escape(words[c['kind']](c))}</li>" for c in changes if c["kind"] in words)
+    ids = (f'<p>Print ids this run: {", ".join(f"{v} {k}" for k, v in sorted(counts.items()))}.</p>'
+           + (f"<ul>{listed}</ul>" if listed else "")) if changes else ""
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>prints</title>
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} .print{{display:inline-block;vertical-align:top;margin:4px 12px 12px 0;padding:4px;border:1px solid #666}}
@@ -197,6 +232,7 @@ function auto(box){{const v=box.closest('.viewer');if(box.checked){{v._t=setInte
 </script>
 <h1>prints</h1>
 <p>{n} prints; families with more than one print: {multi}. Tiles of {result["tile_mm"]} mm.</p>
+{ids}
 {steps.legend([("#f33", "a tile that tells the family's prints apart (a square on every image of the family)")])}
 <p>The large viewer stacks one label photo per print in the same place: click it, or tick "flip by itself", to switch between them. Families of one label photo left out.</p>
 {"".join(blocks)}""")
