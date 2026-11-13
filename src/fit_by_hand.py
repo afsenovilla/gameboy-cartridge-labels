@@ -6,7 +6,10 @@
 # label's cut as a rectangle (cyan, corners rounded as main draws them), starting at solve's fitted cut (or the one saved
 # before): its corners dragged freely (the perspective with them), the dots in its sides sliding one side; a magnifier
 # shows 6 mm around the handle held. Saving writes the corners to HAND_FILE in the photo's own pixels (so a fit stays
-# true whatever solve does later) and goes to the next; saved again, it replaces the one before. Next skips.
+# true whatever solve does later) and goes to the next; saved again, it replaces the one before. Next skips. Delete
+# deletes the photo from photos/ (photos.delete, as remove-photos: the file and its record in photo-sources.json; the
+# steps drop what they made from it on their next run), asking first if it holds other label photos, and its label
+# photos' entries in HAND_FILE; its label photos leave the list.
 # No step reads HAND_FILE.
 # Usage: fit_by_hand.py [shape] [port]   (shape: dmg, cgb or agb; cgb by default)
 import json, os, sys, threading, urllib.parse, datetime
@@ -14,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cv2, numpy as np
-import solve as solve_step, straighten, cuts, shapes, steps
+import solve as solve_step, straighten, cuts, shapes, steps, photos
 
 GEN = "generated"
 HAND_FILE = "hand-fit-labels.json"  # {label photo key: {"corners": [[x, y] x 4: the cut's top left, top right, bottom right, bottom left, in the photo's pixels], "date"}}
@@ -66,7 +69,8 @@ class Hand:
             notes.append(f"pose carried from {r['carried']['from']}")
         if key in self.hand:
             notes.append(f"placed by hand {self.hand[key]['date']}")
-        return {"key": key, "corners": np.round(corners, 2).tolist(), "label_mm": [w, h], "px_per_mm": straighten.PX_PER_MM, "notes": notes}
+        return {"key": key, "corners": np.round(corners, 2).tolist(), "label_mm": [w, h], "px_per_mm": straighten.PX_PER_MM, "notes": notes,
+                "others": self.others(key)}
 
     def image(self, key):
         img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
@@ -77,6 +81,23 @@ class Hand:
         with lock:
             self.hand[key] = {"corners": np.round(corners, 2).tolist(), "date": datetime.date.today().isoformat()}
             steps.write_json(HAND_FILE, self.hand)
+
+    def others(self, key):
+        """The photo's other label photos (any shape)."""
+        photo = self.solved[key]["photo"]
+        return [k for k, r in self.solved.items() if r["photo"] == photo and k != key]
+
+    def delete(self, key):
+        photo = self.solved[key]["photo"]
+        with lock:
+            if photo in photos.all_photos():
+                photos.delete(photo)
+            gone = [k for k, r in self.solved.items() if r["photo"] == photo]
+            if any(self.hand.pop(k, None) for k in gone):
+                steps.write_json(HAND_FILE, self.hand)
+            self.order = [k for k in self.order if k not in gone]
+            for k in gone:
+                self.conf.pop(k, None)
 
     def listing(self):
         return {"items": [{"key": k, "conf": round(self.conf[k], 2), "placed": k in self.hand} for k in self.order],
@@ -100,15 +121,15 @@ h2{font-size:14px;margin:0;width:30ch;overflow:hidden;text-overflow:ellipsis;whi
 #stage{flex:1;position:relative;overflow:hidden;background:#333}
 canvas#c{position:absolute;left:0;top:0}
 button{font:inherit;padding:4px 10px;border:none;border-radius:0.3em}
-button#save{background:#070;color:#fff}
+button#save{background:#070;color:#fff}button#delete{background:#b00;color:#fff}
 #status{display:inline-block;width:10ch;color:#070}
 </style>
 <div id="side"><span id="summary"></span><canvas id="loupe" width="240" height="240"></canvas><div id="list"></div></div>
 <div id="main"><header>
 <button id="prev">← prev</button><span id="position"></span><button id="next">next (skip) →</button>
-<h2 id="title"></h2><button id="reset">Reset (R)</button><button id="save">Save (S)</button><span id="status"></span>
+<h2 id="title"></h2><button id="reset">Reset (R)</button><button id="save">Save (S)</button><button id="delete">Delete photo (D)</button><span id="status"></span>
 <p id="notes"></p>
-<p id="help">Drag the label's corners (squares) onto the sticker's; the dots slide a side. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next; N: next without saving.</p>
+<p id="help">Drag the label's corners (squares) onto the sticker's; the dots slide a side. Tab: next handle; arrow keys: nudge 1 px (Shift: 10 px); wheel: zoom; drag elsewhere: pan; S: save and go to the next; N: next without saving; D: delete the photo (not a label, or useless), and go to the next.</p>
 </header><div id="stage"><canvas id="c"></canvas></div></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -246,11 +267,23 @@ async function save() {
   list[i].placed = true;
   if (i + 1 < list.length) go(i + 1); else { showNames(); $("status").textContent = "saved"; }
 }
+async function del() {
+  if (!item) return;
+  if (item.others.length && !confirm(`This photo holds ${item.others.length} other label photo(s): ${item.others.join(", ")}. Delete the photo anyway?`)) return;
+  const response = await fetch("/delete", {method: "POST", body: JSON.stringify({key: item.key})});
+  if (!response.ok) return alert("Not deleted: " + response.status);
+  const data = await response.json();
+  list = data.items; showSummary(data);
+  item = null; corners = null;
+  if (!list.length) { $("title").textContent = "none"; return; }
+  i = Math.min(i, list.length - 1); show();
+}
 const go = k => { if (k >= 0 && k < list.length) { i = k; show(); } };
 $("prev").onclick = () => go(i - 1);
 $("next").onclick = () => go(i + 1);
 $("reset").onclick = () => reset();
 $("save").onclick = () => save();
+$("delete").onclick = () => del();
 document.onkeydown = e => {
   if (!corners) return;
   const step = e.shiftKey ? 10 : 1, d = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]}[e.key];
@@ -259,6 +292,7 @@ document.onkeydown = e => {
   else if (e.key === "s" || e.key === "S") save();
   else if (e.key === "n" || e.key === "N") go(i + 1);
   else if (e.key === "r" || e.key === "R") reset();
+  else if (e.key === "d" || e.key === "D") del();
 };
 window.onresize = () => { if (img.width) { frame(); draw(); } };
 start();
@@ -289,9 +323,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        if self.path != "/save":
+        if self.path not in ("/save", "/delete"):
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.path == "/delete":
+            if data.get("key") not in hand.conf:
+                return self.send_error(400)
+            hand.delete(data["key"])
+            return self.send(hand.listing())
         if data.get("key") not in hand.conf or np.shape(data.get("corners")) != (4, 2):
             return self.send_error(400)
         hand.save(data["key"], data["corners"])
