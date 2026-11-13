@@ -31,10 +31,59 @@ These go against rules marked settled, so they need the user's yes first:
 
 The names (50; a serial with more prints than names gets two names: `-lisa-bob`):
 
-amy, ann, ben, bob, carl, dan, dave, dora, ed, ella, eve, fay, fred, gail, greg, gus, hal, jack, jane, jeff, jill, joe, june, karl, kate, kim, lee, lisa, liz, lou, mae, max, meg, mike, ned, nora, pam, pat, paul, peg, rex, rose, roy, ruth, sam, sue, ted, tess, tom, vera
+alex
+amy
+ann
+beth
+bob
+carl
+dan
+dave
+dora
+ella
+emma
+eve
+frank
+fred
+gina
+greg
+hugo
+ivan
+jack
+jane
+jeff
+jill
+joe
+john
+karl
+kate
+kim
+lee
+lisa
+lucy
+luke
+mark
+mary
+max
+meg
+mike
+nick
+nora
+paul
+pete
+rick
+rose
+ruth
+sara
+ted
+tess
+tina
+tom
+vera
+zoe
 
 - **No serial read:** the release read instead if any (`DMG-APSJ-jeff`), else `UNKNOWN-jeff`.
-- **The serial read differently later** (a misread corrected): proposed, the id stays as it is (it's a name, not a claim; prints.json carries the serial read now); the alternative, renaming it, recorded in "gone" with "renamed" and the new id.
+- **The serial read differently later** (a misread corrected): the id is corrected (the user, 2026-11-13): the print gets the corrected serial with its name kept if free there (else another), and the old id goes to "gone" with "renamed" and the new id, so anything pointing at it can follow.
 
 **The file:** print-ids.json, in the repo root, written by the prints step only, committed like the data files:
 
@@ -71,6 +120,7 @@ frozen-prints.json, in the repo root, hand input:
          "serial": "DMG-APSJ-JPN", "shape": "dmg",
          "image": "<sha1 of the image>",
          "crop": {…, as restore's},
+         "restored_from": ["<sha1>@48,55", …],
          "label_photos": {"<sha1>@48,55": {"photo_to_ink": [[…]], "cut": [[x, y] × 4, the photo's pixels]}}}}
 ```
 
@@ -78,7 +128,7 @@ the image itself, copied from restore:
 
 frozen/DMG-APSJ-JPN-lisa.avif
 
-(The images are about 130 KB each: 1000 frozen prints would add about 130 MB to the repository. If that's too much: keep them outside git, or in Git LFS.)
+The images are committed (the user, 2026-11-13: the repository will hold them anyway once published); about 130 KB each. "restored_from" lists the label photos the image was restored from (restore's "keys"); "label_photos" holds the print's label photos when frozen, with their poses.
 
 **What each step does with a frozen print:**
 
@@ -86,7 +136,7 @@ frozen/DMG-APSJ-JPN-lisa.avif
 - **find:** frozen label photos are taken from frozen-prints.json as they are, not searched for; their areas are taken. A match from a photo to a frozen print's image makes a label photo there (found_by "frozen print"), as spreading does now.
 - **solve:** frozen label photos are copied (photo_to_ink, cut), not fitted, and not in stage 2. A label photo matched to a frozen print's image gets its photo_to_ink from that match (the image is in ink coordinates), checked by the pixel test of stage 2.
 - **straighten, read-serials:** skip frozen label photos (their serial is the one frozen).
-- **prints:** a frozen print keeps its id and its label photos. A new label photo matched to it is compared with its image by the tile comparison: the same print, or another print (a variant), as now.
+- **prints:** a frozen print keeps its id and its label photos. A new label photo matched to it is compared with its image by the tile comparison: the same print, or another print (a variant), as now. The same print: it joins the print (in prints.json and publish's index.json, with the print's other label photos), but the image stays as frozen (the user, 2026-11-13): the print's label photos can be more than the image's "restored_from".
 - **restore:** skips frozen prints.
 - **publish:** copies the frozen image as it is.
 
@@ -96,13 +146,16 @@ frozen/DMG-APSJ-JPN-lisa.avif
 
 Built into stage 2's match and solve (above); listed apart because it's measured apart: on photos held out (some frozen print's own photos, left out of its freezing), how often the match to the frozen image finds them, and how far the pose from the match is from their solved one.
 
+## Decided (the user, 2026-11-13)
+
+- A new photo of a frozen print joins the print; the image stays as frozen; the image records which label photos it was restored from.
+- The frozen images are committed.
+- A wrong serial in an id is corrected (renamed, the old id followed through "gone").
+- The 153 prints marked Good whose image is still current are not frozen as a batch: not that good.
+
 ## Open questions for the user
 
-1. **A new photo of a frozen print:** (a) it's added to the print and the print is unfrozen, to be restored and judged again; or (b) the print stays as frozen, the new label photo is listed with it but not used. (b) keeps verdicts stable; (a) keeps improving.
-2. **May anything change a frozen print?** For example a better colour method later. Proposed: no, frozen until unfrozen by hand.
-3. **The 153 prints marked Good whose image is still current:** freeze them as the first batch? (The other 80 have changed since they were marked: shown again unmarked.)
-4. **The images in git** (130 KB each), or elsewhere?
-5. **A serial read differently later:** keep the id as it is (proposed), or rename it?
+1. **May anything change a frozen print?** For example a better colour method later. Not decided yet.
 
 ## Order of work
 
