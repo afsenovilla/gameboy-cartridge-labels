@@ -46,8 +46,9 @@ class Hand:
         self.solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
         self.hand = json.load(open(HAND_FILE)) if os.path.exists(HAND_FILE) else {}
         conf = lambda r: (r.get("edge") or {}).get("label_confidence") or 0.0
+        marked = json.load(open(find_step.NOT_LABELS)) if os.path.exists(find_step.NOT_LABELS) else {}  # gone once find runs again
         keys = [k for k, r in self.solved.items() if r["shape"] == shape and solve_step.approximate_cut(r)
-                and os.path.exists(self.base(k) + ".drawn.json")]
+                and k not in marked and os.path.exists(self.base(k) + ".drawn.json")]
         self.order = sorted(keys, key=lambda k: (conf(self.solved[k]), k))
         self.conf = {k: conf(self.solved[k]) for k in keys}
         self.found = {lp["key"]: lp["outline"] for lp in json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]}
