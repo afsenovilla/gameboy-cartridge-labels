@@ -142,12 +142,18 @@ def main():
         for k, r in solved.items():
             families.setdefault(r["family"], []).append(k)
         all_prints, differences = [], {}
+        several = sum(1 for keys in families.values() if len(keys) > 1)
+        print(f"{len(families)} families, {several} of several label photos to compare", flush=True)
+        done = 0
         for fam, keys in sorted(families.items()):
             keys = sorted(keys)
             shape = solved[keys[0]]["shape"]
             if len(keys) == 1:
                 all_prints.append({"keys": keys, "family": fam})
                 continue
+            done += 1
+            if done % 50 == 0 or done == several:
+                print(f"compared {done} of {several} families ({len(keys)} label photos in this one)", flush=True)
             views = [tile_views(os.path.join(gen, "straighten", straighten.file_name(k)), shape) for k in keys]
             n = len(keys)
             D = np.zeros((n, n) + views[0][1].shape, bool)
