@@ -40,6 +40,10 @@
 #      full resolution (refine_fine).
 #   Between them, 1b (an experiment): each chosen fit refined by the learned edge models where they're sure
 #      (stage1_edges, src/edge_fit.py).
+#   Frozen label photos (src/frozen.py, persistent-prints.md stage 2): not fitted; their records as frozen ("frozen": the
+#      print's id), never poor fits, never carried; they take part in stage 2's links (a new photo of a frozen print joins
+#      its family), and their family's ink frame is moved onto the frame they were frozen in (anchor_to_frozen), so the
+#      family's other label photos line up with them.
 #   3. An approximate cut alone in its family: its pose carried from a precise label photo it matches, where their
 #      pixels then agree; it joins that family (carry_alone; "carried": {from, points, pixels_agree} in its record).
 # Done again when solve.json is older than this file, src/edge_fit.py, the edge models or its inputs, or holds a photo
@@ -50,7 +54,7 @@ import cv2, numpy as np
 from scipy.optimize import least_squares
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, match, shapes, find, outlines, edge_fit
+import photos, steps, match, shapes, find, outlines, edge_fit, frozen
 from multiprocessing import Pool
 
 ANGLE = 8.0           # degrees: a segment counts for a sample point if this parallel to its edge
@@ -796,7 +800,7 @@ def merge_fitted(lps, fits):
         for members in sets.values():
             if len(members) < 2:
                 continue
-            rank = lambda lp: (approximate_cut(fits[lp["key"]]), find.FOUND_BY.index(lp["found_by"]), lp["key"])
+            rank = lambda lp: (lp["found_by"] != "frozen", approximate_cut(fits[lp["key"]]), find.FOUND_BY.index(lp["found_by"]), lp["key"])
             members.sort(key=rank)
             keep = members[0]
             for lp in members[1:]:
@@ -1278,14 +1282,52 @@ def offset_matrix(o):
     return np.array([[np.cos(th), -np.sin(th), dx], [np.sin(th), np.cos(th), dy], [0, 0, 1]])
 
 
-def solve(found, matches, edges_dir, photo_paths=None):
+def frozen_fit(r):
+    """A frozen label photo's record in solve.json as stage 1's fit."""
+    return {"cut_to_photo": np.float64(r["cut_to_photo"]), "plastic_to_photo": np.float64(r["plastic_to_photo"]),
+            "width_mm": r.get("width_mm"), "height_mm": r.get("height_mm"), "placement": r["placement"],
+            "start": r["start"], "support": r["support"], "error_mm": r["error_mm"], "candidates": r["candidates"],
+            "probability": r["probability"], "round1_same": not r.get("changed_by_choice"), "edge": r.get("edge")}
+
+
+def anchor_to_frozen(out, frozen_records):
+    """Each family holding frozen label photos: its ink frame moved onto theirs (the frozen poses are in the frame their
+    family had when frozen), the others' photo_to_ink with it; the frozen ones' records as frozen."""
+    by_family = {}
+    for k, r in out.items():
+        by_family.setdefault(r["family"], []).append(k)
+    for members in by_family.values():
+        fz = [k for k in members if k in frozen_records]
+        if not fz:
+            continue
+        shape = out[fz[0]]["shape"]
+        c = corners_mm(shape)
+        # where the frozen poses put the family's ink corners: each frozen one's (frozen ink <- this run's ink), averaged
+        moved = np.mean([project(np.float64(frozen_records[k]["photo_to_ink"]) @ np.linalg.inv(np.float64(out[k]["photo_to_ink"])), c)
+                         for k in fz], 0)
+        M = cv2.getPerspectiveTransform(np.float32(c), np.float32(moved)).astype(np.float64)
+        for k in members:
+            if k in frozen_records:
+                continue
+            H = M @ np.float64(out[k]["photo_to_ink"])
+            out[k]["photo_to_ink"] = (H / H[2, 2]).tolist()
+        for k in fz:
+            fam, size = out[k]["family"], out[k]["family_size"]
+            out[k] = {**{f: v for f, v in frozen_records[k].items() if f != "found"}, "family": fam, "family_size": size,
+                      "frozen": frozen_records[k]["frozen"]}
+
+
+def solve(found, matches, edges_dir, photo_paths=None, frozen_records=None):
     lps = found["label_photos"]
     for lp in lps:
         lp["centre"] = np.float64(lp["centre"])
     global _GEN_DIR
     _GEN_DIR = os.path.dirname(edges_dir)
-    fits, failed, choice = stage1(lps, edges_dir, None)
-    fits = stage1_edges(lps, fits, photo_paths or {})
+    frozen_records = {k: r for k, r in (frozen_records or {}).items() if k in {lp["key"] for lp in lps}}
+    fitting = [lp for lp in lps if lp["key"] not in frozen_records]
+    fits, failed, choice = stage1(fitting, edges_dir, None)
+    fits = stage1_edges(fitting, fits, photo_paths or {})
+    fits.update({k: frozen_fit(r) for k, r in frozen_records.items()})
     merged = merge_fitted(lps, fits)
     candidates = link_candidates(lps, matches, merged)
     lps = [lp for lp in lps if lp["key"] not in merged]
@@ -1294,6 +1336,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
     for d, k in merged.items():
         merged_into.setdefault(k, []).append(d)
     offsets, family_of, poor, links_info, corrections, groups = stage2(lps, fits, candidates, photo_paths or {})
+    poor -= set(frozen_records)  # a frozen label photo is never a poor fit
     coarse = {}
     for k, f in fits.items():
         C, _ = corrections.get(k, (np.eye(3), None))
@@ -1333,6 +1376,7 @@ def solve(found, matches, edges_dir, photo_paths=None):
                   "correction_mm": None if moved is None else round(moved, 3),
                   "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3),
                   "edge": f.get("edge"), "merged": sorted(merged_into.get(k, []))}
+    anchor_to_frozen(out, frozen_records)
     carry_alone(out, lps, matches, photo_paths or {}, links_info)
     print("writing solve.json and the page", flush=True)
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
@@ -1377,7 +1421,7 @@ def carry_job(job):
 
 def carry_alone(out, lps, matches, photo_paths, info, workers=8):
     """Stage 3 (above), in place on solve's records; family sizes recounted."""
-    alone = {k for k, r in out.items() if approximate_cut(r) and r["family_size"] <= 1 and not poor_fit(r)}
+    alone = {k for k, r in out.items() if approximate_cut(r) and r["family_size"] <= 1 and not poor_fit(r) and not r.get("frozen")}
     precise = {k for k, r in out.items() if not approximate_cut(r) and not poor_fit(r)}
     lp_of = {lp["key"]: lp for lp in lps}
     by_photo = {}
@@ -1485,6 +1529,7 @@ def main():
     out = os.path.join(out_dir, "solve.json")
     found_file = os.path.join(gen, "find", "label-photos.json")
     inputs = [found_file] + [os.path.join(gen, d, s + e) for s in chosen for d, e in (("edges", ".npz"), ("match", ".npz"))]
+    inputs += [frozen.FILE] if os.path.exists(frozen.FILE) else []
     missing = [p for p in inputs if not os.path.exists(p)]
     if missing:
         sys.exit(f"{len(missing)} inputs missing: run make find and make edges first")
@@ -1494,7 +1539,8 @@ def main():
     if deleted or any(steps.stale(out, c) for c in code) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
         found = json.load(open(found_file))
         found["label_photos"] = [lp for lp in found["label_photos"] if lp["photo"] in chosen]  # deleted since find ran: left out
-        result = solve(found, match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen)
+        fz = {k: {**r, "frozen": pid} for k, (pid, r) in frozen.label_photos(frozen.load(), set(chosen)).items()}
+        result = solve(found, match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen, fz)
         steps.write_json(out, result)
     result = json.load(open(out))
     sizes = {s: json.load(open(os.path.join(gen, "read-text", s + ".json")))["size"] or [1, 1] for s in chosen}

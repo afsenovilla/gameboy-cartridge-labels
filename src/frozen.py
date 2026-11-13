@@ -55,6 +55,12 @@ def unfreeze(pid, path=None, folder=None):
         os.remove(image_path(pid, folder))
 
 
+def cut_corners(record):
+    """A frozen label photo's cut in its photo's pixels (top left, top right, bottom right, bottom left)."""
+    import numpy as np, cuts
+    return cuts.corners_in_ink(np.float64(record["cut_to_photo"]), record["shape"], record.get("width_mm"), record.get("height_mm"))
+
+
 def label_photos(entries, present=None):
     """key -> (print id, record) of every frozen label photo, those of photos in present only (if given)."""
     return {k: (pid, r) for pid, e in entries.items() for k, r in e["label_photos"].items()

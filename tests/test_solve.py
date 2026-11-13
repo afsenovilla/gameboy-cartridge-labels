@@ -152,3 +152,16 @@ def test_nested_fit_finds_the_label_own_width():
     segs = edges.segments(img)["segments"].astype(np.float64)
     H, placement, support, error = solve.fit_nested(H_true, "dmg", segs)
     assert abs(placement[3] - w) < 0.15
+
+
+def test_a_family_is_anchored_to_its_frozen_label_photo():
+    import numpy as np
+    import solve
+    T = lambda dx, dy: [[1.0, 0, dx], [0, 1.0, dy], [0, 0, 1.0]]
+    out = {"f@1,1": {"shape": "dmg", "family": "f@1,1", "family_size": 2, "photo_to_ink": T(0, 0)},
+           "n@1,1": {"shape": "dmg", "family": "f@1,1", "family_size": 2, "photo_to_ink": T(5, 0)}}
+    frozen_records = {"f@1,1": {"shape": "dmg", "photo_to_ink": T(0.3, -0.2), "found": [[0, 0]], "frozen": "DMG-X-JPN-bob"}}
+    solve.anchor_to_frozen(out, frozen_records)
+    assert out["f@1,1"]["photo_to_ink"] == T(0.3, -0.2) and out["f@1,1"]["frozen"] == "DMG-X-JPN-bob"
+    assert "found" not in out["f@1,1"] and out["f@1,1"]["family_size"] == 2
+    assert np.allclose(out["n@1,1"]["photo_to_ink"], T(5.3, -0.2))
