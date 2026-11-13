@@ -309,3 +309,12 @@ document.body.prepend(inp);
 - The downloaders (ebay_photos, mercari_photos, jauce_photos) save photos to downloaded-photos/<site>-search/ (with listing.json), no longer to save-new-images-here/: a download running meanwhile landed in an add-photos run (the user: move them when ready to add them). `make move-downloads` moves the photos whose listing entry is written, with their entries, to save-new-images-here/<site>-search/; the downloaders and the move take turns on each folder's listing.json (a lock file).
 - Their records moved there too, the default for all three: downloaded-photos/sources.json, searches.json (eBay), mercari-sources.json, mercari-searches.json, jauce-sources.json, jauce-searches.json. No `EBAY_OUT` needed any more.
 - downloaded-photos/ is not in git, as save-new-images-here/.
+
+## 2026-11-13: pass "bad1", for the prints marked Bad
+
+- The goal (the user): photos for the prints marked Bad with few high-quality source photos, where a new photo has the best chance of improving the print; DMG first, then CGB, then AGB, with some fuzz.
+- The prints: each print's latest mark in print-marks.json (marks of 2026-11-12, by an old print key, taken to the current print holding most of their label photos), Bad, not frozen: 340 (130 DMG, 64 CGB, 146 AGB), from the outputs before the 2026-11-13 make all. High quality: a precise fit (not poor, not an approximate cut) at 20 px/mm or more (restore's px/mm). 140 have none, 129 one, 55 two.
+- Order, per release (a release's best-placed print): the print's label photos at 20 px/mm, plus 0 for DMG, 0.7 for CGB, 1.4 for AGB, plus a random 0 to 1 (seeded), plus its best px/mm / 100. 331 releases (8 prints had no release, 1 a release outside the database); the first 50 are 46 DMG and 4 CGB, the first 200 are 108 DMG, 42 CGB, 50 AGB.
+- eBay, 327 queries (4 releases have no Latin word to search by): downloaded-photos/queries-ebay-bad1.json, all regions as pass 2 ("Japan" for the 161 Japanese, "PAL" for the 50 European). Batches `~/Downloads/ebay-batch-bad1-<n>.json`, taken in by `ingest <batch> <queries> bad1`.
+- Mercari US, 166 queries, the non-Japanese ones, the same order: downloaded-photos/queries-mercari-bad1.json. Batches `~/Downloads/mercari-bad1-batch-<n>.json`.
+- Jauce not used: Yahoo's photos are at most 1200 px, about 10 px/mm at the label, under the 20 px/mm these prints lack.
