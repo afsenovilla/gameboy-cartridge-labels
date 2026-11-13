@@ -11590,17 +11590,6 @@
   "source": "zockbar",
   "title_on_page": "Turn and Burn"
  },
- "16d1d043d448da560aaf1e82e7b4806125ad5f13": {
-  "fetched": "2026-11-12",
-  "file": "mercari-m36896945059.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m36896945059_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m36896945059/",
-  "query": "Batman Game Boy Japan",
-  "searched_release": "DMG-BAA",
-  "searched_serial": "DMG-BAA-JPN",
-  "source": "mercari-search",
-  "title_on_page": "Nintendo Game Boy Pocket Silver + 7 Games Metroid II Mario Land Tetris Batman"
- },
  "16d939d9725b37f59f60dc53fa0814417703184f": {
   "file": "otakaraou/agb/AGB-BDNJ-JPN.jpg",
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250530_0b3402.jpg",
@@ -32149,17 +32138,6 @@
   "source": "ebay-search",
   "title_on_page": "Madagascar Operation Penguin Nintendo GBA DreamWorks Action Game Cartridge Only"
  },
- "3f4d272c5711f48c754a99ebde8c2e318368cde4": {
-  "fetched": "2026-11-09",
-  "file": "ebay-277727073637.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/kGwAAeSw-fVpkN0b/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/277727073637",
-  "query": "Toki Tori Game Boy Color cartridge",
-  "searched_release": "CGB-B2TE",
-  "searched_serial": "CGB-B2TE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Toki Tori – Game Boy Color (GBC) | Original Cartridge"
- },
  "3f4e237cb6290296008d0a11c9bb1d24b4b97a9d": {
   "fetched": "2026-11-11",
   "file": "yahoo-l1194068710.jpg",
@@ -39913,18 +39891,6 @@
   "title_on_page": "とっとこハム太郎2 ハムちゃんず大集合でちゅ ゲームボーイカラー専用 ソフトのみ",
   "via": "https://www.jauce.com/auction/e1241166358"
  },
- "4f0ceede01ecae3e8fd37fa438c0f0c37bff88fb": {
-  "fetched": "2026-11-11",
-  "file": "yahoo-o1096632278.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0406/users/1087aee00d20469f81a600bb4665f8682bf13fe7/i-img1200x1200-1687556522vmtzze909909.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/o1096632278",
-  "query": "怪獣王ゴジラ ゲームボーイ",
-  "searched_release": "DMG-G7J",
-  "searched_serial": "DMG-G7J-JPN",
-  "source": "jauce-search",
-  "title_on_page": "怪獣王ゴジラ　ゲームボーイ　特撮　東宝",
-  "via": "https://www.jauce.com/auction/o1096632278"
- },
  "4f131cffff93a27491944627f6657b186afd134a": {
   "also": [
    {
@@ -46236,17 +46202,6 @@
   "source": "unrecorded",
   "title_on_page": "Microsoft Pinball Arcade - Nintendo - GBC - Game Boy Color - Cryo - Module"
  },
- "5b6a5a97f67d3a091b5594a4a715e3d9f3210b0a": {
-  "fetched": "2026-11-10",
-  "file": "ebay-168647278447.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/i44AAeSw92lqkIkm/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/168647278447",
-  "query": "Harry Potter and the Sorcerer's Stone GBA cartridge",
-  "searched_release": "AGB-AHRE",
-  "searched_serial": "AGB-AHRE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Harry Potter and the Sorcerer's Stone GBA, Nintendo Game Boy Advance"
- },
  "5b6bb6f30ff756a5d3d76808932cbeabb4ca6014": {
   "file": "ebay-hitjapan/agb/AGB-BHRJ-JPN.webp",
   "note": "named by the serial read on it (exact)",
@@ -47169,17 +47124,6 @@
   "source": "jauce-search",
   "title_on_page": "シスター・プリンセス　リピュア ゲームボーイアドバンス GBA ソフトのみ",
   "via": "https://www.jauce.com/auction/n1235548237"
- },
- "5d53f970e01d6c4fbb594aa54140b991a7f7a57a": {
-  "fetched": "2026-11-10",
-  "file": "ebay-386832917406.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/0jUAAOSwi8Rl5fge/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/386832917406",
-  "query": "Tales of Phantasia GBA PAL cartridge",
-  "searched_release": "AGB-AN8P",
-  "searched_serial": "AGB-AN8P-EUR",
-  "source": "ebay-search",
-  "title_on_page": "Gameboy Advance / GBA - Tales Of Phantasia - NEU6"
  },
  "5d571c6a68b497617bb1df33253b7657de380a99": {
   "fetched": "2026-11-09",
@@ -52453,18 +52397,6 @@
   "original_sha1": "970c39d86c9d339ac7340b4d9d72c55a8c10e947",
   "serial_on_label": "DMG-HFA",
   "source": "ebay-elrocinante"
- },
- "66e93cb6d47bbfb34550b505a09e55ff917d3cc6": {
-  "fetched": "2026-11-11",
-  "file": "yahoo-o1234165591.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0206/user/f1d61310802fff712482468dbe5f4f8535d3b7df9d42be980e151427cfe2791e/i-img1200x914-178186213339997ho5fk36.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/o1234165591",
-  "query": "メダロット3 ゲームボーイカラー",
-  "searched_release": "CGB-B32J",
-  "searched_serial": "CGB-B32J-JPN",
-  "source": "jauce-search",
-  "title_on_page": "勝☆GBC【 メダロット3 クワガタバージョン ソフトと取説のみ】 箱無し ゲームボーイ カラー",
-  "via": "https://www.jauce.com/auction/o1234165591"
  },
  "66e9eafb86cab92d11fcf58ccd98f6d5ffcc2019": {
   "file": "konsolenkost-1151908-kk-modul-urban-strike-the-sequel-to-jungle-strike-1151908-293759.jpg",
@@ -80615,17 +80547,6 @@
   "system": "GameBoy",
   "title_on_page": "Dropzone"
  },
- "9db64d3a6a4674abc20f450e80116c5400d295ae": {
-  "fetched": "2026-11-12",
-  "file": "ebay-800849030745.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/lYIAAeSwzC1q43YT/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/800849030745",
-  "query": "Disney Sports : Basketball GBA cartridge",
-  "searched_release": "AGB-A2AE",
-  "searched_serial": "AGB-A2AE",
-  "source": "ebay-search",
-  "title_on_page": "Gameboy Advance / GBA - Disney Sports - Basketball - USA"
- },
  "9db81101bb0b89a118035b4005c65e1f056ef1c4": {
   "file": "ebay-hitjapan/dmg/DMG-WPA.webp",
   "note": "named by the serial read on it (exact)",
@@ -91051,17 +90972,6 @@
   "searched_serial": "CGB-BECP-EUR",
   "source": "ebay-search",
   "title_on_page": "Nintendo Gameboy Color Game Only ECW Hardcore Revolution"
- },
- "b171b7edea3b717b73d692b7829856761a3932a4": {
-  "fetched": "2026-11-09",
-  "file": "ebay-197291733769.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/WfYAAeSwDtJoGpLe/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/197291733769",
-  "query": "Trick Boarder Game Boy Color cartridge",
-  "searched_release": "CGB-BTBE",
-  "searched_serial": "CGB-BTBE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Trick Boarder | GameBoy GBC Modul | Nintendo Game Boy Color  Modul | TOP Zustand"
  },
  "b175d7431f86f0cb35a9fa38ea4c11dcb46ec0eb": {
   "file": "jnlgame/dmg/DMG-A2RE-USA.jpg",
@@ -104143,18 +104053,6 @@
   "searched_serial": "CGB-BKIP-EUR",
   "source": "ebay-search",
   "title_on_page": "Shelly Club - Nintendo Game Boy Color / GBC"
- },
- "c9c21c8cf01a4d3441c356a39b0eed9353f8357f": {
-  "fetched": "2026-11-12",
-  "file": "yahoo-g1076701915.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0312/users/bb75668ac92392c2ca12afb55cbe40114e7abb5d/i-img1200x896-1672042894r5mbul220818.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/g1076701915",
-  "query": "メダロット弐 GBA",
-  "searched_release": "AGB-A5QJ",
-  "searched_serial": "AGB-A5QJ",
-  "source": "jauce-search",
-  "title_on_page": "中古C★メダロット弐コア カブト★ゲームボーイアドバンスソフト",
-  "via": "https://www.jauce.com/auction/g1076701915"
  },
  "c9c2d9af1e73883a71631b62c655f3861f750c96": {
   "fetched": "2026-11-11",
@@ -127343,17 +127241,6 @@
   "source": "jauce-search",
   "title_on_page": "GBA ゲームボーイアドバンス ファミコンミニ07 ゼビウス ソフトのみ 起動確認済",
   "via": "https://www.jauce.com/auction/u1245517899"
- },
- "f53ac4435358ff1f33a45579dfc693dd672c14bd": {
-  "fetched": "2026-11-09",
-  "file": "ebay-327323227468.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/seQAAOSwlFdjYWHV/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/327323227468",
-  "query": "Jurassic Park III Park Builder GBA cartridge",
-  "searched_release": "AGB-AJ3E",
-  "searched_serial": "AGB-AJ3E-USA",
-  "source": "unrecorded",
-  "title_on_page": "Jurassic Park III Park Builder Nintendo Game Boy Advance Gameboy GBA 2001 Origin"
  },
  "f53e346b55924520b62386a0de0803e4d8c026a8": {
   "fetched": "2026-11-09",
