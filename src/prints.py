@@ -12,6 +12,7 @@
 # tiles (pairs within a family, by their serials read): 3 or more different tiles on 10 % of same-serial pairs (dirt,
 # misfits: split, then pooled back), 86 % of one release's region variants (many of the rest misread serials of one
 # print: IPN for JPN, a cut-off serial) and 95 % of different releases. At 2 mm tiles a region code hardly showed (one tile, often still correlating).
+#   pairs.npz: the pair cache (below)
 #   id-changes.json: this run's id changes ([{"kind": new, kept, split, merged, renamed or gone, "id", ...}]), on the page
 # The ids are kept between runs in print-ids.json (the repo root, committed; with --sample in <generated>/prints/).
 # Done again when prints.json is older than this file, solve.json or serials.json.
@@ -59,6 +60,49 @@ def tiles_textured_in_both_and_not_correlating(va, vb):
     differing = textured & ~(corr > CORRELATION)
     differing[0, :] = differing[-1, :] = differing[:, 0] = differing[:, -1] = False
     return differing
+
+
+# The pair cache (the user, 2026-11-13): a pair's differing tiles depend only on the two straightened images, the shape
+# and the comparison (COMPARISON's functions and settings), so each pair's result is kept in <generated>/prints/pairs.npz,
+# named by both keys and each image's fingerprint (straighten writes an image only when it's drawn again: its file's
+# size and modification time), all of it dropped when the comparison's fingerprint changes. A run compares only the
+# pairs it hasn't seen; pairs no longer in a family are dropped. Saved every SAVE_EVERY families that compared anything.
+SAVE_EVERY = 200
+
+
+def comparison_version():
+    """A fingerprint of what a pair's result depends on but its images."""
+    import hashlib, inspect
+    h = hashlib.sha1(inspect.getsource(tile_views).encode() + inspect.getsource(tiles_textured_in_both_and_not_correlating).encode())
+    h.update(repr((TILE_MM, TEXTURE, CORRELATION, straighten.PX_PER_MM, straighten.MARGIN, shapes.LABEL_MM)).encode())
+    return h.hexdigest()[:16]
+
+
+def image_fingerprint(path):
+    st = os.stat(path)
+    return f"{st.st_size}:{st.st_mtime_ns}"
+
+
+def load_pairs(path, version):
+    """name -> differing tiles (bool array), from the cache, if it's of this comparison."""
+    if not os.path.exists(path):
+        return {}
+    z = np.load(path)
+    if str(z["version"]) != version:
+        return {}
+    out = {}
+    for name, (h, w), a, b in zip(z["names"], z["grids"], z["starts"][:-1], z["starts"][1:]):
+        out[str(name)] = np.unpackbits(z["bits"][a:b])[:h * w].astype(bool).reshape(h, w)
+    return out
+
+
+def save_pairs(path, version, pairs):
+    names = sorted(pairs)
+    packed = [np.packbits(pairs[n].ravel()) for n in names]
+    starts = np.concatenate([[0], np.cumsum([len(b) for b in packed])]).astype(np.int64)
+    steps.write_npz(path, version=np.array(version), names=np.array(names, dtype="U200"),
+                    grids=np.array([pairs[n].shape for n in names], np.int32).reshape(-1, 2),
+                    starts=starts, bits=np.concatenate(packed) if packed else np.zeros(0, np.uint8))
 
 
 def components(n, edges):
@@ -143,8 +187,10 @@ def main():
             families.setdefault(r["family"], []).append(k)
         all_prints, differences = [], {}
         several = sum(1 for keys in families.values() if len(keys) > 1)
-        print(f"{len(families)} families, {several} of several label photos to compare", flush=True)
-        done = 0
+        pairs_file, version = os.path.join(out_dir, "pairs.npz"), comparison_version()
+        cached = load_pairs(pairs_file, version)
+        print(f"{len(families)} families, {several} of several label photos to compare; {len(cached)} pairs cached", flush=True)
+        pairs, compared, unsaved, done = {}, 0, 0, 0
         for fam, keys in sorted(families.items()):
             keys = sorted(keys)
             shape = solved[keys[0]]["shape"]
@@ -154,15 +200,31 @@ def main():
             done += 1
             if done % 50 == 0 or done == several:
                 print(f"compared {done} of {several} families ({len(keys)} label photos in this one)", flush=True)
-            views = [tile_views(os.path.join(gen, "straighten", straighten.file_name(k)), shape) for k in keys]
-            n = len(keys)
-            D = np.zeros((n, n) + views[0][1].shape, bool)
+            paths = [os.path.join(gen, "straighten", straighten.file_name(k)) for k in keys]
+            fps = [image_fingerprint(f) for f in paths]
+            views = {}
+            view = lambda i: views[i] if i in views else views.setdefault(i, tile_views(paths[i], shape))
+            n, found = len(keys), {}
             for i, j in itertools.combinations(range(n), 2):
-                D[i, j] = D[j, i] = tiles_textured_in_both_and_not_correlating(views[i], views[j])
+                name = f"{keys[i]}|{keys[j]}|{fps[i]}|{fps[j]}"
+                if name not in cached:
+                    cached[name] = tiles_textured_in_both_and_not_correlating(view(i), view(j))
+                    compared += 1
+                    unsaved += 1
+                found[i, j] = pairs[name] = cached[name]
+            grid = next(iter(found.values())).shape
+            D = np.zeros((n, n) + grid, bool)
+            for (i, j), m in found.items():
+                D[i, j] = D[j, i] = m
             groups, differs = split_family(D.reshape(n, n, -1))
             if differs.any():
-                differences[fam] = {"grid": list(views[0][1].shape), "tiles": np.flatnonzero(differs).tolist()}
+                differences[fam] = {"grid": list(grid), "tiles": np.flatnonzero(differs).tolist()}
+            if unsaved and done % SAVE_EVERY == 0:
+                save_pairs(pairs_file, version, cached)
+                unsaved = 0
             all_prints += [{"keys": [keys[i] for i in g], "family": fam} for g in groups]
+        save_pairs(pairs_file, version, pairs)  # this run's pairs only: those no longer in a family dropped
+        print(f"{compared} pairs compared, {len(pairs) - compared} from the cache", flush=True)
         for p in all_prints:
             rel = Counter(serial.get(k, {}).get("release") for k in p["keys"] if serial.get(k, {}).get("release"))
             p["release"] = rel.most_common(1)[0][0] if rel else None

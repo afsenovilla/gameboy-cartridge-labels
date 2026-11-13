@@ -35,3 +35,13 @@ def test_one_dirty_label_photo_doesnt_split_a_print_whose_others_agree():
     D = differ_matrix(4, 50)
     D[1, 3, 10:14] = D[3, 1, 10:14] = True
     assert len(prints.split_family(D)[0]) == 1
+
+
+def test_pair_cache_round_trip(tmp_path):
+    a = np.zeros((18, 21), bool); a[3, 4] = a[17, 20] = True
+    b = np.ones((10, 21), bool)
+    path = str(tmp_path / "pairs.npz")
+    prints.save_pairs(path, "v1", {"x@1,1|y@1,1|1:2|3:4": a, "x@1,1|z@1,1|1:2|5:6": b})
+    back = prints.load_pairs(path, "v1")
+    assert np.array_equal(back["x@1,1|y@1,1|1:2|3:4"], a) and np.array_equal(back["x@1,1|z@1,1|1:2|5:6"], b)
+    assert prints.load_pairs(path, "v2") == {}
