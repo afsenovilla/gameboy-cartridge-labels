@@ -35,7 +35,7 @@
 # Computed when the page starts, kept in generated/remove-photos/badness.json until prints.json, solve.json, a restored
 # print is newer, or the settings (BLUR_MM, DAMAGE_DE, REFERENCE_MIN, REFERENCE_MAX, the method) changed.
 # Usage: remove_photos.py [port]
-import json, os, sys, threading, urllib.parse, warnings
+import json, os, sys, threading, time, urllib.parse, warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from multiprocessing import Pool
 
@@ -156,6 +156,11 @@ def jobs_of(prints):
     return jobs
 
 
+def sized_badness_of(job):
+    """(the job's label photos, badness_of(job)): for progress by label photos."""
+    return len(job[1]), badness_of(job)
+
+
 def crop_of(pid):
     """restore's crop of a print (its family's; a frozen print's as frozen), or None."""
     e = frozen.load().get(pid)
@@ -182,14 +187,16 @@ def badness(prints):
     out = {}
     total = sum(len(j[1]) for j in jobs)
     print(f"comparing {total} label photos ({len(jobs)} prints)", flush=True)
-    done = 0
+    done, n, last = 0, 0, time.monotonic()
     with Pool(8) as pool:
-        for n, res in enumerate(pool.imap_unordered(badness_of, jobs), 1):
+        for size, res in pool.imap_unordered(sized_badness_of, jobs):
             for key, b in res:
                 out[key] = b
-            done += len(res)
-            if n % 200 == 0 or n == len(jobs):
-                print(f"compared {n} of {len(jobs)} prints", flush=True)
+            n += 1
+            done += size
+            if time.monotonic() - last >= 30 or n == len(jobs):
+                last = time.monotonic()
+                print(f"compared {done} of {total} label photos ({n} of {len(jobs)} prints)", flush=True)
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
     steps.write_json(CACHE, {"settings": settings, "badness": out})
     return out
