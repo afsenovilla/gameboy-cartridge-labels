@@ -43,7 +43,10 @@ def freeze(pid, print_entry, solved, found_outlines, restored_base, path=None, f
                     "serial": print_entry.get("serial") or print_entry.get("release"), "shape": print_entry["shape"],
                     "image": hashlib.sha1(open(image_path(pid, folder), "rb").read()).hexdigest(),
                     "crop": desc["crop"], "restored_from": desc["keys"], "paper": desc.get("paper"),
-                    "label_photos": {k: {**solved[k], "found": found_outlines.get(k)} for k in print_entry["keys"] if k in solved}}
+                    "label_photos": {k: {**solved[k], "found": found_outlines.get(k)} for k in print_entry["keys"] if k in solved},
+                    # each of its photos' label photos then (match leaves a photo out once all of them are frozen)
+                    "photo_label_photos": {photo: sorted(k for k, r in solved.items() if r["photo"] == photo)
+                                           for photo in {solved[k]["photo"] for k in print_entry["keys"] if k in solved}}}
     save(entries, path)
 
 
@@ -53,6 +56,24 @@ def unfreeze(pid, path=None, folder=None):
     save(entries, path)
     if os.path.exists(image_path(pid, folder)):
         os.remove(image_path(pid, folder))
+
+
+def images(entries=None):
+    """image SHA-1 -> (print id, path) of every frozen print's image (match indexes them as if they were photos)."""
+    entries = load() if entries is None else entries
+    return {e["image"]: (pid, image_path(pid)) for pid, e in entries.items() if os.path.exists(image_path(pid))}
+
+
+def left_out_of_matching(entries=None):
+    """Photos all of whose label photos were in frozen prints when frozen (persistent-prints.md stage 2): match leaves
+    them out. A photo's label photos when frozen: each entry's "photo_label_photos"."""
+    entries = load() if entries is None else entries
+    frozen_keys = {k for e in entries.values() for k in e["label_photos"]}
+    had = {}
+    for e in entries.values():
+        for photo, keys in e.get("photo_label_photos", {}).items():
+            had.setdefault(photo, set()).update(keys)
+    return {photo for photo, keys in had.items() if keys <= frozen_keys}
 
 
 def cut_corners(record):

@@ -5,6 +5,8 @@
 #   responses (strength), descriptors (n x 128, uint8).
 # SIFT sees the photo at most MAX_SIDE px on its long side (never scaled up) and keeps at most MAX_KEYPOINTS, the
 # strongest; the keypoints are stored in the full photo's pixels.
+# Also of every frozen print's image (src/frozen.py), named by the image's SHA-1: match indexes them as if they were
+# photos (persistent-prints.md stage 2).
 # A photo is done again when its file is missing or older than this file. Files of photos no longer there are removed.
 # The page, <generated>/features/index.html: the counts, the photos with the fewest keypoints first.
 # Usage: features.py [--sample] [--workers N]
@@ -12,7 +14,7 @@ import argparse, os, sys
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps
+import photos, steps, frozen
 
 MAX_SIDE = 2000
 MAX_KEYPOINTS = 8000
@@ -78,8 +80,9 @@ def main():
     chosen = photos.chosen(args.sample)
     out_dir = os.path.join(photos.generated(args.sample), "features")
     os.makedirs(out_dir, exist_ok=True)
-    steps.remove_orphans(out_dir, chosen, ".npz")
-    jobs = [(s, p, os.path.join(out_dir, s + ".npz")) for s, p in chosen.items()]
+    images = {s: path for s, (_, path) in frozen.images().items()}  # frozen prints' images, matched as photos
+    steps.remove_orphans(out_dir, {**chosen, **images}, ".npz")
+    jobs = [(s, p, os.path.join(out_dir, s + ".npz")) for s, p in {**chosen, **images}.items()]
     steps.run(do_photo, [j for j in jobs if steps.stale(j[2], __file__)], args.workers, what="features of")
     page(out_dir, chosen)
     print(f"page: {os.path.join(out_dir, 'index.html')}")

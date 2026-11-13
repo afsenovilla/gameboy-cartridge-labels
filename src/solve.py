@@ -44,6 +44,8 @@
 #      print's id), never poor fits, never carried; they take part in stage 2's links (a new photo of a frozen print joins
 #      its family), and their family's ink frame is moved onto the frame they were frozen in (anchor_to_frozen), so the
 #      family's other label photos line up with them.
+#      A label photo find tagged with a match to a frozen print's image and no good pose of its own gets its pose from
+#      that match where the pixels agree, and joins that print's family (from_frozen_match).
 #   3. An approximate cut alone in its family: its pose carried from a precise label photo it matches, where their
 #      pixels then agree; it joins that family (carry_alone; "carried": {from, points, pixels_agree} in its record).
 # Done again when solve.json is older than this file, src/edge_fit.py, the edge models or its inputs, or holds a photo
@@ -1317,7 +1319,59 @@ def anchor_to_frozen(out, frozen_records):
                       "frozen": frozen_records[k]["frozen"]}
 
 
-def solve(found, matches, edges_dir, photo_paths=None, frozen_records=None):
+def from_frozen_match(out, lps, failed, photo_paths, frozen_entries):
+    """A label photo find tagged with a match to a frozen print's image ("frozen_match": its photo's pixels -> the
+    image's) and with no good pose of its own (unsolved, or an approximate cut alone in its family): its pose from that
+    match (the image is in the frozen ink frame: straighten's pixels, cropped), where its pixels then agree with the
+    image's as stage 2 requires of a link; it joins the family of the print's frozen label photos, as an approximate
+    cut (its own cut is found by straighten)."""
+    import straighten
+    done = 0
+    for lp in lps:
+        k, P = lp["key"], lp.get("frozen_print")
+        if P is None or P not in frozen_entries or (k in out and (out[k].get("frozen") or not (
+                approximate_cut(out[k]) and out[k]["family_size"] <= 1))):
+            continue
+        e, shape = frozen_entries[P], lp["shape"] or frozen_entries[P]["shape"]
+        img_to_ink = straighten.canvas(shape)[1] @ np.array([[1.0, 0, e["crop"]["x"]], [0, 1.0, e["crop"]["y"]], [0, 0, 1.0]])
+        ink = img_to_ink @ np.float64(lp["frozen_match"])
+        cut = np.linalg.inv(ink)
+        cut /= cut[2, 2]
+        path, image = photo_paths.get(lp["photo"]), cv2.imread(frozen.image_path(P))
+        photo = photos.load(path) if path else None
+        if photo is None or image is None or not usable(cut, shape):
+            continue
+        img_cut = np.linalg.inv(img_to_ink)
+        w, h = shapes.LABEL_MM[shape]
+        need = max(MIN_TEXTURED_TILES, MIN_COVERAGE * int(w // COMPARE_TILE_MM) * int(h // COMPARE_TILE_MM))
+        share, textured = pixel_agreement(compare_view(photo, cut, shape), compare_view(image, img_cut, shape), 0.0, np.zeros(2), shape)
+        if share < AGREE_SHARE or textured < need:
+            continue
+        mates = [m for m, r in out.items() if r.get("frozen") == P]
+        fam = out[mates[0]]["family"] if mates else k
+        mate = out[mates[0]] if mates else next(iter(e["label_photos"].values()))
+        plastic = cut @ np.float64(mate["photo_to_ink"]) @ np.float64(mate["plastic_to_photo"])
+        base = out.get(k) or {"photo": lp["photo"], "shape": shape, "start": "frozen print match", "support": {},
+                              "error_mm": 0.0, "candidates": 0, "probability": None, "changed_by_choice": False,
+                              "correction_mm": None, "fine_correction_mm": None, "merged": []}
+        out[k] = {**base, "photo_to_ink": (ink / ink[2, 2]).tolist(), "cut_to_photo": cut.tolist(),
+                  "plastic_to_photo": (plastic / plastic[2, 2]).tolist(), "width_mm": mate.get("width_mm"),
+                  "height_mm": mate.get("height_mm"), "offset": [0.0, 0.0, 0.0], "placement": mate["placement"],
+                  "family": fam, "edge": {"label_used": False, "recess_used": False},
+                  "fallback": f"approximate cut: pose from a match to frozen print {P}",
+                  "frozen_match": {"print": P, "pixels_agree": round(share, 3)}}
+        failed.pop(k, None)
+        done += 1
+    sizes = {}
+    for r in out.values():
+        sizes[r["family"]] = sizes.get(r["family"], 0) + 1
+    for r in out.values():
+        r["family_size"] = sizes[r["family"]]
+    print(f"frozen prints: {done} label photos posed from a match to a frozen print's image", flush=True)
+    return done
+
+
+def solve(found, matches, edges_dir, photo_paths=None, frozen_records=None, frozen_entries=None):
     lps = found["label_photos"]
     for lp in lps:
         lp["centre"] = np.float64(lp["centre"])
@@ -1377,6 +1431,7 @@ def solve(found, matches, edges_dir, photo_paths=None, frozen_records=None):
                   "fine_correction_mm": None if fine_moved is None else round(fine_moved, 3),
                   "edge": f.get("edge"), "merged": sorted(merged_into.get(k, []))}
     anchor_to_frozen(out, frozen_records)
+    links_info["from frozen print matches"] = from_frozen_match(out, lps, failed, photo_paths or {}, frozen_entries or {})
     carry_alone(out, lps, matches, photo_paths or {}, links_info)
     print("writing solve.json and the page", flush=True)
     return {"label_photos": out, "links": links_info, "unsolved": failed, "choice": choice}
@@ -1539,8 +1594,9 @@ def main():
     if deleted or any(steps.stale(out, c) for c in code) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
         found = json.load(open(found_file))
         found["label_photos"] = [lp for lp in found["label_photos"] if lp["photo"] in chosen]  # deleted since find ran: left out
-        fz = {k: {**r, "frozen": pid} for k, (pid, r) in frozen.label_photos(frozen.load(), set(chosen)).items()}
-        result = solve(found, match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen, fz)
+        entries = frozen.load()
+        fz = {k: {**r, "frozen": pid} for k, (pid, r) in frozen.label_photos(entries, set(chosen)).items()}
+        result = solve(found, match.read_matches(os.path.join(gen, "match"), list(chosen)), os.path.join(gen, "edges"), chosen, fz, entries)
         steps.write_json(out, result)
     result = json.load(open(out))
     sizes = {s: json.load(open(os.path.join(gen, "read-text", s + ".json")))["size"] or [1, 1] for s in chosen}

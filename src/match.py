@@ -10,6 +10,11 @@
 #   checking: RANSAC on those correspondences (homography, RANSAC_PX), repeated without each one's inliers (at most
 #     MAX_PER_PAIR); one is kept with MIN_INLIERS or more inliers, plausible (not mirrored, scale 1/8 to 8, little shear)
 #     and its inliers spread over at least MIN_AREA of the smaller photo.
+# Frozen prints (src/frozen.py, persistent-prints.md stage 2): each frozen print's image is in the index as if it were
+# a photo (its features from the features step, by the image's SHA-1), before every photo, so a photo matched from now on
+# can match it; it has no file of its own. A photo all of whose label photos are frozen (frozen.left_out_of_matching) is
+# left out of the index and never matched again; its file stays as written (if the matching changes, its matches are
+# gone: the frozen label photos don't need them).
 # Each pair is stored once, in one photo's file, and a file never changes once written: in a run, the photos with an
 # up-to-date file come first, then the others in SHA-1 order; a photo's file holds its pairs with the photos before
 # it. All are done again when the matching changes (VERSION: a fingerprint of the settings and the functions that decide
@@ -23,7 +28,7 @@ import argparse, json, multiprocessing, os, sys
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps
+import photos, steps, frozen
 
 INDEXED = 1500
 NEIGHBOURS = 8
@@ -184,10 +189,11 @@ def match_photo(job):
     return i
 
 
-def read_matches(out_dir, shas):
+def read_matches(out_dir, shas, images=()):
     """Every match: [(sha1 a, sha1 b, a_to_b, inliers)], from all the photos' files; a match with a photo not among
-    shas (deleted since match ran: remove-photos) is left out."""
-    found, wanted = [], set(shas)
+    shas (deleted since match ran: remove-photos) is left out, except with one of images (frozen prints' images, by
+    their SHA-1: src/frozen.py)."""
+    found, wanted = [], set(shas) | set(images)
     for s in shas:
         p = os.path.join(out_dir, s + ".npz")
         if not os.path.exists(p):
@@ -246,9 +252,14 @@ def main():
             if os.path.exists(out(s)):
                 os.remove(out(s))
         steps.write_json(version_file, {"version": current})
-    done = [s for s in chosen if os.path.exists(out(s))]
-    todo = [s for s in sorted(chosen) if s not in set(done)]
-    shas = done + todo
+    # frozen prints (src/frozen.py): their images first in the index, as photos (a new photo of a frozen print matches
+    # its image); photos all of whose label photos are frozen left out (their files stay as written)
+    images = [s for s in sorted(frozen.images()) if os.path.exists(os.path.join(features_dir, s + ".npz"))]
+    left_out = frozen.left_out_of_matching() & set(chosen)
+    done = [s for s in chosen if os.path.exists(out(s)) and s not in left_out]
+    todo = [s for s in sorted(chosen) if s not in set(done) and s not in left_out]
+    shas = images + done + todo
+    done = images + done
     if todo:
         print(f"indexing {len(shas)} photos", flush=True)
         parts, owner, which = build_index(features_dir, shas)

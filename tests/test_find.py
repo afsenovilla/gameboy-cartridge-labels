@@ -102,3 +102,16 @@ def test_a_frozen_label_photo_is_taken_as_it_is_and_new_photos_link_to_it():
     assert any(r["why"] == "in a frozen label photo's area" for r in result["rejected"])
     b = [lp for lp in result["label_photos"] if lp["photo"] == "b"]
     assert len(b) == 1 and b[0]["matches"][0]["to"] == "a@12,34"               # spread into b, linked to it
+
+
+def test_a_match_with_a_frozen_print_image_makes_a_label_photo_tagged_with_it():
+    texts = {"b": {"size": [1000, 1000], "lines": []}}
+    chosen = {"b": "photos/b.jpg"}
+    img_pts = points(50, 50, 700, 600)
+    H_img_to_b = np.array([[1.0, 0, 100], [0, 1, 80], [0, 0, 1]])
+    inl = inliers(img_pts, H_img_to_b)                      # in the image's file: image -> b
+    images = {"img1": {"print": "DMG-APSJ-JPN-zoe", "crop": {"x": 0, "y": 0, "w": 840, "h": 740}, "shape": "dmg"}}
+    result = find.find(chosen, texts, [("img1", "b", H_img_to_b, inl)], DATABASE, frozen_images=images)
+    (lp,) = result["label_photos"]
+    assert lp["photo"] == "b" and lp["found_by"] == "frozen print" and lp["frozen_print"] == "DMG-APSJ-JPN-zoe"
+    assert np.allclose(lp["frozen_match"], np.linalg.inv(H_img_to_b)) and lp["shape"] == "dmg"

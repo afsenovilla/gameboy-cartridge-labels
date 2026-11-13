@@ -38,6 +38,9 @@
 # outline, found_by "frozen"), never merged into another; their areas (the cut and find's outline when frozen) are
 # taken: no other label photo is made there. Spreading reaches them as any label photo, so a new photo of a frozen
 # print links to it.
+# A match between a photo and a frozen print's image (match indexes them as photos) makes a label photo where the image
+# lands in the photo, or tags the one already there (found_by "frozen print"; "frozen_print": the print's id,
+# "frozen_match": the photo's pixels -> the image's): solve takes its pose from it.
 # The shape is the serial's platform (DMG-, CGB-, AGB-); a label photo found by matching takes its linked ones' (most).
 # Keys: <sha1>@<x>,<y>, the centre in whole percent of the photo's width and height.
 # Done again when label-photos.json is older than this file or than any of its inputs (NOT_LABELS among them).
@@ -151,7 +154,7 @@ def overlap(a, b):
     return float(area / smaller) if smaller > 0 else 0.0
 
 
-FOUND_BY = ["frozen", "serial", "near serial", "detail", "string and match", "match"]
+FOUND_BY = ["frozen", "frozen print", "serial", "near serial", "detail", "string and match", "match"]
 
 
 def merge_overlapping(lps):
@@ -209,7 +212,7 @@ def place(lp, places, photo_seeds=()):
 
 
 def find(chosen, texts, matches, release_of, detections=None, use_strings=True, places=None, not_labels=None,
-         frozen_lps=None):
+         frozen_lps=None, frozen_images=None):
     """The label photos, their sets and the rejected candidates, from the photos' texts (unless not use_strings), the
     details found in them (sha1 -> detections) and the matches; none in the areas not_labels marks (load_not_labels)."""
     not_labels = not_labels or {}
@@ -255,6 +258,36 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
             else:
                 unknown.setdefault(s, []).append(cand)
     lps += lps_frozen
+    # matches with frozen prints' images (frozen_images: image SHA-1 -> {"print", "crop", "shape"}): each makes a label
+    # photo where it lands in the photo (or tags the one there) with the print and the match (photo -> image pixels)
+    frozen_images = frozen_images or {}
+    to_images, rest = [], []
+    for a, b, H, inl in matches:
+        if b in frozen_images and a in chosen:
+            to_images.append((a, b, np.float64(H), inl[:, :2]))
+        elif a in frozen_images and b in chosen:
+            to_images.append((b, a, np.linalg.inv(np.float64(H)), inl[:, 2:]))
+        elif a in chosen and b in chosen:
+            rest.append((a, b, H, inl))
+    matches = rest
+    for a, img, H, pa in sorted(to_images, key=lambda m: -len(m[3])):
+        f = frozen_images[img]
+        w, h = f["crop"]["w"], f["crop"]["h"]
+        corners = cv2.perspectiveTransform(np.float64([[[0, 0]], [[w, 0]], [[w, h]], [[0, h]]]), np.linalg.inv(H)).reshape(-1, 2)
+        centre = corners.mean(0)
+        here = [lp for lp in lps if lp["photo"] == a and inside([pa.mean(0)], lp)[0]]
+        if here:
+            lp = here[0]
+            if lp.get("frozen_key") or lp.get("frozen_match") is not None:
+                continue
+        else:
+            if not_a_label(not_labels, a, centre) or not_a_label(taken, a, centre):
+                continue
+            lp = {"photo": a, "centre": centre, "radius": float(np.max(np.hypot(*(corners - centre).T))), "strings": [],
+                  "details": [], "points": [], "found_by": "frozen print", "detail_shape": f["shape"]}
+            lps.append(lp)
+        lp["frozen_print"], lp["frozen_match"] = f["print"], H
+        lp["points"].append(pa)
     # the label photos per photo, kept as lps grows (a scan of lps per match was quadratic: an hour and more on 13k photos)
     of_photo = {}
     for lp in lps:
@@ -360,7 +393,9 @@ def find(chosen, texts, matches, release_of, detections=None, use_strings=True, 
     out = [{"key": lp["key"], "photo": lp["photo"], "centre": np.round(lp["centre"], 1).tolist(),
             "radius": round(float(lp["radius"]), 1), "outline": lp["outline"], "shape": lp["shape"],
             "found_by": lp["found_by"], "placed_by": lp.get("placed_by"), "strings": lp["strings"], "details": lp.get("details", []),
-            "matches": [{"to": o["key"], "inliers": n} for o, n in lp.get("links", [])]} for lp in lps]
+            "matches": [{"to": o["key"], "inliers": n} for o, n in lp.get("links", [])],
+            **({"frozen_print": lp["frozen_print"], "frozen_match": np.round(lp["frozen_match"] / lp["frozen_match"][2, 2], 9).tolist()}
+               if lp.get("frozen_match") is not None else {})} for lp in lps]
     return {"label_photos": out, "sets": sorted(sets.values(), key=len, reverse=True), "rejected": rejected}
 
 
@@ -378,7 +413,7 @@ def page(out_dir, chosen, result, texts):
     for lp in lps:
         shapes[lp["shape"]] = shapes.get(lp["shape"], 0) + 1
     rel = os.path.relpath(".", out_dir)
-    colours = {"frozen": "#05f", "serial": "#2a2", "near serial": "#6c2", "detail": "#a3c", "string and match": "#c80", "match": "#28c"}
+    colours = {"frozen": "#05f", "frozen print": "#5af", "serial": "#2a2", "near serial": "#6c2", "detail": "#a3c", "string and match": "#c80", "match": "#28c"}
 
     def figure(s):
         w, h = texts[s]["size"] or [1, 1]
@@ -431,8 +466,9 @@ def main():
                  + [f for f in (NOT_LABELS, frozen.FILE) if os.path.exists(f)])
     texts = {s: json.load(open(p)) for s, p in text_files.items()}
     if steps.stale(out, __file__) or os.path.getmtime(out) < newest:
-        result = find(chosen, texts, match.read_matches(os.path.join(gen, "match"), list(chosen)), serials.load_database(),
+        result = find(chosen, texts, match.read_matches(os.path.join(gen, "match"), list(chosen), frozen.images()), serials.load_database(),
                       found, use_strings=not args.no_strings, places=details.load_places(), not_labels=load_not_labels(),
+                      frozen_images={e["image"]: {"print": pid, "crop": e["crop"], "shape": e["shape"]} for pid, e in frozen.load().items()},
                       frozen_lps={k: {"photo": r["photo"], "cut": frozen.cut_corners(r), "found": r.get("found"), "shape": r["shape"]}
                                   for k, (pid, r) in frozen.label_photos(frozen.load()).items()})
         steps.write_json(out, result)
