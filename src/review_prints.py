@@ -18,7 +18,8 @@
 # the photo holds label photos of other prints; the label photo stays, marked deleted, and the next run drops it.
 # Each print's serial typed in by hand ("Set serial", the user 2026-11-14): every label photo of the print gets it in
 # serial-corrections.json (read_serials.CORRECTIONS, which make read-serials applies last; the page shows it at once);
-# not a frozen print's. The next make read-serials and make prints give the print its id with that serial. Buttons only, no keys (the user: keys next to S are too easy to hit).
+# not a frozen print's. Joining leaves a hole of the same size where each joined print sat, so the page doesn't move
+# (the user, 2026-11-14); the joined print shows on the next page turn, tab or search. The next make read-serials and make prints give the print its id with that serial. Buttons only, no keys (the user: keys next to S are too easy to hit).
 # Usage: review_prints.py [port]
 import json, os, re, sys, threading, urllib.parse
 from collections import Counter
@@ -216,6 +217,7 @@ button:disabled{opacity:.4;cursor:default}
 .serial{margin:12px 0 24px;padding:8px;border:1px solid #555;border-radius:6px}
 .serial h2{font-size:16px;margin:0 0 6px}
 .print{display:inline-block;vertical-align:top;margin:4px 8px 8px 0;padding:6px;border:1px solid #666;border-radius:6px;background:#333;max-width:100%}
+.print.hole{box-sizing:border-box;border:1px dashed #555;background:none;color:#777;display:inline-flex;align-items:center;justify-content:center}
 .print.ticked{border-color:#5a8;box-shadow:0 0 0 2px #5a8}
 .print .head{display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
 .print .restored{width:220px;display:block;margin-bottom:4px}
@@ -250,21 +252,21 @@ const lpTicks = new Set();    // label photo keys ticked for splitting
 const $ = id => document.getElementById(id);
 const handle = p => p.keys[0].key;
 
-async function load() {
+async function load(show = true) {
   const r = await fetch("/state");
-  if (r.status === 503) { setTimeout(load, 1000); return; }
+  if (r.status === 503) { setTimeout(() => load(show), 1000); return; }
   S = await r.json();
   const now = new Set(S.prints.map(handle));
   for (const h of [...joinTicks.keys()]) if (!now.has(h)) joinTicks.delete(h);
   lpTicks.clear();
-  render();
+  if (show) render();
 }
 
-async function post(path, body) {
+async function post(path, body, show = true) {
   $("msg").textContent = "";
   const r = await fetch(path, {method: "POST", body: JSON.stringify(body)});
   if (!r.ok) { $("msg").textContent = await r.text(); return false; }
-  await load();
+  await load(show);
   return true;
 }
 
@@ -278,6 +280,7 @@ function el(tag, attrs, ...kids) {
 function printCard(p) {
   const keys = p.keys.map(k => k.key);
   const card = el("div", {class: "print" + (joinTicks.has(handle(p)) ? " ticked" : "")});
+  card.handle = handle(p);
   const tick = el("input", {type: "checkbox"});
   tick.checked = joinTicks.has(handle(p));
   tick.onchange = () => { if (tick.checked) joinTicks.set(handle(p), keys); else joinTicks.delete(handle(p)); card.classList.toggle("ticked", tick.checked); bar(); };
@@ -382,7 +385,16 @@ function bar() {
   $("count").textContent = n ? `${n} prints ticked for joining.` : "No prints ticked for joining.";
   $("join").disabled = n < 2; $("clear").disabled = n === 0;
 }
-$("join").onclick = async () => { if (await post("/decide", {kind: "join", prints: [...joinTicks.values()]})) { joinTicks.clear(); bar(); render(); } };
+$("join").onclick = async () => {
+  const handles = new Set(joinTicks.keys());
+  if (!await post("/decide", {kind: "join", prints: [...joinTicks.values()]}, false)) return;
+  for (const card of document.querySelectorAll(".print")) {
+    if (!handles.has(card.handle)) continue;
+    const r = card.getBoundingClientRect();
+    card.replaceWith(el("div", {class: "print hole", style: `width:${r.width}px;height:${r.height}px`}, "joined"));
+  }
+  joinTicks.clear(); bar();
+};
 $("clear").onclick = () => { joinTicks.clear(); bar(); render(); };
 $("go").onclick = () => { query = $("q").value; render(); };
 $("q").onkeydown = e => { if (e.key === "Enter") { query = $("q").value; render(); } };
