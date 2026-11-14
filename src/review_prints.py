@@ -10,21 +10,20 @@
 #     first, then the most differing tiles between two of its label photos (the prints step's pair cache).
 #   - Search: a serial, a stem or an id (its start), up to SEARCH_MAX prints.
 #   - Decisions: every decision, the latest first, each to undo.
-# Each print: its label photos (straightened, the label and 1 mm around it), each with its serial read and a tick box:
-# "Split off ticked" makes the ticked a print of their own. A print's own tick box marks it for joining: "Join ticked"
-# in the bar at the bottom joins the ticked prints, from any tab. Frozen prints (src/frozen.py) can't be split, and two
+# Each print: its label photos (straighten's image as is: full resolution and uncropped, for pinch-zooming; the user,
+# 2026-11-14), each with its serial read and a tick box: "Split off ticked" makes the ticked a print of their own. A
+# print's own tick box marks it for joining: "Join ticked" in the bar at the bottom joins the ticked prints, from any tab. Frozen prints (src/frozen.py) can't be split, and two
 # can't be joined. Buttons only, no keys (the user: keys next to S are too easy to hit).
 # Usage: review_prints.py [port]
-import functools, json, os, sys, threading, urllib.parse
+import json, os, sys, threading, urllib.parse
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import cv2, numpy as np
-import photos, straighten, shapes, print_corrections, prints as prints_step
+import numpy as np
+import photos, straighten, print_corrections, prints as prints_step
 
 GEN = photos.generated(False)
-THUMB_PX = 160
 SERIALS_PER_PAGE = 10
 PRINTS_PER_PAGE = 20
 SEARCH_MAX = 50
@@ -156,19 +155,6 @@ class Tool:
         print_corrections.save(data)
         self.compute()
         return None
-
-
-@functools.lru_cache(maxsize=4000)
-def thumbnail(key):
-    shape = (tool.solved.get(key) or {}).get("shape")
-    img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
-    if img is None or shape is None:
-        return None
-    P, M = straighten.PX_PER_MM, straighten.MARGIN
-    lw, lh = shapes.LABEL_MM[shape]
-    img = img[int((M - 1) * P):int((M + lh + 1) * P), int((M - 1) * P):int((M + lw + 1) * P)]
-    img = cv2.resize(img, (THUMB_PX, round(THUMB_PX * img.shape[0] / img.shape[1])), interpolation=cv2.INTER_AREA)
-    return cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])[1].tobytes()
 
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>review prints</title>
@@ -364,8 +350,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(tool.state_json)
         part, _, name = path[1:].partition("/")
         if part == "label":
-            body = thumbnail(name)
-            return self.send(body, "image/jpeg", cache=True) if body else self.send_error(404)
+            file = os.path.join(GEN, "straighten", straighten.file_name(name))
+            return self.send(open(file, "rb").read(), "image/avif", cache=True) if os.path.exists(file) else self.send_error(404)
         if part == "print":
             file = os.path.join(GEN, "restore", straighten.file_name(name))
             return self.send(open(file, "rb").read(), "image/avif") if os.path.exists(file) else self.send_error(404)
