@@ -66,6 +66,10 @@
 #   The outputs collected into generated/publish/: prints/ (the restored prints), index.json
 #   (source and URLs from photo-sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
+#   make refreeze [ID=DMG-TS-USA-mike]
+#   A tool, not a step: every frozen print (or the one given) restored again with today's restore, its frozen image
+#   replaced; its label photos, poses and crop stay as accepted (src/refreeze.py). Then make all, to match the new images.
+#
 #   make review-prints
 #   A tool, not a step: a local page for splitting and joining prints (across families too), the decisions kept in
 #   print-corrections.json and applied by the next make prints (then make restore publish): the serials of several prints,
@@ -96,7 +100,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos review-prints fit-by-hand
+.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos review-prints refreeze fit-by-hand
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -195,6 +199,9 @@ remove-photos:
 
 review-prints:
 	$(PYTHON) src/review_prints.py
+
+refreeze:
+	$(PYTHON) src/refreeze.py $(SAMPLE_FLAG) $(ID)
 
 SHAPE ?= cgb
 fit-by-hand:

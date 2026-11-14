@@ -28,7 +28,8 @@
 # Last, after the paper white, the print screen (halftone) removed from the restored print (src/descreen.py: a notch at
 # the screen's peaks, then a 1.5 px weighted median; the user, 2026-11-14: on the restored print, not on each label
 # photo before).
-# A frozen print (src/frozen.py) isn't restored: its image is the one frozen (publish copies it).
+# A frozen print (src/frozen.py) isn't restored: its image is the one frozen (publish copies it); make refreeze
+# (src/refreeze.py) restores it again.
 # Done again when an image is older than this file, cuts.py, descreen.py, prints.json, solve.json or its family's straightened
 # images and cuts.
 # Usage: restore.py [--sample] [--workers N]
@@ -418,14 +419,8 @@ def print_jobs(gen, result, solved):
     the approximate cuts {key}, crop, joined across families). Poor fits are left out; a print with fewer than MIN_PHOTOS others, or
     MIN_PRECISE that aren't approximate cuts, isn't restored at all (the user: fewer prints, all of them good, rather
     than bad ones among them)."""
-    import solve as solve_step
-    px_per_mm = {}
-    for k, r in solved.items():  # the photo's pixels per mm at the label, from the fit
-        lw, lh = shapes.LABEL_MM[r["shape"]]
-        px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
-    poor = {k for k, r in solved.items() if solve_step.poor_fit(r)}
-    approximate = {k for k, r in solved.items() if solve_step.approximate_cut(r)}
-    image = lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
+    info = fit_info(gen, solved)
+    _, poor, approximate, _ = info
     by_family = {}
     for p in result["prints"]:
         by_family.setdefault(p["family"], []).append(p)
@@ -439,13 +434,34 @@ def print_jobs(gen, result, solved):
                       else canonical_crop(ps[0]["shape"]))
     jobs = {}
     for p in result["prints"]:
-        if p.get("frozen"):  # its image is the frozen one (src/frozen.py): never restored again
+        if p.get("frozen"):  # its image is the frozen one (src/frozen.py): restored again only by make refreeze
             continue
-        own = [(k, image(k)) for k in p["keys"] if k not in poor]
-        if len(own) < MIN_PHOTOS or sum(k not in approximate for k, _ in own) < MIN_PRECISE:
-            continue
-        jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, approximate & {k for k, _ in own}, crops[p["family"]], len(p.get("families", [])) > 1)
+        job = job_of(p, info, crops[p["family"]])
+        if job:
+            jobs[p["id"]] = job
     return jobs
+
+
+def fit_info(gen, solved):
+    """(px per mm {key: the photo's pixels per mm at the label, from the fit}, poor fits {key}, approximate cuts {key},
+    key -> its straightened image)."""
+    import solve as solve_step
+    px_per_mm = {}
+    for k, r in solved.items():
+        lw, lh = shapes.LABEL_MM[r["shape"]]
+        px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
+    poor = {k for k, r in solved.items() if solve_step.poor_fit(r)}
+    approximate = {k for k, r in solved.items() if solve_step.approximate_cut(r)}
+    return px_per_mm, poor, approximate, lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
+
+
+def job_of(p, info, crop):
+    """A print's job for restore_print but its output path, or None if it has too few label photos to restore."""
+    px_per_mm, poor, approximate, image = info
+    own = [(k, image(k)) for k in p["keys"] if k not in poor]
+    if len(own) < MIN_PHOTOS or sum(k not in approximate for k, _ in own) < MIN_PRECISE:
+        return None
+    return (p["id"], p["shape"], own, px_per_mm, approximate & {k for k, _ in own}, crop, len(p.get("families", [])) > 1)
 
 
 def page(out_dir, result, gen):
