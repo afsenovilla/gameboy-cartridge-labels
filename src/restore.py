@@ -441,7 +441,7 @@ def page(out_dir, result, gen):
         crop = lambda k: (f'<div class="src" style="width:{c["w"] * scale:.0f}px;height:{c["h"] * scale:.0f}px">'
                           f'<img loading="lazy" src="{rel}/{straighten.file_name(k)}" style="width:{cw * scale:.0f}px;'
                           f'margin:{-c["y"] * scale:.0f}px 0 0 {-c["x"] * scale:.0f}px"></div>')
-        sources = "".join(crop(k) for k in desc.get("keys", []))
+        sources = "".join(crop(k) for k in desc.get("keys", [])[:steps.PAGE_SOURCES]) + steps.more(len(desc.get("keys", [])))
         figs.append(f'<figure><div class="pair"><img loading="lazy" src="{b}.avif"></div>'
                     f'<figcaption><b>{html.escape(str(p["serial"] or p["release"] or "?"))}</b>: {len(desc.get("keys", []))} label photos ({len(desc.get("approximate", []))} approximate cuts)'
                     f'{"" if desc.get("paper") else "; no paper found: median colours"}; label photos per band, finest first: {desc.get("bands")}</figcaption>'
@@ -451,8 +451,8 @@ def page(out_dir, result, gen):
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:block;margin:12px 0 24px}} .pair img{{width:340px;margin-right:6px}}
 figcaption{{font-size:12px;margin:4px 0}} .src{{display:inline-block;overflow:hidden;margin:2px}} .src img{{display:block}}</style>
 <h1>restore</h1>
-<p>{len(figs)} restored prints, the most label photos first. The restored print: the median of its label photos per band, their colours evened to their median, then its paper made white (clipping a little) where paper is found. Below: its label photos straightened, the same crop.</p>
-{"".join(figs)}""")
+<p>{steps.shown(len(figs))} restored prints, the most label photos first. The restored print: the median of its label photos per band, their colours evened to their median, then its paper made white (clipping a little) where paper is found. Below: its label photos straightened, the same crop.</p>
+{"".join(steps.few(figs))}""")
 
 
 if __name__ == "__main__":

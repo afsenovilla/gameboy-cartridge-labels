@@ -163,7 +163,7 @@ def page(out_dir, result, missing, unknown, gen):
     rel = os.path.relpath(os.path.join(gen, "straighten"), out_dir)
     doubtful = [(k, v) for k, v in result.items() if v["decided_by"] != "own"]
     figs = []
-    for k, v in doubtful:
+    for k, v in steps.few(doubtful):
         reads = "<br>".join(html.escape(r["from"] + ": " + r["text"]) for r in v["reads"]) or "<i>no reads</i>"
         figs.append(f'<figure><img loading="lazy" src="{rel}/{straighten.file_name(k)}"><figcaption><code>{html.escape(k[:14])}</code> '
                     f'<b>{html.escape(str(v["serial"] or v["release"]))}</b> ({html.escape(v["decided_by"])})<br>{reads}</figcaption></figure>')
@@ -173,7 +173,7 @@ def page(out_dir, result, missing, unknown, gen):
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:6px;vertical-align:top;width:280px}} img{{width:280px}} figcaption{{font-size:11px}}</style>
 <h1>read-serials</h1>
 <p>{len(result)} label photos; a release the database knows for {with_release}. Decided by: {", ".join(f"{k} {n}" for k, n in decided.most_common())}. Database entries with no label photo: {len(missing)}. Serial-looking strings the database doesn't know: {len(unknown)} ({html.escape(", ".join(sorted(unknown)[:30]))}).</p>
-<h2>Not decided by their own reads alone ({len(doubtful)})</h2>{figs}""")
+<h2>Not decided by their own reads alone ({steps.shown(len(doubtful))})</h2>{figs}""")
 
 
 def main():

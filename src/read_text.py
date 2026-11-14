@@ -88,7 +88,7 @@ def page(out_dir, chosen, release_of):
 
     def rows(items):
         out = []
-        for sha1, path, lines, found in items:
+        for sha1, path, lines, found in steps.few(items):
             texts = "<br>".join(html.escape(l["text"]) for l in lines) or "<i>no text</i>"
             out.append(f'<tr><td><a href="{rel}/{path}"><img loading="lazy" src="{rel}/{path}"></a></td>'
                        f'<td><code>{sha1[:10]}</code><br>{html.escape(", ".join(found))}</td><td>{texts}</td></tr>')
@@ -99,8 +99,8 @@ def page(out_dir, chosen, release_of):
 <style>body{{font:14px system-ui;margin:16px}} img{{max-width:240px;max-height:240px}} td{{vertical-align:top;padding:4px 8px;border-top:1px solid #ccc}}</style>
 <h1>read-text</h1>
 <p>{len(chosen)} photos: a serial the database knows on {known}; serial-looking strings, none known, on {len(unknown)}; no serial-looking string on {len(none)}.</p>
-<h2>No serial-looking string ({len(none)})</h2><table>{rows(none)}</table>
-<h2>Serial-looking strings the database doesn't know ({len(unknown)})</h2><table>{rows(unknown)}</table>
+<h2>No serial-looking string ({steps.shown(len(none))})</h2><table>{rows(none)}</table>
+<h2>Serial-looking strings the database doesn't know ({steps.shown(len(unknown))})</h2><table>{rows(unknown)}</table>
 """)
 
 

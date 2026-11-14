@@ -301,14 +301,18 @@ def page(out_dir, result, gen):
                 marks += f'<rect x="{(M + 1 + c * T) * P}" y="{(M + 1 + r * T) * P}" width="{T * P}" height="{T * P}" fill="none" stroke="#f33" stroke-width="5"/>'
         overlay = f'<svg viewBox="0 0 {w} {h}">{marks}</svg>'
         figure = lambda k: f'<div class="ph"><img loading="lazy" src="{rel}/{straighten.file_name(k)}" >{overlay}</div>'
-        row = "".join(f'<div class="print"><div>{html.escape(str(p["serial"] or p["release"] or "?"))} ({len(p["keys"])})</div>{"".join(figure(k) for k in p["keys"])}</div>' for p in ps)
+        name = lambda p: f'{html.escape(str(p["serial"] or p["release"] or "?"))} ({len(p["keys"])})'
+        if len(ps) == 1:  # one print: its label photos side by side
+            row = f'<div class="print"><div>{name(ps[0])}</div>{"".join(figure(k) for k in ps[0]["keys"][:steps.PAGE_SOURCES])}{steps.more(len(ps[0]["keys"]))}</div>'
+        else:  # several: the viewer shows them, here only their names
+            row = f'<p>Its prints (label photos): {", ".join(name(p) for p in ps)}</p>'
         viewer = ""
         if len(ps) > 1:
-            layers = "".join(f'<img src="{rel}/{straighten.file_name(p["keys"][0])}" data-label="{html.escape(str(p["serial"] or p["release"] or "?"))} ({len(p["keys"])} label photos)" style="display:{"block" if n == 0 else "none"}">' for n, p in enumerate(ps))
+            layers = "".join(f'<img loading="lazy" src="{rel}/{straighten.file_name(p["keys"][0])}" data-label="{html.escape(str(p["serial"] or p["release"] or "?"))} ({len(p["keys"])} label photos)" style="display:{"block" if n == 0 else "none"}">' for n, p in enumerate(steps.few(ps)))
             viewer = (f'<div class="viewer" onclick="flip(this)"><div class="stack">{layers}{overlay}</div>'
                       f'<div class="caption">{html.escape(str(ps[0]["serial"] or ps[0]["release"] or "?"))} ({len(ps[0]["keys"])} label photos)</div>'
                       f'<label onclick="event.stopPropagation()"><input type="checkbox" onchange="auto(this)"> flip by itself</label></div>')
-        blocks.append(f'<h3>Family {html.escape(fam[:10])}: {len(ps)} prints{", " + str(len(d["tiles"])) + " tiles differ" if d else ""}</h3>{viewer}{row}')
+        blocks.append(f'<h3>Family {html.escape(fam[:10])}: {steps.shown(len(ps))} prints{", " + str(len(d["tiles"])) + " tiles differ" if d else ""}</h3>{viewer}{row}')
     n = len(result["prints"])
     multi = sum(1 for ps in by_family.values() if len(ps) > 1)
     changes_file = os.path.join(out_dir, "id-changes.json")
@@ -332,8 +336,9 @@ function auto(box){{const v=box.closest('.viewer');if(box.checked){{v._t=setInte
 <p>{n} prints; families with more than one print: {multi}. Tiles of {result["tile_mm"]} mm.</p>
 {ids}
 {steps.legend([("#f33", "a tile that tells the family's prints apart (a square on every image of the family)")])}
-<p>The large viewer stacks one label photo per print in the same place: click it, or tick "flip by itself", to switch between them. Families of one label photo left out.</p>
-{"".join(blocks)}""")
+<p>The viewer stacks one label photo per print (the family's first {steps.PAGE_FIGURES}) in the same place: click it, or tick "flip by itself", to switch between them. A family of one print: its first {steps.PAGE_SOURCES} label photos. Families of one label photo left out.</p>
+<h2>Families ({steps.shown(len(blocks))})</h2>
+{"".join(steps.few(blocks))}""")
 
 
 if __name__ == "__main__":

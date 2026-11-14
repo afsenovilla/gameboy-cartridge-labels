@@ -141,7 +141,7 @@ def load_cut(gen, key):
 def page(out_dir, solved):
     order = sorted(solved.items(), key=lambda kv: -(kv[1].get("error_mm") or 0))
     figs = []
-    for key, r in order:
+    for key, r in steps.few(order):
         (w, h), _ = canvas(r["shape"])
         m = MARGIN * PX_PER_MM
         lw, lh = shapes.LABEL_MM[r["shape"]]
@@ -163,7 +163,7 @@ def page(out_dir, solved):
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{display:inline-block;margin:6px;vertical-align:top;width:300px}}
 .ph{{position:relative;display:inline-block}} .ph img{{width:300px;display:block}} .ph svg{{position:absolute;inset:0;width:100%;height:100%}} figcaption{{font-size:11px}}</style>
 <h1>straighten</h1>
-<p>{len(solved)} label photos in ink coordinates, {PX_PER_MM} px/mm, {MARGIN:g} mm around the nominal label. Largest leftover error first.</p>
+<p>{steps.shown(len(solved))} label photos in ink coordinates, {PX_PER_MM} px/mm, {MARGIN:g} mm around the nominal label. Largest leftover error first.</p>
 {steps.legend([("#f0f", "the label's canonical size at its family's median cut"), ("#ff0", "this cartridge's recess, from the plastic's fit"), ("#0ff", "the sticker's cut found")])}
 {"".join(figs)}""")
 
@@ -205,9 +205,9 @@ def cuts_page(out_dir, solved):
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} figure{{margin:12px 0 24px}}
 .ph{{position:relative}} .ph svg{{position:absolute;inset:0}} figcaption{{font-size:12px;margin-top:4px}}</style>
 <h1>cuts</h1>
-<p>{len(figs)} label photos, each the nominal label plus {C:g} mm around it, one image pixel per screen pixel ({P} px per mm). A side not found first, then the label photos whose sides moved most from the fitted cut.</p>
+<p>{steps.shown(len(figs))} label photos, each the nominal label plus {C:g} mm around it, one image pixel per screen pixel ({P} px per mm). A side not found first, then the label photos whose sides moved most from the fitted cut.</p>
 {steps.legend([("#0ff", f"the cut found (solid) and the crop's edge, {cuts.INSET} mm inside it (dashed)"), ("#f0f", "the fitted cut (solve's, dotted)")])}
-{"".join(f[1] for f in figs)}""")
+{"".join(f[1] for f in steps.few(figs))}""")
 
 
 def main():

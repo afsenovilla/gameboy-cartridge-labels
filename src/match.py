@@ -216,14 +216,14 @@ def page(out_dir, chosen):
     n = np.array([len(linked.get(s, ())) for s in shas]) if shas else np.zeros(1)
     rel = os.path.relpath(".", out_dir)
     img = lambda s: f'<a href="{rel}/{chosen[s]}"><img loading="lazy" src="{rel}/{chosen[s]}"></a>'
-    weakest = sorted(matches, key=lambda m: len(m[3]))[:60]
+    weakest = steps.few(sorted(matches, key=lambda m: len(m[3])))
     with open(os.path.join(out_dir, "index.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>match</title>
 <style>body{{font:14px system-ui;margin:16px}} img{{max-width:200px;max-height:200px}} td{{vertical-align:top;padding:4px 8px;border-top:1px solid #ccc}}</style>
 <h1>match</h1>
 <p>{len(shas)} photos, {len(matches)} matches between {len({(a, b) for a, b, _, _ in matches})} pairs. Photos matched with: none {len(alone)}, median {int(np.median(n))}, most {int(n.max())}.</p>
-<h2>Matching nothing ({len(alone)})</h2><p>{''.join(img(s) for s in alone)}</p>
-<h2>Weakest matches (60)</h2><table>{''.join(f'<tr><td>{len(inl)} inliers</td><td>{img(a)}</td><td>{img(b)}</td></tr>' for a, b, _, inl in weakest)}</table>
+<h2>Matching nothing ({steps.shown(len(alone))})</h2><p>{''.join(img(s) for s in steps.few(alone))}</p>
+<h2>Weakest matches ({len(weakest)})</h2><table>{''.join(f'<tr><td>{len(inl)} inliers</td><td>{img(a)}</td><td>{img(b)}</td></tr>' for a, b, _, inl in weakest)}</table>
 """)
 
 

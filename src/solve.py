@@ -1572,7 +1572,7 @@ def page(out_dir, chosen, result, sizes):
 <p>The edge models (an experiment) refined {len(edges)}: their recess used on {edge_used["recess"]}, their label on {edge_used["label"]} (confidence at least {edge_fit.ACCEPT}, the label within the fit's limits); the drawing shows the poses used.</p>
 <p>Grouped by how the fit was started; within a group, most outline support first.</p>
 <h2>Not solved ({len(result["unsolved"])})</h2><ul>{unsolved}</ul>
-{"".join(f'<h2>Started from: {k} ({len(by_kind[k])})</h2>' + "".join(figure(key, r) for key, r in by_kind[k]) for k in kinds)}
+{"".join(f'<h2>Started from: {k} ({steps.shown(len(by_kind[k]))})</h2>' + "".join(figure(key, r) for key, r in steps.few(by_kind[k])) for k in kinds)}
 """)
 
 

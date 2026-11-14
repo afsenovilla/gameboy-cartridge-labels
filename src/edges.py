@@ -52,7 +52,7 @@ def do_photo(job):
     return sha1
 
 
-def page(out_dir, chosen, drawn=40):
+def page(out_dir, chosen, drawn=steps.PAGE_FIGURES):
     counts = []
     for sha1, path in chosen.items():
         f = np.load(os.path.join(out_dir, sha1 + ".npz"))

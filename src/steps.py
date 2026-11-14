@@ -41,6 +41,27 @@ def run(work, jobs, workers, initializer=None, initargs=(), what="done"):
                 print(f"{what} {done} of {len(jobs)}", flush=True)
 
 
+PAGE_FIGURES = 10  # a step's page shows this many figures per section, the first in its order (the user, 2026-11-14: looked at once in a while)
+
+
+def few(items):
+    """The figures a page shows of a section's items."""
+    return list(items)[:PAGE_FIGURES]
+
+
+PAGE_SOURCES = 4  # of a figure's own label photos (a print's), this many shown
+
+
+def more(n):
+    """After a figure's first PAGE_SOURCES label photos: how many more it has."""
+    return f'<span style="font-size:11px"> +{n - PAGE_SOURCES} more</span>' if n > PAGE_SOURCES else ""
+
+
+def shown(n):
+    """A section's count, saying when only some are shown."""
+    return f"{n}" if n <= PAGE_FIGURES else f"{n}; the first {PAGE_FIGURES} shown"
+
+
 def legend(items, title=None):
     """A page's legend: one entry per line, each with its colour in a dot in front ([(colour, text)])."""
     import html
