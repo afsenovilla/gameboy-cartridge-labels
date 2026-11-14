@@ -1539,7 +1539,7 @@ def page(out_dir, chosen, result, sizes):
     rel = os.path.relpath(".", out_dir)
     kinds = ["placed", "outline", "search"]
     group = lambda r: next((k for k in kinds if r["start"].startswith(k)), "search")
-    by_kind = {k: sorted([(key, r) for key, r in lps.items() if group(r) == k], key=lambda kv: -kv[1]["support"]["face"]) for k in kinds}
+    by_kind = {k: sorted([(key, r) for key, r in lps.items() if group(r) == k], key=lambda kv: -kv[1]["support"].get("face", 0)) for k in kinds}
 
     def figure(key, r):
         s = r["photo"]; w, h = sizes[s]
