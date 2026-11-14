@@ -43,6 +43,7 @@ def main():
         else:
             kept.append(pid)
     done = 0
+    print(f"restoring {len(jobs)} frozen prints again, {args.workers} at a time", flush=True)
     with multiprocessing.Pool(args.workers) as pool:
         for n, (pid, desc) in enumerate(pool.imap_unordered(restore.restore_print, jobs), 1):
             if desc is not None:
@@ -51,8 +52,7 @@ def main():
                 done += 1
             else:
                 kept.append(pid)
-            if n % 20 == 0 or n == len(jobs):
-                print(f"refrozen {n} of {len(jobs)} prints", flush=True)
+            print(f"{n} of {len(jobs)}: {pid}" + ("" if desc is not None else " (kept its image)"), flush=True)
     print(f"{done} frozen prints restored again; {len(kept)} kept their image (too few label photos): {' '.join(sorted(kept))}")
 
 
