@@ -4,7 +4,7 @@
 #     the family); its colours scaled so its paper is white (see paper_white) where paper is found, else the label
 #     photos' evened to their median (the user: one image per print)
 #   <print>.json: {"crop" (cuts.crop's: x, y, w, h px in the straightened images, mm), "keys" (its label photos used),
-#     "approximate" (those of them with an approximate cut),
+#     "approximate" (those of them with an approximate cut), "screen_peaks" (how many print-screen peaks descreen removed),
 #     "bands" (how many label photos count in each band, finest first), "paper" (the paper's colour found, or null)}
 # The label photos: the print's own only, poor fits left out (solve.poor_fit); a print with fewer than MIN_PHOTOS of
 # them, or fewer than MIN_PRECISE that aren't approximate cuts (solve.approximate_cut), gets no image (the user,
@@ -25,15 +25,18 @@
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
 # leave out clearly blurred regions.)
+# Last, after the paper white, the print screen (halftone) removed from the restored print (src/descreen.py: a notch at
+# the screen's peaks, then a 1.5 px weighted median; the user, 2026-11-14: on the restored print, not on each label
+# photo before).
 # A frozen print (src/frozen.py) isn't restored: its image is the one frozen (publish copies it).
-# Done again when an image is older than this file, cuts.py, prints.json, solve.json or its family's straightened
+# Done again when an image is older than this file, cuts.py, descreen.py, prints.json, solve.json or its family's straightened
 # images and cuts.
 # Usage: restore.py [--sample] [--workers N]
 import argparse, html, json, os, sys, warnings
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, straighten, shapes, cuts, prints as prints_step
+import photos, steps, straighten, shapes, cuts, descreen, prints as prints_step
 from scipy import ndimage
 
 QUALITY = 90
@@ -288,12 +291,13 @@ def restore_print(job):
         out_levels.append(est.astype(np.float32))
     result = np.clip(from_oklab(collapse(out_levels)), 0, 1)
     paper, white = paper_white(result)
-    write_avif(out_base + ".avif", white if white is not None else result)
+    final, screen = descreen.descreen(to_oklab(white if white is not None else result))
+    write_avif(out_base + ".avif", np.clip(from_oklab(final), 0, 1))
     for old in (out_base + "-median.avif", out_base + "-paper.avif"):
         if os.path.exists(old):
             os.remove(old)
     return pid, {"crop": crop, "keys": own_keys, "approximate": [k for k in own_keys if k in approximate], "bands": counts,
-                 "paper": None if paper is None else [round(float(v), 3) for v in paper]}
+                 "paper": None if paper is None else [round(float(v), 3) for v in paper], "screen_peaks": len(screen)}
 
 
 def canonical_crop(shape):
@@ -387,7 +391,7 @@ def main():
     out_dir = os.path.join(gen, "restore")
     os.makedirs(out_dir, exist_ok=True)
     base = lambda pid: os.path.join(out_dir, straighten.file_name(pid)[:-5])
-    newest = max(os.path.getmtime(p) for p in (prints_file, solve_file, __file__, cuts.__file__))
+    newest = max(os.path.getmtime(p) for p in (prints_file, solve_file, __file__, cuts.__file__, descreen.__file__))
     mtime = lambda f: os.path.getmtime(f) if os.path.exists(f) else 0
     jobs, wanted = [], set()
     for pid, job in print_jobs(gen, result, solved).items():
