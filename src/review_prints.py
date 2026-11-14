@@ -15,15 +15,19 @@
 # print's own tick box marks it for joining: "Join ticked" in the bar at the bottom joins the ticked prints, from any tab. Frozen prints (src/frozen.py) can't be split, and two
 # can't be joined. "Delete photo" under each label photo deletes its photo from photos/ (photos.delete: the file and its
 # record in photo-sources.json; the user, 2026-11-14: a bootleg with the wrong serial), asking first (confirm()) only if
-# the photo holds label photos of other prints; the label photo stays, marked deleted, and the next run drops it. Buttons only, no keys (the user: keys next to S are too easy to hit).
+# the photo holds label photos of other prints; the label photo stays, marked deleted, and the next run drops it.
+# Each print's serial typed in by hand ("Set serial", the user 2026-11-14): every label photo of the print gets it in
+# serial-corrections.json (read_serials.CORRECTIONS, which make read-serials applies last; the page shows it at once);
+# not a frozen print's. The next make read-serials and make prints give the print its id with that serial. Buttons only, no keys (the user: keys next to S are too easy to hit).
 # Usage: review_prints.py [port]
-import json, os, sys, threading, urllib.parse
+import json, os, re, sys, threading, urllib.parse
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
-import photos, straighten, print_corrections, prints as prints_step
+import photos, straighten, print_corrections, prints as prints_step, serials as serials_db
+from read_serials import CORRECTIONS
 
 GEN = photos.generated(False)
 SERIALS_PER_PAGE = 10
@@ -64,6 +68,7 @@ class Tool:
         self.id_of_key = {k: p["id"] for p in self.result["prints"] for k in p["keys"]}
         self.tiles = pair_tiles(GEN)
         self.present = set(photos.all_photos())
+        self.release_of = serials_db.load_database()
         self.compute()
 
     def mapper(self, decisions):
@@ -71,7 +76,15 @@ class Tool:
         old = {k for d in decisions for k in d.get("keys", []) + [k for g in d.get("prints", []) for k in g]} - keys
         return print_corrections.key_mapper(keys, self.outlines, prints_step.photo_sizes({k.split("@")[0] for k in old}, GEN))
 
+    def corrections(self):
+        return json.load(open(CORRECTIONS)) if os.path.exists(CORRECTIONS) else {"corrections": {}}
+
     def compute(self):
+        hand = self.corrections()["corrections"]
+        for k, serial in hand.items():  # as make read-serials will have them
+            r_ = serials_db.release(serial, self.release_of)
+            self.serials[k] = {**self.serials.get(k, {}), "serial": serial, "release": r_["id"] if r_ else None,
+                               "decided_by": "corrected by hand"}
         self.decisions = print_corrections.load()["decisions"]
         mapped = self.mapper(self.decisions)
         groups, self.applied = print_corrections.apply([p["keys"] for p in self.auto], self.decisions, mapped, self.frozen_of)
@@ -88,7 +101,7 @@ class Tool:
             disagree = sum(1 for k in g if read(k, "serial") and read(k, "serial") != serial)
             tiles = max((self.tiles.get((a, b), 0) for i, a in enumerate(g) for b in g[i + 1:]), default=0)
             out.append({"keys": [{"key": k, "serial": read(k, "serial"), "release": read(k, "release"),
-                                  "deleted": k.split("@")[0] not in self.present} for k in g],
+                                  "by_hand": k in hand, "deleted": k.split("@")[0] not in self.present} for k in g],
                         "id": p["id"] if p else None,
                         "from": sorted({self.id_of_key[k] for k in g if k in self.id_of_key}) if not p else [],
                         "serial": serial, "release": rel.most_common(1)[0][0] if rel else None,
@@ -148,6 +161,26 @@ class Tool:
         data = print_corrections.load()
         data["decisions"].append({**d, "datetime": print_corrections.now()})
         print_corrections.save(data)
+        self.compute()
+        return None
+
+    def set_serial(self, keys, serial):
+        """Every label photo of a print (keys, as shown) gets serial in serial-corrections.json: None, or why not."""
+        serial = (serial or "").strip().upper()
+        g = self.group_of(keys or [])
+        if g is None:
+            return "The page may be out of date: reload."
+        if g["frozen"]:
+            return "A frozen print's serial can't be set: unfreeze it first (remove-photos)."
+        if not re.fullmatch(r"[A-Z0-9]+(-[A-Z0-9]+)+", serial):
+            return f"Not a serial: {serial!r} (like DMG-APSJ-JPN)."
+        data = self.corrections()
+        data["corrections"] = dict(sorted({**data["corrections"], **{k: serial for k in keys}}.items()))
+        tmp = CORRECTIONS + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, CORRECTIONS)
+        print(f"serial {serial}: {len(keys)} label photos", flush=True)
         self.compute()
         return None
 
@@ -275,7 +308,11 @@ function printCard(p) {
   }}, "Split off ticked");
   split.disabled = !canSplit();
   if (p.frozen.length) split.title = "frozen: can't be split";
-  card.append(lps, el("div", {style: "margin-top:4px"}, split));
+  const input = el("input", {size: "16", placeholder: "serial", value: p.serial || ""});
+  const set = el("button", {onclick: () => post("/serial", {keys, serial: input.value})}, "Set serial");
+  if (p.frozen.length) { set.disabled = true; set.title = "frozen: can't be changed"; }
+  const hand = p.keys.every(k => k.by_hand) ? el("span", {class: "note"}, " entered by hand") : "";
+  card.append(lps, el("div", {style: "margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"}, split, input, set, hand));
   return card;
 }
 
@@ -386,11 +423,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/decide", "/undo", "/delete") or tool is None:
+        if self.path not in ("/decide", "/undo", "/delete", "/serial") or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         with lock:
             why = (tool.decide(data) if self.path == "/decide" else tool.delete(data.get("photo")) if self.path == "/delete"
+                   else tool.set_serial(data.get("keys"), data.get("serial")) if self.path == "/serial"
                    else tool.undo(data.get("index", -1), data.get("datetime")))
         if why:
             return self.send(why.encode(), "text/plain", 409)
