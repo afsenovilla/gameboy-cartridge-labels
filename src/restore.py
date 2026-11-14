@@ -420,7 +420,7 @@ def print_jobs(gen, result, solved):
     MIN_PRECISE that aren't approximate cuts, isn't restored at all (the user: fewer prints, all of them good, rather
     than bad ones among them)."""
     info = fit_info(gen, solved)
-    _, poor, approximate, _ = info
+    _, poor, approximate, _, _ = info
     by_family = {}
     for p in result["prints"]:
         by_family.setdefault(p["family"], []).append(p)
@@ -444,7 +444,7 @@ def print_jobs(gen, result, solved):
 
 def fit_info(gen, solved):
     """(px per mm {key: the photo's pixels per mm at the label, from the fit}, poor fits {key}, approximate cuts {key},
-    key -> its straightened image)."""
+    key -> its straightened image, the shape each was fitted as {key: shape})."""
     import solve as solve_step
     px_per_mm = {}
     for k, r in solved.items():
@@ -452,13 +452,20 @@ def fit_info(gen, solved):
         px_per_mm[k] = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh])
     poor = {k for k, r in solved.items() if solve_step.poor_fit(r)}
     approximate = {k for k, r in solved.items() if solve_step.approximate_cut(r)}
-    return px_per_mm, poor, approximate, lambda k: os.path.join(gen, "straighten", straighten.file_name(k))
+    return (px_per_mm, poor, approximate, lambda k: os.path.join(gen, "straighten", straighten.file_name(k)),
+            {k: r["shape"] for k, r in solved.items()})
 
 
 def job_of(p, info, crop):
     """A print's job for restore_print but its output path, or None if it has too few label photos to restore."""
-    px_per_mm, poor, approximate, image = info
-    own = [(k, image(k)) for k in p["keys"] if k not in poor]
+    px_per_mm, poor, approximate, image, shape_of = info
+    # a label photo fitted as another shape than the print's (joined by hand: a CGB label fitted as DMG, 2026-11-14)
+    # is straightened to another size and can't be combined: left out, like a poor fit
+    other = [k for k in p["keys"] if shape_of.get(k) != p["shape"]]
+    if other:
+        print(f"{p['id']}: left out, fitted as another shape than the print's {p['shape']}: "
+              + ", ".join(f"{k} ({shape_of.get(k)})" for k in other), flush=True)
+    own = [(k, image(k)) for k in p["keys"] if k not in poor and k not in other]
     if len(own) < MIN_PHOTOS or sum(k not in approximate for k, _ in own) < MIN_PRECISE:
         return None
     return (p["id"], p["shape"], own, px_per_mm, approximate & {k for k, _ in own}, crop, len(p.get("families", [])) > 1)
