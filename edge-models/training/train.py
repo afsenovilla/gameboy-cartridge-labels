@@ -23,8 +23,13 @@ def load(shell):
     perm = rng.permutation(photo.max() + 1)
     test_photo = perm[: len(perm) // 5]
     is_test = np.isin(photo, test_photo)
+    if "hand" in z.files:  # labels placed by hand (extract.py): 1 always trained on, 2 always held out
+        hand = z["hand"][photo]
+        is_test = (is_test & (hand == 0)) | (hand == 2)
+    else:
+        hand = np.zeros(len(photo), int)
     key = photo * 8 + meta[:, 1].astype(int) * 4 + meta[:, 2].astype(int)  # edge instance
-    return strips, meta, key, is_test
+    return strips, meta, key, is_test, hand
 
 
 class Edges:
@@ -99,6 +104,21 @@ class Regress(nn.Module):
     def forward(self, w, c=None):
         h = self.conv(w if not self.cond else torch.cat([w, c[:, :, None].expand(-1, -1, w.shape[2])], 1)).flatten(1)
         return self.head(h if not self.cond else torch.cat([h, c], 1))[:, 0]
+
+
+class Onnx:
+    """An exported model (export_onnx.py), called as the PyTorch one."""
+
+    def __init__(self, path):
+        import onnxruntime
+        self.session = onnxruntime.InferenceSession(path, providers=["CPUExecutionProvider"])
+
+    def eval(self):
+        return self
+
+    def __call__(self, w, c):
+        out = self.session.run(None, {"strips": w.cpu().numpy().astype(np.float32), "condition": c.cpu().numpy().astype(np.float32)})[0]
+        return torch.from_numpy(out).to(w.device)
 
 
 def cond_of(E, j, shell_id, n_cond):
@@ -205,19 +225,26 @@ def main():
     p.add_argument("--dil", type=int, nargs="+", default=[1, 2, 4, 8, 16, 1])
     p.add_argument("--tag", default="")
     p.add_argument("--save", default="")
+    p.add_argument("--onnx", default="", help="no training: evaluate this ONNX model instead")
     args = p.parse_args()
-    strips, meta, key, is_test = load(args.shell)
+    strips, meta, key, is_test, hand = load(args.shell)
     Etr = Edges(strips, meta, key, ~is_test, args.parts, args.sides)
     Ete = Edges(strips, meta, key, is_test, args.parts, args.sides)
     print(vars(args), "train edges", Etr.n_edges, "test edges", Ete.n_edges, flush=True)
-    model = None if args.kind == "gradient" else train(args, Etr, Ete)
+    if args.onnx:
+        model = Onnx(args.onnx)
+    else:
+        model = None if args.kind == "gradient" else train(args, Etr, Ete)
     out = {"args": vars(args), "eval": {}}
     # per part, so recess and label are reported apart
     for part in args.parts:
         Ep = Edges(strips, meta, key, is_test, [part], args.sides)
         out["eval"][["recess", "label"][part]] = evaluate(model, args, Ep)
         out["eval"][["recess", "label"][part] + " scale+-10%"] = evaluate(model, args, Ep, ks=(1, 8), jitter=0.1)
-    if model is not None and args.kind == "heatmap":
+        if part == 1 and (hand == 2).any():  # main's held-out fits and the hand-placed held out, apart
+            out["eval"]["label main"] = evaluate(model, args, Edges(strips, meta, key, is_test & (hand == 0), [1], args.sides))
+            out["eval"]["label hand"] = evaluate(model, args, Edges(strips, meta, key, hand == 2, [1], args.sides))
+    if isinstance(model, Heatmap):
         out["receptive_field_mm"] = model.rf / args.R
     print(json.dumps(out["eval"]), flush=True)
     with open(os.path.join(HERE, "results.jsonl"), "a") as f:

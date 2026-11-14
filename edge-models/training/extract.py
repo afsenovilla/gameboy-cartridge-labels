@@ -7,6 +7,10 @@
 # Strips across the recess's and the label's edges of every good fit (accepted True or hand-placed; not "almost"),
 # sampled in the cartridge's mm through the fit: per edge, one strip every STEP mm along it (1.5 mm clear of each end),
 # each strip NORMAL_HALF mm to both sides of the edge at PER_MM samples per mm, from inside (-) to outside (+).
+# Since 2026-11-14 also the labels placed by hand in fit-by-hand (this branch's hand-fit-labels.json: the cut's corners in
+# the photo's pixels), as label edges only, of their shape (solve.json's); HAND_TEST of them (a fixed draw) held out for
+# testing (data/<shell>.npz "hand": per photo 0 main's fits, 1 hand-placed for training, 2 hand-placed held out; with
+# --all-hand none held out). A photo with a hand-placed label gives main's label fit up (the same label).
 # Output: data/<shell>.npz with strips (n, 2*NORMAL_HALF*PER_MM+1, 3) uint8 RGB, and per strip its photo index, part
 # (0 recess, 1 label), side (0 top, 1 right, 2 bottom, 3 left), position along the edge (mm).
 import json, os, sys, numpy as np, cv2
@@ -17,12 +21,14 @@ MAIN = "/Users/vicwid/code/geon/gameboy-labels"
 DET = "/Users/vicwid/code/geon/gameboy-labels-detection"
 sys.path.insert(0, os.path.join(MAIN, "src"))
 import cartridge  # main's shells
+SHAPES = json.load(open(os.path.join(DET, "src", "shape-models.json")))["shapes"]  # the same label rectangles, this branch's
 cartridge.SPECIAL_SHELLS = os.path.join(MAIN, cartridge.SPECIAL_SHELLS)
 import importlib.util
 _spec = importlib.util.spec_from_file_location("det_photos", os.path.join(DET, "src", "photos.py"))
 det_photos = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(det_photos)  # this branch's loader
 
 PER_MM, NORMAL_HALF, STEP, END = 20, 20.0, 1.0, 1.5
+HAND_TEST = 25
 T = np.linspace(-NORMAL_HALF, NORMAL_HALF, int(2 * NORMAL_HALF * PER_MM) + 1)
 
 
@@ -66,10 +72,15 @@ def job(args):
 
 
 def main():
+    all_hand = "--all-hand" in sys.argv
     fits = json.load(open(os.path.join(HERE, "fits.json")))
+    hand = json.load(open(os.path.join(DET, "hand-fit-labels.json")))
+    solved = json.load(open(os.path.join(DET, "generated", "solve", "solve.json")))["label_photos"]
+    hand_sha = {k.split("@")[0] for k in hand}
     files = {os.path.splitext(f)[0]: os.path.join(DET, "photos", f) for f in os.listdir(os.path.join(DET, "photos"))}
     jobs = {"dmg": [], "cgb": [], "agb": []}
     names = {"dmg": [], "cgb": [], "agb": []}
+    kinds = {"dmg": [], "cgb": [], "agb": []}
     for name, e in sorted(fits.items()):
         un = cartridge.unprefixed(name)
         if un[:4].upper() not in ("DMG-", "CGB-", "AGB-") or cartridge.special_shell(name) or e["sha1"] not in files:
@@ -79,12 +90,24 @@ def main():
         parts = []
         if good(plastic):
             parts.append((0, shell.recess, plastic["mm_to_photo"]))
-        if good(label):
+        if good(label) and e["sha1"] not in hand_sha:
             parts.append((1, shell.label, label["mm_to_photo"]))
         if parts:
             k = shell.name
             jobs[k].append((len(names[k]), files[e["sha1"]], parts))
             names[k].append((name, e["sha1"]))
+            kinds[k].append(0)
+    keys = sorted(k for k in hand if k in solved and k.split("@")[0] in files)
+    print(len(hand), "hand-placed,", len(keys), "with their photo and shape", flush=True)
+    test = set() if all_hand else set(np.random.default_rng(14).permutation(keys)[:HAND_TEST].tolist())
+    for key in keys:
+        k = solved[key]["shape"]
+        rect = SHAPES[k]["label"]
+        x1, y1, x2, y2 = rect
+        H = cv2.getPerspectiveTransform(np.float32([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]), np.float32(hand[key]["corners"]))
+        jobs[k].append((len(names[k]), files[key.split("@")[0]], [(1, rect, H.tolist())]))
+        names[k].append(("hand:" + key, key.split("@")[0]))
+        kinds[k].append(2 if key in test else 1)
     os.makedirs(os.path.join(HERE, "data"), exist_ok=True)
     for k in jobs:
         print(k, len(jobs[k]), "photos", flush=True)
@@ -101,7 +124,7 @@ def main():
                 if done % 200 == 0:
                     print(" ", done, flush=True)
         np.savez(os.path.join(HERE, "data", k + ".npz"), strips=np.concatenate(strips), meta=np.concatenate(meta).astype(np.float32),
-                 names=np.array(names[k]), scales=np.array([[i, p, s] for (i, p), s in scales.items()]))
+                 names=np.array(names[k]), hand=np.array(kinds[k]), scales=np.array([[i, p, s] for (i, p), s in scales.items()]))
 
 
 if __name__ == "__main__":

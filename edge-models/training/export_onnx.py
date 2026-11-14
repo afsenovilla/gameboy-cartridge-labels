@@ -1,11 +1,14 @@
 # The trained models (models/<shape>-<0 recess, 1 label>.pt) exported to ../<shape>-<part>.onnx for src/edge_fit.py,
-# each checked against PyTorch on random strips (run 2026-11-10: largest difference 1.1e-5).
-import os, numpy as np, onnxruntime, torch
+# each checked against PyTorch on random strips (run 2026-11-10: largest difference 1.1e-5). With arguments, only those:
+# export_onnx.py cgb-1 (2026-11-14: cgb's label model retrained with the labels placed by hand).
+import os, sys, numpy as np, onnxruntime, torch
 import train
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 for shape in ("dmg", "cgb", "agb"):
     for p, part in ((0, "recess"), (1, "label")):
+        if sys.argv[1:] and f"{shape}-{p}" not in sys.argv[1:]:
+            continue
         m = train.Heatmap(6)
         m.load_state_dict(torch.load(os.path.join(HERE, "models", f"{shape}-{p}.pt"), map_location="cpu"))
         m.eval()
