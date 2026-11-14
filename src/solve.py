@@ -1528,7 +1528,10 @@ def carry_alone(out, lps, matches, photo_paths, info, workers=8):
 def edge_caption(e):
     if not e:
         return ""
-    part = lambda p: f'{p} {e[p + "_confidence"]:.2f} {"used" if e[p + "_used"] else "not used"}, moved {e[p + "_moved_mm"]} mm'
+    def part(p):  # a pose from a frozen print match has no edge fit: only "not used"
+        if p + "_confidence" not in e:
+            return f'{p} not fitted'
+        return f'{p} {e[p + "_confidence"]:.2f} {"used" if e[p + "_used"] else "not used"}, moved {e[p + "_moved_mm"]} mm'
     return f'<br>edge models: {part("recess")}; {part("label")}'
 
 
