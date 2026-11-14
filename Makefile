@@ -66,6 +66,12 @@
 #   The outputs collected into generated/publish/: prints/ (the restored prints), index.json
 #   (source and URLs from photo-sources.json) and the lists; the page generated/publish/index.html. Needs make restore.
 #
+#   make review-prints
+#   A tool, not a step: a local page for splitting and joining prints (across families too), the decisions kept in
+#   print-corrections.json and applied by the next make prints (then make restore publish): the serials of several prints,
+#   every print worst first (label photos reading another serial, differing tiles), a search, and the decisions to undo;
+#   the page shows the prints as the next make prints makes them (src/review_prints.py, src/print_corrections.py).
+#
 #   make remove-photos
 #   A tool, not a step: a local page for deleting photos from photos/ (the file and its record in photo-sources.json),
 #   on two tabs: the photos with no label photo found, 20 at a time; every print with its label photos, the worst first
@@ -90,7 +96,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos fit-by-hand
+.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish clean-publish remove-photos review-prints fit-by-hand
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -186,6 +192,9 @@ clean-publish:
 
 remove-photos:
 	$(PYTHON) src/remove_photos.py
+
+review-prints:
+	$(PYTHON) src/review_prints.py
 
 SHAPE ?= cgb
 fit-by-hand:

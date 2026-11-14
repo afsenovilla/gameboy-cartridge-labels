@@ -17,15 +17,18 @@
 #   never split, never merged with another frozen print; others of its family may join it (a new photo of it); it keeps
 #   its id ("frozen": its id) and its serial as frozen. One with none of its label photos left is still listed (keys []).
 #   id-changes.json: this run's id changes ([{"kind": new, kept, split, merged, renamed or gone, "id", ...}]), on the page
+#   automatic.json: {"prints": [{"keys", "family"}]}: the prints as the comparison found them, before the user's decisions
+#   The user's decisions (print-corrections.json, made in review-prints: src/print_corrections.py) applied on those: a
+#   print joined across families has the family most of its label photos are of, and "families", all of them.
 # The ids are kept between runs in print-ids.json (the repo root, committed; with --sample in <generated>/prints/).
-# Done again when prints.json is older than this file, solve.json or serials.json.
+# Done again when prints.json is older than this file, solve.json, serials.json or print-corrections.json.
 # Usage: prints.py [--sample]
 import argparse, html, itertools, json, os, sys
 from collections import Counter
 import cv2, numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, straighten, shapes, print_ids, frozen
+import photos, steps, straighten, shapes, print_ids, frozen, print_corrections
 
 TILE_MM = 1
 TEXTURE = 6.0
@@ -153,6 +156,37 @@ def split_family(D, fixed=()):
     return prints, differs
 
 
+def photo_sizes(shas, gen):
+    """sha1 -> [w, h] of the photos read-text has read."""
+    sizes = {}
+    for s in shas:
+        f = os.path.join(gen, "read-text", s + ".json")
+        if os.path.exists(f):
+            sizes[s] = json.load(open(f))["size"]
+    return sizes
+
+
+def corrected(auto, solved, frozen_of, gen):
+    """The automatic prints ([{keys, family}]) with the user's decisions applied (print_corrections)."""
+    decisions = print_corrections.load()["decisions"]
+    if not decisions:
+        return auto
+    found = json.load(open(os.path.join(gen, "find", "label-photos.json")))["label_photos"]
+    keys = {k for p in auto for k in p["keys"]}
+    old = {k for d in decisions for k in d.get("keys", []) + [k for g in d.get("prints", []) for k in g]} - keys
+    mapped = print_corrections.key_mapper(keys, {lp["key"]: lp["outline"] for lp in found}, photo_sizes({k.split("@")[0] for k in old}, gen))
+    groups, applied = print_corrections.apply([p["keys"] for p in auto], decisions, mapped, frozen_of)
+    print(f"print corrections: {sum(applied)} of {len(decisions)} decisions applied", flush=True)
+    out = []
+    for g in groups:
+        fams = Counter(solved[k]["family"] for k in g)
+        p = {"keys": sorted(g), "family": fams.most_common(1)[0][0]}
+        if len(fams) > 1:
+            p["families"] = sorted(fams)
+        out.append(p)
+    return out
+
+
 def keep_ids(all_prints, ids_file, gen):
     """Each print's persistent id (print_ids), the registry in ids_file updated; this run's changes."""
     registry = print_ids.load(ids_file)
@@ -163,11 +197,7 @@ def keep_ids(all_prints, ids_file, gen):
     for k in new_keys:
         of_photo.setdefault(k.split("@")[0], []).append(k)
     old_keys = {k for e in registry["prints"].values() for k in e["keys"]}
-    sizes = {}
-    for s in {k.split("@")[0] for k in old_keys - new_keys}:
-        f = os.path.join(gen, "read-text", s + ".json")
-        if os.path.exists(f):
-            sizes[s] = json.load(open(f))["size"]
+    sizes = photo_sizes({k.split("@")[0] for k in old_keys - new_keys}, gen)
     key_map = {k: print_ids.same_label_photo(k, of_photo.get(k.split("@")[0], []), outlines, sizes) for k in old_keys}
     forced = {i: p["frozen"] for i, p in enumerate(all_prints) if p.get("frozen")}
     registry, changes = print_ids.assign(all_prints, registry, key_map, forced=forced)
@@ -193,7 +223,7 @@ def main():
     solved = json.load(open(solve_file))["label_photos"]
     serial = json.load(open(serials_file))
     frozen_entries = frozen.load()
-    inputs = [solve_file, serials_file, __file__, print_ids.__file__] + ([frozen.FILE] if os.path.exists(frozen.FILE) else [])
+    inputs = [solve_file, serials_file, __file__, print_ids.__file__] + [f for f in (frozen.FILE, print_corrections.FILE) if os.path.exists(f)]
     if not os.path.exists(out) or os.path.getmtime(out) < max(os.path.getmtime(p) for p in inputs):
         frozen_of = {k: pid for pid, e in frozen_entries.items() for k in e["label_photos"] if k in solved}
         families = {}
@@ -243,6 +273,8 @@ def main():
             all_prints += [{"keys": [keys[i] for i in g], "family": fam} for g in groups]
         save_pairs(pairs_file, version, pairs)  # this run's pairs only: those no longer in a family dropped
         print(f"{compared} pairs compared, {len(pairs) - compared} from the cache", flush=True)
+        steps.write_json(os.path.join(out_dir, "automatic.json"), {"prints": all_prints})
+        all_prints = corrected(all_prints, solved, frozen_of, gen)
         present = {pid for pid in frozen_of.values()}
         all_prints += [{"keys": [], "family": None} for pid in frozen_entries if pid not in present]
         missing = [pid for pid in frozen_entries if pid not in present]

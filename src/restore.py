@@ -105,7 +105,12 @@ def even_to(img, ref, valid):
 # REGISTER_ROUNDS times; then by a smooth local correction: dense optical flow (DIS) against the median, smoothed over
 # FLOW_SMOOTH_MM and limited to FLOW_MAX_PX, so a gentle bend or lens distortion is followed, not a detail (dirt isn't
 # pulled into place).
+# A print joined across families (the user's decisions, src/print_corrections.py) has label photos posed by separate
+# fits, up to about 1 mm (20 px) apart: each is first shifted onto the one with the most of the label on it by phase
+# correlation (accepted when its peak is at least COARSE_RESPONSE and the shift at most COARSE_MAX_MM).
 REGISTER_ROUNDS = 2
+COARSE_RESPONSE = 0.05
+COARSE_MAX_MM = 3.0
 FLOW_SMOOTH_MM = 2.0
 FLOW_MAX_PX = 3.0
 
@@ -158,12 +163,28 @@ def warped_onto(ref, entry, gray, M):
     return (warp(entry[0], M, flow), warp(entry[1].astype(np.uint8), M, flow, nearest=True) > 0, entry[2])
 
 
-def register(entries):
+def coarse_shifts(grays, valids):
+    """Per label photo, a translation (as a homography: out px -> its px) putting it on the one with the most valid
+    pixels (phase correlation), or none where the correlation is weak or the shift too large."""
+    ref = int(np.argmax([v.sum() for v in valids]))
+    window = cv2.createHanningWindow(grays[ref].shape[::-1], cv2.CV_32F)
+    Ms = []
+    for i, g in enumerate(grays):
+        M = np.eye(3, dtype=np.float32)
+        if i != ref:
+            (dx, dy), response = cv2.phaseCorrelate(grays[ref] * window, g * window)
+            if response >= COARSE_RESPONSE and np.hypot(dx, dy) <= COARSE_MAX_MM * straighten.PX_PER_MM:
+                M[0, 2], M[1, 2] = dx, dy
+        Ms.append(M)
+    return Ms
+
+
+def register(entries, joined=False):
     """A print's own label photos (image, valid, px/mm) aligned to their median: a homography each, then a smooth
-    local correction."""
+    local correction. joined: a print joined across families: first coarse_shifts."""
     valids = [e[1].astype(np.uint8) for e in entries]
     grays = [evened_gray(e[0], v > 0) for e, v in zip(entries, valids)]
-    Ms = [np.eye(3, dtype=np.float32) for _ in entries]
+    Ms = coarse_shifts(grays, valids) if joined else [np.eye(3, dtype=np.float32) for _ in entries]
     for _ in range(REGISTER_ROUNDS):
         ref = np.median(np.stack([warp(g, M) for g, M in zip(grays, Ms)]), 0)
         Ms = [homography_to(ref, g, v, M) for g, v, M in zip(grays, valids, Ms)]
@@ -210,7 +231,7 @@ def filled(img, where):
 
 def restore_print(job):
     """Restores one print: (print id, the result's description)."""
-    pid, shape, own, px_per_mm, approximate, crop, out_base = job
+    pid, shape, own, px_per_mm, approximate, crop, joined, out_base = job
     P = straighten.PX_PER_MM
     x0, y0, w, h = crop["x"], crop["y"], crop["w"], crop["h"]
     size, px_to_mm = straighten.canvas(shape)
@@ -233,7 +254,7 @@ def restore_print(job):
     if len(loaded) > MAX_PHOTOS:
         loaded = sorted(loaded, key=lambda ke: -ke[1][2])[:MAX_PHOTOS]
     own_keys = [k for k, _ in loaded]
-    entries = register([e for _, e in loaded])
+    entries = register([e for _, e in loaded], joined)
     ref = np.median(np.stack([e[0] for e in entries]), 0)
     evened = [even_to(e[0], ref, e[1]) for e in entries]
     valids = [e[1] for e in entries]
@@ -390,7 +411,7 @@ def main():
 
 def print_jobs(gen, result, solved):
     """print id -> restore_print's job but its output path: (id, shape, own [(key, image)], px per mm {key: ...},
-    the approximate cuts {key}, crop). Poor fits are left out; a print with fewer than MIN_PHOTOS others, or
+    the approximate cuts {key}, crop, joined across families). Poor fits are left out; a print with fewer than MIN_PHOTOS others, or
     MIN_PRECISE that aren't approximate cuts, isn't restored at all (the user: fewer prints, all of them good, rather
     than bad ones among them)."""
     import solve as solve_step
@@ -419,7 +440,7 @@ def print_jobs(gen, result, solved):
         own = [(k, image(k)) for k in p["keys"] if k not in poor]
         if len(own) < MIN_PHOTOS or sum(k not in approximate for k, _ in own) < MIN_PRECISE:
             continue
-        jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, approximate & {k for k, _ in own}, crops[p["family"]])
+        jobs[p["id"]] = (p["id"], p["shape"], own, px_per_mm, approximate & {k for k, _ in own}, crops[p["family"]], len(p.get("families", [])) > 1)
     return jobs
 
 
