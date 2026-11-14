@@ -13,7 +13,9 @@
 # Each print: its label photos (straighten's image as is: full resolution and uncropped, for pinch-zooming; the user,
 # 2026-11-14), each with its serial read and a tick box: "Split off ticked" makes the ticked a print of their own. A
 # print's own tick box marks it for joining: "Join ticked" in the bar at the bottom joins the ticked prints, from any tab. Frozen prints (src/frozen.py) can't be split, and two
-# can't be joined. Buttons only, no keys (the user: keys next to S are too easy to hit).
+# can't be joined. "Delete photo" under each label photo deletes its photo from photos/ (photos.delete: the file and its
+# record in photo-sources.json; the user, 2026-11-14: a bootleg with the wrong serial), asking first (confirm()) only if
+# the photo holds label photos of other prints; the label photo stays, marked deleted, and the next run drops it. Buttons only, no keys (the user: keys next to S are too easy to hit).
 # Usage: review_prints.py [port]
 import json, os, sys, threading, urllib.parse
 from collections import Counter
@@ -61,6 +63,7 @@ class Tool:
         self.by_keys = {frozenset(p["keys"]): p for p in self.result["prints"] if p["keys"]}
         self.id_of_key = {k: p["id"] for p in self.result["prints"] for k in p["keys"]}
         self.tiles = pair_tiles(GEN)
+        self.present = set(photos.all_photos())
         self.compute()
 
     def mapper(self, decisions):
@@ -84,7 +87,8 @@ class Tool:
             image = p and os.path.exists(os.path.join(GEN, "restore", straighten.file_name(p["id"])))
             disagree = sum(1 for k in g if read(k, "serial") and read(k, "serial") != serial)
             tiles = max((self.tiles.get((a, b), 0) for i, a in enumerate(g) for b in g[i + 1:]), default=0)
-            out.append({"keys": [{"key": k, "serial": read(k, "serial"), "release": read(k, "release")} for k in g],
+            out.append({"keys": [{"key": k, "serial": read(k, "serial"), "release": read(k, "release"),
+                                  "deleted": k.split("@")[0] not in self.present} for k in g],
                         "id": p["id"] if p else None,
                         "from": sorted({self.id_of_key[k] for k in g if k in self.id_of_key}) if not p else [],
                         "serial": serial, "release": rel.most_common(1)[0][0] if rel else None,
@@ -147,6 +151,17 @@ class Tool:
         self.compute()
         return None
 
+    def delete(self, sha1):
+        """Deletes a photo from photos/: None, or why not."""
+        if sha1 in self.present:
+            if sha1 not in photos.all_photos():
+                return "Not in photos/ any more: reload."
+            photos.delete(sha1)
+            print(f"deleted {sha1}", flush=True)
+            self.present.discard(sha1)
+            self.compute()
+        return None
+
     def undo(self, index, when):
         data = print_corrections.load()
         if not (0 <= index < len(data["decisions"])) or data["decisions"][index]["datetime"] != when:
@@ -176,6 +191,9 @@ button:disabled{opacity:.4;cursor:default}
 .lp img{width:160px;display:block}
 .lp.ticked img{outline:3px solid #fa0}
 .lp .odd{color:#f96}
+.lp.deleted img{opacity:.25}
+.lp .del{font-size:11px;padding:1px 6px;margin-top:2px}
+.lp .gone{color:#f66}
 .frozen{color:#6bf}
 .note{color:#aaa;font-size:12px}
 #bar{position:fixed;bottom:0;left:0;right:0;background:#1d1d1d;padding:10px 16px;display:flex;gap:10px;align-items:center;z-index:2}
@@ -242,9 +260,11 @@ function printCard(p) {
   for (const k of p.keys) {
     const box = el("input", {type: "checkbox"});
     box.checked = lpTicks.has(k.key);
-    const lp = el("label", {class: "lp" + (box.checked ? " ticked" : "")},
-      el("img", {loading: "lazy", src: "/label/" + encodeURIComponent(k.key)}),
-      box, el("span", {class: (k.serial && k.serial !== p.serial) ? "odd" : ""}, " " + (k.serial || k.release || "no serial read")));
+    const lp = el("div", {class: "lp" + (box.checked ? " ticked" : "") + (k.deleted ? " deleted" : "")},
+      el("label", {}, el("img", {loading: "lazy", src: "/label/" + encodeURIComponent(k.key)}),
+        box, el("span", {class: (k.serial && k.serial !== p.serial) ? "odd" : ""}, " " + (k.serial || k.release || "no serial read"))));
+    if (k.deleted) lp.append(el("div", {class: "gone"}, "photo deleted"));
+    else lp.append(el("div", {}, el("button", {class: "del", onclick: () => deletePhoto(k.key, p)}, "Delete photo")));
     box.onchange = () => { if (box.checked) lpTicks.add(k.key); else lpTicks.delete(k.key); lp.classList.toggle("ticked", box.checked); split.disabled = !canSplit(); };
     lps.append(lp);
   }
@@ -257,6 +277,14 @@ function printCard(p) {
   if (p.frozen.length) split.title = "frozen: can't be split";
   card.append(lps, el("div", {style: "margin-top:4px"}, split));
   return card;
+}
+
+async function deletePhoto(key, p) {
+  const sha1 = key.split("@")[0];
+  const others = S.prints.filter(q => q !== p && q.keys.some(k => k.key.split("@")[0] === sha1));
+  if (others.length && !confirm(`This photo also holds label photos of ${others.length} other print${others.length > 1 ? "s" : ""}:\n` +
+      others.map(q => (q.serial || q.release || "no serial") + " (" + (q.id || "new print") + ")").join("\n") + "\n\nDelete anyway?")) return;
+  await post("/delete", {photo: sha1});
 }
 
 function pager(n, per) {
@@ -358,11 +386,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/decide", "/undo") or tool is None:
+        if self.path not in ("/decide", "/undo", "/delete") or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         with lock:
-            why = tool.decide(data) if self.path == "/decide" else tool.undo(data.get("index", -1), data.get("datetime"))
+            why = (tool.decide(data) if self.path == "/decide" else tool.delete(data.get("photo")) if self.path == "/delete"
+                   else tool.undo(data.get("index", -1), data.get("datetime")))
         if why:
             return self.send(why.encode(), "text/plain", 409)
         self.send({"ok": True})
