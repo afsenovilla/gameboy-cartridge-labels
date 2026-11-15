@@ -6440,17 +6440,6 @@
   "serial_on_label": "DMT-DT-USA",
   "source": "jnlgame"
  },
- "0bf4d824cfe2402ecb6303c60830729e89674e17": {
-  "fetched": "2026-11-13",
-  "file": "ebay-357862266558.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/wR8AAeSwDV1pCvvh/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/357862266558",
-  "query": "ECW Hardcore Revolution Game Boy Color cartridge",
-  "searched_release": "CGB-BECE",
-  "searched_serial": "CGB-BECE-USA",
-  "source": "ebay-search",
-  "title_on_page": "ECW: Hardcore Revolution (Nintendo GameBoy Color, GBC, 2002) Authentic"
- },
  "0c06b9c6b2d17020514cb8a7ec2f80ce22ae86da": {
   "fetched": "2026-11-10",
   "file": "ebay-278096297247.jpg",
@@ -17700,18 +17689,6 @@
   "source": "retronintendostore",
   "title_on_page": "David Crane's The Rescue of Princess Blobette"
  },
- "21db939586afb304e4248e9e9bfd996ed1a2c1df": {
-  "fetched": "2026-11-12",
-  "file": "yahoo-w1251610513.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0211/user/c5496cbeb1f5371459434db8ace4e9c0feb1a21fca53236106f549d297622c66/i-img1200x1200-17941867812506xfjrc160888.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/w1251610513",
-  "query": "ダブルパック GBA",
-  "searched_release": "AGB-BW4J",
-  "searched_serial": "AGB-BW4J-JPN",
-  "source": "jauce-search",
-  "title_on_page": "GBA キャッスルヴァニア ダブルパック　海外版",
-  "via": "https://www.jauce.com/auction/w1251610513"
- },
  "21ddf0cfeba56bd06d071f3941e84737b1e4512d": {
   "file": "google/dmg/DMG-ACCJ-JPN.jpg",
   "original_name": "s-l1200 (1).jpg",
@@ -22439,17 +22416,6 @@
   "original_sha1": "afef986918cb6c6954b265b0edb0cdd4a48b53f4",
   "serial_on_label": "DMG-PVJ",
   "source": "ebay-elrocinante"
- },
- "2a968dca9920bcebb112cbfb91e61cbc72cd2308": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m58350655913.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m58350655913_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m58350655913/",
-  "query": "Super Mario Advance GBA",
-  "searched_release": "AGB-AMAE",
-  "searched_serial": "AGB-AMAE-USA",
-  "source": "mercari-search",
-  "title_on_page": "Super Mario World Super Mario Advance 2 GBA Game"
  },
  "2a97a401851c2c7306163f95dbd772c33ca521f6": {
   "fetched": "2026-11-09",
@@ -42055,17 +42021,6 @@
   "source": "unrecorded",
   "title_on_page": "Popeye Rush for Spinach Nintendo Game Boy Advance GBA *TESTED*"
  },
- "4f07a70f38197a2d6290f2070f156c88e9625244": {
-  "fetched": "2026-11-11",
-  "file": "ebay-117492795970.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/WYoAAeSwGY9q41HV/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/117492795970",
-  "query": "Snoopy Tennis Game Boy Color Japan cartridge",
-  "searched_release": "CGB-BS9J",
-  "searched_serial": "CGB-BS9J-JPN",
-  "source": "ebay-search",
-  "title_on_page": "Nintendo Snoopy Tennis Game Boy Color 1999 Sports, Authentic"
- },
  "4f09bb3be77efb4444ac98c335b49c801b27cc90": {
   "file": "otakaraou/cgb/CGB-BAFJ-JPN.jpg",
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/gb/983.jpg",
@@ -61072,17 +61027,6 @@
   "serial_on_label": "DMG-ALKJ-JPN",
   "source": "emumovies"
  },
- "728424f74f171379baa3a7caaec0a51a4254d224": {
-  "fetched": "2026-11-13",
-  "file": "ebay-317596718953.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/ljkAAeSwUdlpKSCv/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/317596718953",
-  "query": "Ayakashi no Shiro Game Boy Japan cartridge",
-  "searched_release": "DMG-AYJ",
-  "searched_serial": "DMG-AYJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "AYAKASHI NO SHIRO Gameboy Nintendo 7369 gb"
- },
  "7286a88dca8f125069edfa36bbe6f6e6bed0536a": {
   "fetched": "2026-11-09",
   "file": "ebay-127661217727.jpg",
@@ -68187,10 +68131,6 @@
   "source": "unrecorded",
   "title_on_page": "BARBIE in THE 12 DANCING PRINCESSES (2006) Nintendo Game Boy Advance GBA Tested"
  },
- "7f31dc89334417b731c020a4bb273119a3cd0aa1": {
-  "file": "gbhwdb/dmg/DMG-MQ-UKV_2.jpg",
-  "source": "gbhwdb"
- },
  "7f3268786e530d4107e66f4d3f680643926d3e47": {
   "fetched": "2026-11-11",
   "file": "ebay-960180120473.jpg",
@@ -74262,17 +74202,6 @@
   "original_name": "s-l1600 - 2026-10-24T194905.710.webp",
   "original_sha1": "f541d7c9ae9494dba58c700013e53cb8f8e5fbb5",
   "source": "ebay-elrocinante"
- },
- "8b2a15ee44cd090a0bd97bb914597bab25d5ef1e": {
-  "fetched": "2026-11-09",
-  "file": "ebay-336747665635.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/wv0AAeSwjRtqf-bL/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/336747665635",
-  "query": "Spyro Attack of the Rhynocs GBA cartridge",
-  "searched_release": "AGB-AOWE",
-  "searched_serial": "AGB-AOWE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Spyro: Attack of the Rhynocs (Nintendo Game Boy Advance, 2003) GBA Cartridge"
  },
  "8b31c733837147376b97662466679a101ea42864": {
   "file": "mercari/dmg/DMG-AGJJ-JPN.jpg",
@@ -86389,17 +86318,6 @@
   "title_on_page": "5946 ハムスター倶楽部2 GB",
   "via": "https://www.jauce.com/auction/g1085308571"
  },
- "a31375e4391d563cbb2260c4f588dd0f68965efd": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m19592249922.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m19592249922_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m19592249922/",
-  "query": "Ace Combat Advance GBA",
-  "searched_release": "AGB-BAEE",
-  "searched_serial": "AGB-BAEE-USA",
-  "source": "mercari-search",
-  "title_on_page": "Ace Combat Advance (Nintendo Game Boy Advance, 2005) Cartridge Only - Tested"
- },
  "a322b72c6d8cb191eb5bf2718ed87e0e15271332": {
   "fetched": "2026-11-12",
   "file": "ebay-178076137103.jpg",
@@ -91982,17 +91900,6 @@
   "source": "zockbar",
   "title_on_page": "Tail 'Gator"
  },
- "ad91d825d947c8c7fab1134602f0edeff2a38f89": {
-  "fetched": "2026-11-13",
-  "file": "ebay-227577634868.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/lQYAAeSwE3hpIRcs/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/227577634868",
-  "query": "Ayakashi no Shiro Game Boy Japan cartridge",
-  "searched_release": "DMG-AYJ",
-  "searched_serial": "DMG-AYJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "Ayakashi no Shiro (Nintendo Game Boy) JAPANESE Video Game 1422"
- },
  "ad951313ca5c0480769f83819d562e9d350b9f0c": {
   "fetched": "2026-11-11",
   "file": "ebay-317329435867.jpg",
@@ -92916,17 +92823,6 @@
   "searched_serial": "AGB-BHEE-USA",
   "source": "unrecorded",
   "title_on_page": "HOT WHEELS STUNT TRACK CHALLENGE NINTENDO GAMEBOY ADVANCE GBA"
- },
- "af4854ac0ab309d4c690247ba1c359c4ef0acd95": {
-  "fetched": "2026-11-09",
-  "file": "ebay-127881215665.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/i-cAAeSwOhNqEd2b/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/127881215665",
-  "query": "The Flintstones Big Trouble in Bedrock GBA cartridge",
-  "searched_release": "AGB-AFSE",
-  "searched_serial": "AGB-AFSE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Flintstones Big Trouble In Bedrock Gameboy Advance Game GBA Cartridge Only"
  },
  "af4ffc31c13c3d7e0cbf6d9bc10c0690e5156cb5": {
   "fetched": "2026-11-09",
@@ -107381,18 +107277,6 @@
   "title_on_page": "GBA ゲームボーイアドバンス F-ZERO FOR GAMEBOY ADVANCE ソフトのみ 起動確認済",
   "via": "https://www.jauce.com/auction/m1251038752"
  },
- "c9670fee552b952708822c85d5ef434a57729bff": {
-  "fetched": "2026-11-11",
-  "file": "yahoo-u1211421071.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0112/user/72780f1d00e988b62916c09483c9c918fa895db03fdaf91d481545114b6d1ec0/i-img900x1200-17650203848242ixm7fe368.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/u1211421071",
-  "query": "メダロット ゲームボーイ",
-  "searched_release": "DMG-AMYJ",
-  "searched_serial": "DMG-AMYJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "a-103 GBA Medabots AX Rokusho メダロットロクショウ 北米版",
-  "via": "https://www.jauce.com/auction/u1211421071"
- },
  "c96a47e3e1c76da44c05b9910e078e544c081ce0": {
   "file": "ebay-hitjapan/dmg/DMG-AS8J-JPN_2.jpg",
   "original_name": "s-l1600 (66).webp",
@@ -117479,17 +117363,6 @@
   "source": "unrecorded",
   "title_on_page": "Trick Boarder Nintendo Game Boy Color GameBoy Great Shape"
  },
- "dc376919113df72a53a632df76bf0141ad808225": {
-  "fetched": "2026-11-10",
-  "file": "ebay-128175470836.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/tt8AAeSwmxNq65x0/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/128175470836",
-  "query": "Golden Sun GBA PAL cartridge",
-  "searched_release": "AGB-AGSF",
-  "searched_serial": "AGB-AGSF-FRA",
-  "source": "ebay-search",
-  "title_on_page": "Golden Sun The Lost Age Nintendo Game Boy Advance GBA Tested Working"
- },
  "dc3b1ab4bb6e222b81ff089af779d2c6847cd28c": {
   "fetched": "2026-11-11",
   "file": "ebay-920083047597.jpg",
@@ -118284,17 +118157,6 @@
   "image_url": "https://gbhwdb.gekkio.fi/static/AGB-BPRI-0/granmastro-1_01_front.jpg",
   "page": "https://gbhwdb.gekkio.fi/cartridges/AGB-BPRI-0/",
   "source": "gbhwdb"
- },
- "ddc23660569267c97fef22606b9123821a4aa1cb": {
-  "fetched": "2026-11-13",
-  "file": "ebay-278068564121.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/ni0AAOSwGctjbvpu/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/278068564121",
-  "query": "SD Lupin Sansei Kinko Yaburi Daisakusen Game Boy Japan cartridge",
-  "searched_release": "DMG-XRJ",
-  "searched_serial": "DMG-XRJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "SD Lupin Sansei: Kinko Yaburi Daisakusen Nintendo GBC Japanese Import Regionfree"
  },
  "ddc455e26c1f5a607c2d069be44e39e3a40078d2": {
   "category": "https://www.konsolenkost.de/gameboy-classic/spiele/?f_umfang=lose",
@@ -121136,17 +120998,6 @@
   "source": "konsolenkost",
   "system": "GameBoy",
   "title_on_page": "Bugs Bunny: Crazy Castle 1 (UK Version)"
- },
- "e311ca9e524735b07bcfce53cfa72b1b5a072612": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m66128113350.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m66128113350_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m66128113350/",
-  "query": "Castlevania GBA PAL",
-  "searched_release": "AGB-AAMP",
-  "searched_serial": "AGB-AAMP-EUR",
-  "source": "mercari-search",
-  "title_on_page": "Castlevania Double Pack Gameboy Advance Tested Works Nintendo GBA"
  },
  "e3150418625bc402b19ab49b904314a39e0ee4ad": {
   "fetched": "2026-11-12",
@@ -125021,17 +124872,6 @@
   "searched_serial": "DMG-AVAP-FAH",
   "source": "ebay-search",
   "title_on_page": "Babe and Friends - Nintendo Game Boy Color, 1999 - Tested Game Cartridge"
- },
- "e96a6432b1218c39bafe03ea7ccc489e6c2c8f63": {
-  "fetched": "2026-11-12",
-  "file": "ebay-116669933167.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/qPsAAeSwSXVoPw3r/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/116669933167",
-  "query": "Contra Advance The Alien Wars EX GBA PAL cartridge",
-  "searched_release": "AGB-AAWP",
-  "searched_serial": "AGB-AAWP-EUR",
-  "source": "ebay-search",
-  "title_on_page": "Contra: Advance the Alien Wars EX Game Nintendo Game Boy Advance GBA Cartridge"
  },
  "e97054d4fcf333ede9374ccd12305a1e4484a88c": {
   "fetched": "2026-11-11",
@@ -135156,30 +134996,6 @@
   "original_name": "s-l1600 (3).webp",
   "serial_on_label": "AGB-BSBJ-JPN",
   "source": "ebay-hitjapan"
- },
- "fc1ab9b25ad5239f7b45437e58f7bf7445fbf97a": {
-  "also": [
-   {
-    "fetched": "2026-11-13",
-    "file": "mercari-m35897130429.jpg",
-    "image_url": "https://u-mercari-images.mercdn.net/photos/m35897130429_1.jpg",
-    "page_url": "https://www.mercari.com/us/item/m35897130429/",
-    "query": "Super Mario Advance GBA",
-    "searched_release": "AGB-AMAE",
-    "searched_serial": "AGB-AMAE-USA",
-    "source": "mercari-search",
-    "title_on_page": "Mario Kart Super Circuit Nintendo Gameboy Advance GBA Tested Works Great"
-   }
-  ],
-  "fetched": "2026-11-13",
-  "file": "mercari-m13931549420.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m13931549420_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m13931549420/",
-  "query": "Mario Kart Super Circuit GBA PAL",
-  "searched_release": "AGB-AMKP",
-  "searched_serial": "AGB-AMKP-AUS",
-  "source": "mercari-search",
-  "title_on_page": "Mario Kart Super Circuit Nintendo Gameboy Advance GBA Tested Works Great"
  },
  "fc1ba377f7cc7d88a3eddcbafbbbac45bb641132": {
   "fetched": "2026-11-11",
