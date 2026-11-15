@@ -12,14 +12,17 @@
 #   - Decisions: every decision, the latest first, each to undo.
 # Each print: its label photos (straighten's image as is: full resolution and uncropped, for pinch-zooming; the user,
 # 2026-11-14), each with its serial read and a tick box: "Split off ticked" makes the ticked a print of their own. A
-# print's own tick box marks it for joining: "Join ticked" in the bar at the bottom joins the ticked prints, from any tab. Frozen prints (src/frozen.py) can't be split, and two
-# can't be joined. "Delete photo" under each label photo deletes its photo from photos/ (photos.delete: the file and its
+# print's own tick box marks it for joining: "Join ticked" in the bar at the bottom joins the ticked prints, from any
+# tab. Frozen prints (src/frozen.py) can't be split, and two can't be joined. "Delete photo" under each label photo deletes its photo from photos/ (photos.delete: the file and its
 # record in photo-sources.json; the user, 2026-11-14: a bootleg with the wrong serial), asking first (confirm()) only if
 # the photo holds label photos of other prints; the label photo stays, marked deleted, and the next run drops it.
 # Each print's serial typed in by hand ("Set serial", the user 2026-11-14): every label photo of the print gets it in
 # serial-corrections.json (read_serials.CORRECTIONS, which make read-serials applies last; the page shows it at once);
 # not a frozen print's. Joining leaves a hole of the same size where each joined print sat, so the page doesn't move
-# (the user, 2026-11-14); the joined print shows on the next page turn, tab or search. The next make read-serials and make prints give the print its id with that serial. Buttons only, no keys (the user: keys next to S are too easy to hit).
+# (the user, 2026-11-14); the joined print shows on the next page turn, tab or search.
+# Freeze and Unfreeze on each print (the user, 2026-11-15; as in remove-photos: frozen.freeze, frozen.unfreeze): a print
+# as prints.json has it, with its image from make restore, can be frozen; unfreezing asks first (its frozen image is
+# deleted). A frozen print shows its frozen image; what's frozen is read from frozen-prints.json, so it shows at once. The next make read-serials and make prints give the print its id with that serial. Buttons only, no keys (the user: keys next to S are too easy to hit).
 # Usage: review_prints.py [port]
 import json, os, re, sys, threading, urllib.parse
 from collections import Counter
@@ -27,7 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
-import photos, straighten, print_corrections, prints as prints_step, serials as serials_db
+import photos, straighten, frozen, print_corrections, prints as prints_step, serials as serials_db
 from read_serials import CORRECTIONS
 
 GEN = photos.generated(False)
@@ -64,7 +67,6 @@ class Tool:
         self.solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
         found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
         self.outlines = {lp["key"]: lp["outline"] for lp in found}
-        self.frozen_of = {k: p["frozen"] for p in self.result["prints"] if p.get("frozen") for k in p["keys"]}
         self.by_keys = {frozenset(p["keys"]): p for p in self.result["prints"] if p["keys"]}
         self.id_of_key = {k: p["id"] for p in self.result["prints"] for k in p["keys"]}
         self.tiles = pair_tiles(GEN)
@@ -81,6 +83,8 @@ class Tool:
         return json.load(open(CORRECTIONS)) if os.path.exists(CORRECTIONS) else {"corrections": {}}
 
     def compute(self):
+        entries = frozen.load()
+        self.frozen_of = {k: pid for pid, e in entries.items() for k in e["label_photos"]}
         hand = self.corrections()["corrections"]
         for k, serial in hand.items():  # as make read-serials will have them
             r_ = serials_db.release(serial, self.release_of)
@@ -97,8 +101,9 @@ class Tool:
             rel = Counter(read(k, "release") for k in g if read(k, "release"))
             serial = ser.most_common(1)[0][0] if ser else None
             p = self.by_keys.get(frozenset(g))
-            frozen = {self.frozen_of[k] for k in g if k in self.frozen_of}
-            image = p and os.path.exists(os.path.join(GEN, "restore", straighten.file_name(p["id"])))
+            frozen_ids = {self.frozen_of[k] for k in g if k in self.frozen_of}
+            restored = p and os.path.exists(os.path.join(GEN, "restore", straighten.file_name(p["id"])))
+            image = p and (os.path.exists(frozen.image_path(p["id"])) if p["id"] in entries else restored)
             disagree = sum(1 for k in g if read(k, "serial") and read(k, "serial") != serial)
             tiles = max((self.tiles.get((a, b), 0) for i, a in enumerate(g) for b in g[i + 1:]), default=0)
             out.append({"keys": [{"key": k, "serial": read(k, "serial"), "release": read(k, "release"),
@@ -108,7 +113,7 @@ class Tool:
                         "serial": serial, "release": rel.most_common(1)[0][0] if rel else None,
                         "shape": self.solved[g[0]]["shape"] if g[0] in self.solved else None,
                         "families": len({self.solved[k]["family"] for k in g if k in self.solved}),
-                        "frozen": sorted(frozen), "image": bool(image), "disagree": disagree, "tiles": tiles})
+                        "frozen": sorted(frozen_ids), "image": bool(image), "restored": bool(restored), "disagree": disagree, "tiles": tiles})
         # the same serial (or release): several prints; hidden where an "apart" decision has these prints
         by_serial = {}
         for i, p in enumerate(out):
@@ -143,7 +148,7 @@ class Tool:
             if len(gs) < 2 or any(g is None for g in gs):
                 return "Tick two or more prints (the page may be out of date: reload)."
             if sum(1 for g in gs if g["frozen"]) > 1:
-                return "Two frozen prints can't be joined: unfreeze one first (remove-photos)."
+                return "Two frozen prints can't be joined: unfreeze one first."
             d = {"kind": "join", "prints": decision["prints"]}
         elif kind == "split":
             keys, rest = decision.get("keys", []), decision.get("rest", [])
@@ -151,7 +156,7 @@ class Tool:
             if g is None or not keys or not rest:
                 return "Tick some of a print's label photos, not all (the page may be out of date: reload)."
             if g["frozen"]:
-                return "A frozen print can't be split: unfreeze it first (remove-photos)."
+                return "A frozen print can't be split: unfreeze it first."
             d = {"kind": "split", "keys": keys, "rest": rest}
         elif kind == "apart":
             if not decision.get("serial") or any(self.group_of(g) is None for g in decision.get("prints", [])):
@@ -165,6 +170,26 @@ class Tool:
         self.compute()
         return None
 
+    def set_frozen(self, keys, on):
+        """Freezes the print shown with keys (its id and image from make restore) or unfreezes it: None, or why not."""
+        g = self.group_of(keys or [])
+        if g is None:
+            return "The page may be out of date: reload."
+        if not on:
+            for pid in g["frozen"]:
+                frozen.unfreeze(pid)
+                print(f"unfrozen {pid}", flush=True)
+        else:
+            if g["frozen"]:
+                return "Already frozen."
+            if not g["id"] or not g["restored"]:
+                return "Only a print with its image from make restore can be frozen (after make prints restore)."
+            p = self.by_keys[frozenset(keys)]
+            frozen.freeze(p["id"], p, self.solved, self.outlines, os.path.join(GEN, "restore", straighten.file_name(p["id"])[:-5]))
+            print(f"frozen {p['id']}", flush=True)
+        self.compute()
+        return None
+
     def set_serial(self, keys, serial):
         """Every label photo of a print (keys, as shown) gets serial in serial-corrections.json: None, or why not."""
         serial = (serial or "").strip().upper()
@@ -172,7 +197,7 @@ class Tool:
         if g is None:
             return "The page may be out of date: reload."
         if g["frozen"]:
-            return "A frozen print's serial can't be set: unfreeze it first (remove-photos)."
+            return "A frozen print's serial can't be set: unfreeze it first."
         if not re.fullmatch(r"[A-Z0-9]+(-[A-Z0-9]+)+", serial):
             return f"Not a serial: {serial!r} (like DMG-APSJ-JPN)."
         data = self.corrections()
@@ -289,6 +314,12 @@ function printCard(p) {
     el("span", {class: "note"}, `${p.serial || p.release || "no serial"} · ${p.keys.length} label photos` + (p.families > 1 ? ` · ${p.families} families` : "") +
       (p.disagree ? ` · ${p.disagree} read another serial` : "") + (p.tiles ? ` · up to ${p.tiles} tiles differ` : "")));
   if (p.frozen.length) head.append(el("span", {class: "frozen"}, "frozen"));
+  const fz = el("button", {onclick: () => {
+    if (p.frozen.length && !confirm(`Unfreeze ${p.frozen.join(", ")}? Its frozen image is deleted; the next make restore restores it again.`)) return;
+    post("/freeze", {keys, on: !p.frozen.length});
+  }}, p.frozen.length ? "Unfreeze" : "Freeze");
+  if (!p.frozen.length && !(p.id && p.restored)) { fz.disabled = true; fz.title = "only a print with its image from make restore"; }
+  head.append(fz);
   card.append(head);
   if (p.image) card.append(el("img", {class: "restored", loading: "lazy", src: "/print/" + encodeURIComponent(p.id)}));
   else if (p.keys.length >= 3) card.append(el("div", {class: "note"}, p.id ? "no restored image" : "restored after make prints restore"));
@@ -430,17 +461,20 @@ class Handler(BaseHTTPRequestHandler):
             file = os.path.join(GEN, "straighten", straighten.file_name(name))
             return self.send(open(file, "rb").read(), "image/avif", cache=True) if os.path.exists(file) else self.send_error(404)
         if part == "print":
-            file = os.path.join(GEN, "restore", straighten.file_name(name))
+            file = frozen.image_path(name)
+            if not (name in frozen.load() and os.path.exists(file)):
+                file = os.path.join(GEN, "restore", straighten.file_name(name))
             return self.send(open(file, "rb").read(), "image/avif") if os.path.exists(file) else self.send_error(404)
         self.send_error(404)
 
     def do_POST(self):
-        if self.path not in ("/decide", "/undo", "/delete", "/serial") or tool is None:
+        if self.path not in ("/decide", "/undo", "/delete", "/serial", "/freeze") or tool is None:
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         with lock:
             why = (tool.decide(data) if self.path == "/decide" else tool.delete(data.get("photo")) if self.path == "/delete"
                    else tool.set_serial(data.get("keys"), data.get("serial")) if self.path == "/serial"
+                   else tool.set_frozen(data.get("keys"), bool(data.get("on"))) if self.path == "/freeze"
                    else tool.undo(data.get("index", -1), data.get("datetime")))
         if why:
             return self.send(why.encode(), "text/plain", 409)
