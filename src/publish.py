@@ -10,8 +10,7 @@
 #   missing.json, unknown-serials.json (read-serials), few-photos.json (prints): the lists, copied as they are.
 #   index.html: per platform (linked from the top, with its image count) every print with an image, by game title,
 #     with its label photos' sources.
-# Prints from a single photo (their label photos all in one photo, poor fits counted) are left out, with their label
-# photos (the user, 2026-11-15).
+# Prints of a single label photo (poor fits counted) are left out, with their label photo (the user, 2026-11-15).
 # The source and URLs come from photo-sources.json (by SHA-1): for output only, never read by a detection step.
 # A print's image is copied again when it's missing or older than restore's; files of prints no longer there are
 # removed, and the label-photos/ folder an older version wrote.
@@ -84,7 +83,7 @@ def main():
     frozen_entries = frozen.load()
     single = 0
     for p in prints["prints"]:
-        if len({k.split("@")[0] for k in p["keys"]}) < 2:  # a single photo: not published
+        if len(p["keys"]) < 2:  # a single label photo: not published
             single += 1
             continue
         name = straighten.file_name(p["id"])
@@ -125,7 +124,7 @@ def main():
             shutil.copyfile(os.path.join(gen, step, f), os.path.join(out_dir, f))
     steps.write_json(os.path.join(out_dir, "index.json"), index)
     page(out_dir, index)
-    print(f"{single} prints from a single photo left out")
+    print(f"{single} prints of a single label photo left out")
     print(f"{len(copies)} prints, {len(index['label_photos'])} label photos listed ({len(poor & set(index['label_photos']))} poor fits)")
     print(f"page: {os.path.join(out_dir, 'index.html')}")
 
