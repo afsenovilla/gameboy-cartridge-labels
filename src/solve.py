@@ -48,6 +48,8 @@
 #      that match where the pixels agree, and joins that print's family (from_frozen_match).
 #   3. An approximate cut alone in its family: its pose carried from a precise label photo it matches, where their
 #      pixels then agree; it joins that family (carry_alone; "carried": {from, points, pixels_agree} in its record).
+#      So is a precise fit alone in its family, from a precise label photo of a linked family, where also the carried
+#      cut lies on it and the two read the same serial (find's).
 # Done again when solve.json is older than this file, src/edge_fit.py, the edge models or its inputs, or holds a photo
 # since deleted (find's label photos of deleted photos are left out).
 # Usage: solve.py [--sample]
@@ -1447,13 +1449,40 @@ def solve(found, matches, edges_dir, photo_paths=None, frozen_records=None, froz
 # 1297 alone approximate cuts, 789 matched a precise label photo and 312 agreed (175 of the user's 289 OK-ed ones);
 # where two or more precise label photos agreed, their carried poses' largest corner apart was a median 0.82 mm, 90 %
 # 1.67 mm (the print's place on the sticker varies about 1 mm); the approximate cut had been a median 3.8 mm off.
+# A precise fit alone in its family (the user, 2026-11-15: 77261d83's own fit 5.5 mm off, its only link failing the fit
+# test because of it, and a hand-joined print restored with it) is carried the same way, from a precise label photo of
+# a family of two or more, with two checks more, as its own fit is often right:
+#   - the carried cut lies on it: find's centre of it inside the carried cut, or the carried cut overlapping its own by
+#     ON_LABEL_OVERLAP of the smaller (a label photo found by its serial has its centre on the serial, near an edge);
+#     a carry onto another label of the photo (the same print on another cartridge) fails both;
+#   - the two read the same serial: a serial in both label photos' find strings (a nearly-same print, a region
+#     variant, agrees in its pixels as stage 2 requires).
+# Measured before building (2026-11-15, full set): of 2013 precise fits alone, 1507 matched a precise label photo of a
+# linked family, 294 agreed in their pixels; 84 of those were carried over 2 mm, 61 passing both checks (60 by find's
+# serials). The user judged samples: mostly right where both checks pass, refused ones mostly right to refuse. Tried
+# and dropped: the precise fit refitted to its own edges from the carried pose (the refit was wrong in 7 of 9), and
+# prints' tile comparison as the same-print check (it refused three same prints, at 4 to 24 differing tiles).
+ON_LABEL_OVERLAP = 0.5
 CARRY_MAX = 5
 CARRY_RANSAC_PX = 3.0
 
 
+def on_label(cut, shape, centre, own_cut):
+    """Whether a carried cut lies on the label photo: find's centre inside it, or it overlapping the label photo's own
+    cut by ON_LABEL_OVERLAP of the smaller."""
+    q = project(cut, corners_mm(shape)).astype(np.float32)
+    if cv2.pointPolygonTest(q, (float(centre[0]), float(centre[1])), False) >= 0:
+        return True
+    o = project(np.float64(own_cut), corners_mm(shape)).astype(np.float32)
+    smaller = min(cv2.contourArea(q), cv2.contourArea(o))
+    return smaller > 0 and cv2.intersectConvexConvex(q, o)[0] >= ON_LABEL_OVERLAP * smaller
+
+
 def carry_job(job):
-    """(key, carrier key, carried cut_to_photo, H a -> b, points, pixel share) for the first agreeing carrier, or (key, None, ...)."""
-    k, path, shape, tries = job
+    """(key, carrier key, carried cut_to_photo, H a -> b, points, pixel share) for the first agreeing carrier, or (key, None, ...).
+    With a precise fit's own cut and find's centre (job's 5th and 6th), the carried cut must lie on it (on_label)."""
+    k, path, shape, tries = job[:4]
+    own = job[4:] if len(job) > 4 else None
     img = photos.load(path) if path else None
     if img is None:
         return k, None, None, None, 0, 0.0
@@ -1466,7 +1495,7 @@ def carry_job(job):
         cut = np.linalg.inv(H) @ np.float64(cut_b)
         cut /= cut[2, 2]
         img_b = photos.load(path_b) if path_b else None
-        if not usable(cut, shape) or img_b is None:
+        if not usable(cut, shape) or img_b is None or (own and not on_label(cut, shape, own[1], own[0])):
             continue
         share, textured = pixel_agreement(compare_view(img, cut, shape), compare_view(img_b, cut_b, shape), 0.0, np.zeros(2), shape)
         if share >= AGREE_SHARE and textured >= need:
@@ -1478,7 +1507,11 @@ def carry_alone(out, lps, matches, photo_paths, info, workers=8):
     """Stage 3 (above), in place on solve's records; family sizes recounted."""
     alone = {k for k, r in out.items() if approximate_cut(r) and r["family_size"] <= 1 and not poor_fit(r) and not r.get("frozen")}
     precise = {k for k, r in out.items() if not approximate_cut(r) and not poor_fit(r)}
+    precise_alone = {k for k in precise if out[k]["family_size"] <= 1 and not out[k].get("frozen")}
+    linked = {k for k in precise if out[k]["family_size"] >= 2}
+    alone |= precise_alone
     lp_of = {lp["key"]: lp for lp in lps}
+    serials_of = lambda k: {s["serial"] for s in lp_of.get(k, {}).get("strings") or [] if s.get("serial")}
     by_photo = {}
     for k in alone | precise:
         by_photo.setdefault(out[k]["photo"], []).append(k)
@@ -1491,15 +1524,20 @@ def carry_alone(out, lps, matches, photo_paths, info, workers=8):
                     continue
                 ia = inside(pa_all, lp_of[ka])
                 for kb in by_photo.get(y, []):
-                    if kb in precise and out[kb]["shape"] == out[ka]["shape"]:
+                    if kb in precise and out[kb]["shape"] == out[ka]["shape"] and (
+                            ka not in precise_alone or (kb in linked and serials_of(ka) & serials_of(kb))):
                         m = ia & inside(pb_all, lp_of[kb])
                         if m.sum() >= MIN_LINK_POINTS:
                             tries.setdefault(ka, []).append((int(m.sum()), kb, pa_all[m], pb_all[m]))
     jobs = [(k, photo_paths.get(out[k]["photo"]), out[k]["shape"],
              [(kb, photo_paths.get(out[kb]["photo"]), np.float64(out[kb]["cut_to_photo"]), pa, pb)
-              for _, kb, pa, pb in sorted(t, key=lambda c: -c[0])[:CARRY_MAX]]) for k, t in tries.items()]
-    print(f"stage 3: {len(alone)} approximate cuts alone, {len(jobs)} matching a precise label photo; carrying", flush=True)
-    carried = 0
+              for _, kb, pa, pb in sorted(t, key=lambda c: -c[0])[:CARRY_MAX]])
+            + ((np.float64(out[k]["cut_to_photo"]), np.float64(lp_of[k]["centre"])) if k in precise_alone else ())
+            for k, t in tries.items()]
+    n_precise = sum(1 for j in jobs if j[0] in precise_alone)
+    print(f"stage 3: {len(alone) - len(precise_alone)} approximate cuts and {len(precise_alone)} precise fits alone, "
+          f"{len(jobs) - n_precise} and {n_precise} matching a precise label photo; carrying", flush=True)
+    carried = carried_precise = 0
     with Pool(workers) as pool:
         for n, (k, kb, cut, H, points, share) in enumerate(pool.imap_unordered(carry_job, jobs, chunksize=2), 1):
             if n % 200 == 0 or n == len(jobs):
@@ -1514,15 +1552,19 @@ def carry_alone(out, lps, matches, photo_paths, info, workers=8):
                       "plastic_to_photo": (plastic / plastic[2, 2]).tolist(),
                       "width_mm": rb["width_mm"], "height_mm": rb["height_mm"], "offset": rb["offset"], "placement": rb["placement"],
                       "family": rb["family"], "carried": {"from": kb, "points": points, "pixels_agree": round(share, 3)},
-                      "fallback": f"approximate cut: pose carried from {kb} through a match"})
+                      "fallback": (f"precise fit alone: pose carried from {kb} through a match" if k in precise_alone else
+                                   f"approximate cut: pose carried from {kb} through a match")})
             carried += 1
+            carried_precise += k in precise_alone
     sizes = {}
     for r in out.values():
         sizes[r["family"]] = sizes.get(r["family"], 0) + 1
     for r in out.values():
         r["family_size"] = sizes[r["family"]]
-    info["carried"] = {"alone approximate cuts": len(alone), "matching a precise one": len(jobs), "carried": carried}
-    print(f"stage 3: {carried} carried into a precise label photo's family", flush=True)
+    info["carried"] = {"alone approximate cuts": len(alone) - len(precise_alone), "alone precise fits": len(precise_alone),
+                       "matching a precise one": len(jobs) - n_precise, "precise matching a linked one, same serial": n_precise,
+                       "carried": carried - carried_precise, "precise carried": carried_precise}
+    print(f"stage 3: {carried} carried into a precise label photo's family ({carried_precise} of them precise fits)", flush=True)
 
 
 def edge_caption(e):
