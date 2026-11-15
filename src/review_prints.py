@@ -5,7 +5,8 @@
 # image; one the decisions changed shows the ids it's made from (its image comes with make prints restore).
 # Three tabs, and the decisions:
 #   - Same serial: the serials (or releases, where no serial was read) of several prints, the most prints first,
-#     SERIALS_PER_PAGE at a time: join some, or "All different", which hides the serial while its prints are these.
+#     SERIALS_PER_PAGE at a time: join some, "Join all" (its prints joined as "Join ticked" would; the user, 2026-11-15),
+#     or "All different", which hides the serial while its prints are these.
 #   - Every print, worst first, PRINTS_PER_PAGE at a time: the most label photos whose serial read isn't the print's
 #     first, then the most differing tiles between two of its label photos (the prints step's pair cache).
 #   - Search: a serial, a stem or an id (its start), up to SEARCH_MAX prints.
@@ -404,7 +405,18 @@ function render() {
       apart.title = "these prints are different prints: hide this serial while its prints are these";
       const box = el("div", {class: "serial"}, el("h2", {}, `${e.serial}: ${ps.length} prints` + (e.looked_at ? " (looked at)" : "")));
       ps.forEach(p => box.append(printCard(p)));
-      box.append(el("div", {}, apart));
+      const all = el("button", {}, "Join all");
+      const frozenCount = ps.filter(p => p.frozen.length).length;
+      if (frozenCount > 1) { all.disabled = true; all.title = "two frozen prints can't be joined: unfreeze one first"; }
+      else all.title = "these prints are one print: join them all";
+      all.onclick = async () => {
+        const handles = new Set(ps.map(handle));
+        if (!await post("/decide", {kind: "join", prints: ps.map(p => p.keys.map(k => k.key))}, false)) return;
+        holes(handles, "joined");
+        for (const h of handles) joinTicks.delete(h);
+        all.disabled = apart.disabled = true; bar();
+      };
+      box.append(el("div", {}, all, " ", apart));
       m.append(box);
     }
     m.append(pager(list.length, per));
@@ -437,14 +449,18 @@ function bar() {
   $("count").textContent = n ? `${n} prints ticked for joining.` : "No prints ticked for joining.";
   $("join").disabled = n < 2; $("clear").disabled = n === 0;
 }
-$("join").onclick = async () => {
-  const handles = new Set(joinTicks.keys());
-  if (!await post("/decide", {kind: "join", prints: [...joinTicks.values()]}, false)) return;
+// each card of these prints replaced by a hole of its size, so the page doesn't move
+function holes(handles, text) {
   for (const card of document.querySelectorAll(".print")) {
     if (!handles.has(card.handle)) continue;
     const r = card.getBoundingClientRect();
-    card.replaceWith(el("div", {class: "print hole", style: `width:${r.width}px;height:${r.height}px`}, "joined"));
+    card.replaceWith(el("div", {class: "print hole", style: `width:${r.width}px;height:${r.height}px`}, text));
   }
+}
+$("join").onclick = async () => {
+  const handles = new Set(joinTicks.keys());
+  if (!await post("/decide", {kind: "join", prints: [...joinTicks.values()]}, false)) return;
+  holes(handles, "joined");
   joinTicks.clear(); bar();
 };
 $("clear").onclick = () => { joinTicks.clear(); bar(); render(); };
