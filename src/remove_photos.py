@@ -495,7 +495,7 @@ function renderMarks() {
   for (const p of markList.slice(page * MARKS_PER, page * MARKS_PER + MARKS_PER)) {
     const cell = document.createElement("div");
     cell.className = "cell " + (S.marks[p.image_sha1] || "");
-    cell.innerHTML = `<a href="/print/${encodeURIComponent(p.id)}" target="_blank"><img src="/print/${encodeURIComponent(p.id)}"></a><span class="name">${p.serial} (${p.label_photos.length} photos)</span><span class="buttons"></span>`;
+    cell.innerHTML = `<a href="/print/${encodeURIComponent(p.id)}" target="_blank"><img src="/print/${encodeURIComponent(p.id)}"></a><span class="name">${p.id} (${p.label_photos.length} photos)</span><span class="buttons"></span>`;
     cell.querySelector(".buttons").append(...markButtons(p));
     box.append(cell);
   }
@@ -514,7 +514,7 @@ async function remove(sha1s, here, ask = true) {
   const others = new Set();
   if (ask) for (const s of sha1s) for (const p of S.photo_prints[s] || []) if (p !== here) others.add(p);
   if (others.size) {
-    const names = [...others].map(id => (S.prints.find(p => p.id === id) || {}).serial + " (" + id.slice(0, 10) + ")");
+    const names = [...others];
     if (!confirm(`${sha1s.length === 1 ? "This photo also holds" : "These photos also hold"} label photos of ${others.size} other print${others.size > 1 ? "s" : ""}:\n${names.join("\n")}\n\nDelete anyway?`)) return;
   }
   const r = await fetch("/delete", {method: "POST", body: JSON.stringify({photos: sha1s})});
@@ -580,7 +580,7 @@ function renderPrints() {
   for (const p of prints.slice(page * PRINTS_PER, page * PRINTS_PER + PRINTS_PER)) {
     const div = document.createElement("div");
     div.className = "print " + (p.image_sha1 && S.marks[p.image_sha1] || "");
-    div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.serial}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
+    div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.id}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
     const list = div.querySelector(".photos");
     if (p.image_sha1) { const b = document.createElement("div"); b.className = "buttons"; b.append(...markButtons(p)); div.querySelector(".restored").append(b); }
     p.label_photos.forEach((e, i) => {
