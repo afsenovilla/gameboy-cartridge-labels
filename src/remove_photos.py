@@ -15,7 +15,9 @@
 # The tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
 #   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
 #     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
-#     photo: "Delete this and worse" (the photos of it and of the print's label photos after it) or "Delete".
+#     photo: "Delete". ("Delete this and worse" removed 2026-11-15, the user.)
+# Bad photos and Restored prints: sorted by print id by default (a game's prints together, the user 2026-11-15), or the
+# tab's own order (worst first; unmarked first); a search box keeps the prints whose id holds every word typed.
 # In Bad photos, deleting a photo that also holds label photos of other prints asks first (confirm()).
 # Badness of a label photo: 1 - usable x resolution, both 0..1:
 #   usable: the share of the label (restore's crop) that is in the photo, inside the sticker's cut, and matches the
@@ -431,6 +433,8 @@ button.frozen { background: #1565c0; color: #fff }
   <button class="tab on" data-tab="nolabels">Unused</button>
   <button class="tab" data-tab="bad">Bad photos</button>
   <button class="tab" data-tab="marks">Restored prints</button>
+  <input id="search" type="search" placeholder="Search print id" hidden>
+  <select id="sort" hidden></select>
   <span class="info" id="count"></span>
   <span class="spacer"></span>
   <span id="controls"></span>
@@ -439,7 +443,7 @@ button.frozen { background: #1565c0; color: #fff }
 <div id="prints" hidden></div>
 <div id="marks" hidden></div>
 <script>
-let S = null, tab = "nolabels", page = 0, unusedList = [], printList = [], markList = [];
+let S = null, query = "", sortBy = {bad: "id", marks: "id"}, tab = "nolabels", page = 0, unusedList = [], printList = [], markList = [];
 const MARKS_PER = 18;
 const deleted = new Set(), ok = new Set();
 const PER = 20, PRINTS_PER = 25;
@@ -483,16 +487,17 @@ function markButtons(p) {
 }
 
 function renderMarks() {
-  const pages = Math.max(1, Math.ceil(markList.length / MARKS_PER));
+  const list = view(markList);
+  const pages = Math.max(1, Math.ceil(list.length / MARKS_PER));
   page = Math.min(page, pages - 1);
-  const marked = markList.filter(p => S.marks[p.image_sha1]).length;
-  $("#count").textContent = `${markList.length} restored prints, ${marked} marked, the unmarked first (as when the page was loaded); page ${page + 1} of ${pages}`;
+  const marked = list.filter(p => S.marks[p.image_sha1]).length;
+  $("#count").textContent = `${list.length} restored prints, ${marked} marked, ${sortLabel()} (as when the page was loaded); page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); $("#marks").scrollTop = 0; }),
                         button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); $("#marks").scrollTop = 0; }));
   const box = $("#marks");
   box.innerHTML = "";
-  for (const p of markList.slice(page * MARKS_PER, page * MARKS_PER + MARKS_PER)) {
+  for (const p of list.slice(page * MARKS_PER, page * MARKS_PER + MARKS_PER)) {
     const cell = document.createElement("div");
     cell.className = "cell " + (S.marks[p.image_sha1] || "");
     cell.innerHTML = `<a href="/print/${encodeURIComponent(p.id)}" target="_blank"><img src="/print/${encodeURIComponent(p.id)}"></a><span class="name">${p.id} (${p.label_photos.length} photos)</span><span class="buttons"></span>`;
@@ -523,7 +528,25 @@ async function remove(sha1s, here, ask = true) {
   render();
 }
 
+const SORTS = {bad: [["id", "by print id"], ["worst", "the worst first"]],
+               marks: [["id", "by print id"], ["unmarked", "the unmarked first"]]};
+// the tab's prints as loaded, searched and sorted: by id, or in the order the list was loaded in (worst / unmarked first)
+function view(list) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const out = list.filter(p => words.every(w => p.id.toLowerCase().includes(w)));
+  if (sortBy[tab] === "id") out.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+  return out;
+}
+
+function sortLabel() { return SORTS[tab].find(([k]) => k === sortBy[tab])[1] + (query.trim() ? `, matching "${query.trim()}"` : ""); }
+
 function render() {
+  const sort = $("#sort");
+  $("#search").hidden = sort.hidden = tab === "nolabels";
+  if (SORTS[tab]) {
+    sort.innerHTML = SORTS[tab].map(([k, t]) => `<option value="${k}">${t}</option>`).join("");
+    sort.value = sortBy[tab];
+  }
   document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
   $("#grid").hidden = tab !== "nolabels";
   $("#prints").hidden = tab !== "bad";
@@ -567,11 +590,11 @@ function renderNoLabels() {
 function pct(x) { return (100 * x).toFixed(0).padStart(3) + " %"; }
 
 function renderPrints() {
-  const prints = printList;  // as loaded: a deleted label photo leaves a hole
+  const prints = view(printList);  // as loaded: a deleted label photo leaves a hole
   prints.forEach(p => p.left = p.label_photos.filter(e => !deleted.has(e.photo)).reduce((a, e) => a + e.badness, 0));
   const pages = Math.max(1, Math.ceil(prints.length / PRINTS_PER));
   page = Math.min(page, pages - 1);
-  $("#count").textContent = `${prints.length} prints, the worst first (as when the page was loaded); page ${page + 1} of ${pages}`;
+  $("#count").textContent = `${prints.length} prints, ${sortLabel()} (as when the page was loaded); page ${page + 1} of ${pages}`;
   $("#controls").innerHTML = "";
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); $("#prints").scrollTop = 0; }),
                         button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); $("#prints").scrollTop = 0; }));
@@ -583,7 +606,7 @@ function renderPrints() {
     div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.id}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
     const list = div.querySelector(".photos");
     if (p.image_sha1) { const b = document.createElement("div"); b.className = "buttons"; b.append(...markButtons(p)); div.querySelector(".restored").append(b); }
-    p.label_photos.forEach((e, i) => {
+    p.label_photos.forEach(e => {
       const fig = document.createElement("figure");
       if (deleted.has(e.photo)) {
         fig.className = "hole";
@@ -593,9 +616,7 @@ function renderPrints() {
       }
       fig.innerHTML = `<a href="/photo/${e.photo}" target="_blank"><img loading="lazy" src="/label/${encodeURIComponent(e.key)}"></a>
         <figcaption>badness ${e.badness.toFixed(2)}<br>damage ${pct(e.damage)} off ${pct(e.off)}<br>${e.px_per_mm.toFixed(1).padStart(4)} px/mm${e.compared ? "" : " not compared"}${e.poor_fit ? '<br><span class="poor">poor fit</span>' : ""}</figcaption><div class="buttons"></div>`;
-      const worse = p.label_photos.slice(i).map(x => x.photo);
-      fig.querySelector(".buttons").append(button("Delete this and worse", "danger", () => remove(worse, p.id)),
-                                          button("Delete", "danger", () => remove([e.photo], p.id)));
+      fig.querySelector(".buttons").append(button("Delete", "danger", () => remove([e.photo], p.id)));
       list.append(fig);
     });
     box.append(div);
@@ -611,6 +632,8 @@ function button(text, cls, f) {
 }
 
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => { tab = b.dataset.tab; page = 0; render(); });
+$("#search").oninput = e => { query = e.target.value; page = 0; render(); };
+$("#sort").onchange = e => { sortBy[tab] = e.target.value; page = 0; render(); };
 load();
 </script></body></html>"""
 
