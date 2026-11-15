@@ -24,7 +24,11 @@
 # full resolution (register). Combined per band by the median.
 # (Tried: weighting by each band's local energy, as in focus stacking, with Tukey's biweight: the user found the plain
 # median removes noise better; noise and dirt have high local energy too. To experiment with later: energy only to
-# leave out clearly blurred regions.)
+# leave out clearly blurred regions. Tried 2026-11-15: before the median, each label photo's band fitted per Oklab
+# channel to the band's median where both count (photo ≈ g · median, the residual + an offset), divided by g, capped
+# 0.5-2x; gains 0.7-1.3 in the fine bands, ±5 % in the coarse; on 20 prints chosen to show it most (few label photos
+# of mixed resolution and sources) the user found the difference imperceptible: not worth doing. Test script:
+# generated/band-gain/make.py.)
 # Last, after the paper white, the print screen (halftone) removed from the restored print (src/descreen.py: a notch at
 # the screen's peaks, then a 1.5 px weighted median; the user, 2026-11-14: on the restored print, not on each label
 # photo before).
