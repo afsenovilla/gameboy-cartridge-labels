@@ -13,9 +13,13 @@
 # Each print: its label photos (straighten's image as is: full resolution and uncropped, for pinch-zooming; the user,
 # 2026-11-14), each with its serial read and a tick box: "Split off ticked" makes the ticked a print of their own. A
 # print's own tick box marks it for joining: "Join ticked" in the bar at the bottom joins the ticked prints, from any
-# tab. Frozen prints (src/frozen.py) can't be split, and two can't be joined. "Delete photo" under each label photo deletes its photo from photos/ (photos.delete: the file and its
-# record in photo-sources.json; the user, 2026-11-14: a bootleg with the wrong serial), asking first (confirm()) only if
-# the photo holds label photos of other prints; the label photo stays, marked deleted, and the next run drops it.
+# tab. Frozen prints (src/frozen.py) can't be split, and two can't be joined. "Delete label photo" under each label
+# photo (the user, 2026-11-14: a bootleg with the wrong serial; 2026-11-15: the label photo, not the photo): a photo
+# holding no other label photo (find's) is deleted from photos/ (photos.delete: the file and its record in
+# photo-sources.json); else the label photo's area is marked in find's NOT_LABELS as fit-by-hand's "Not a label" does
+# (solve's cut and find's outline, in the photo's pixels; "why": "deleted in review-prints"), and the next make find
+# makes no label photo there. Not a frozen print's. The label photo stays on the page, marked deleted; the next make all
+# drops it.
 # Each print's serial typed in by hand ("Set serial", the user 2026-11-14): every label photo of the print gets it in
 # serial-corrections.json (read_serials.CORRECTIONS, which make read-serials applies last; the page shows it at once);
 # not a frozen print's. Joining leaves a hole of the same size where each joined print sat, so the page doesn't move
@@ -29,8 +33,8 @@ from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import numpy as np
-import photos, straighten, frozen, print_corrections, prints as prints_step, serials as serials_db
+import cv2, numpy as np
+import photos, steps, shapes, straighten, frozen, find as find_step, print_corrections, prints as prints_step, serials as serials_db
 from read_serials import CORRECTIONS
 
 GEN = photos.generated(False)
@@ -71,6 +75,9 @@ class Tool:
         self.id_of_key = {k: p["id"] for p in self.result["prints"] for k in p["keys"]}
         self.tiles = pair_tiles(GEN)
         self.present = set(photos.all_photos())
+        self.photo_keys = {}
+        for k in self.outlines:
+            self.photo_keys.setdefault(k.split("@")[0], set()).add(k)
         self.release_of = serials_db.load_database()
         self.compute()
 
@@ -82,8 +89,12 @@ class Tool:
     def corrections(self):
         return json.load(open(CORRECTIONS)) if os.path.exists(CORRECTIONS) else {"corrections": {}}
 
+    def not_labels(self):
+        return json.load(open(find_step.NOT_LABELS)) if os.path.exists(find_step.NOT_LABELS) else {}
+
     def compute(self):
         entries = frozen.load()
+        marked = self.not_labels()
         self.frozen_of = {k: pid for pid, e in entries.items() for k in e["label_photos"]}
         hand = self.corrections()["corrections"]
         for k, serial in hand.items():  # as make read-serials will have them
@@ -107,7 +118,7 @@ class Tool:
             disagree = sum(1 for k in g if read(k, "serial") and read(k, "serial") != serial)
             tiles = max((self.tiles.get((a, b), 0) for i, a in enumerate(g) for b in g[i + 1:]), default=0)
             out.append({"keys": [{"key": k, "serial": read(k, "serial"), "release": read(k, "release"),
-                                  "by_hand": k in hand, "deleted": k.split("@")[0] not in self.present} for k in g],
+                                  "by_hand": k in hand, "deleted": k.split("@")[0] not in self.present or k in marked} for k in g],
                         "id": p["id"] if p else None,
                         "from": sorted({self.id_of_key[k] for k in g if k in self.id_of_key}) if not p else [],
                         "serial": serial, "release": rel.most_common(1)[0][0] if rel else None,
@@ -210,15 +221,33 @@ class Tool:
         self.compute()
         return None
 
-    def delete(self, sha1):
-        """Deletes a photo from photos/: None, or why not."""
-        if sha1 in self.present:
+    def delete(self, key):
+        """Deletes a label photo: its photo if it holds no other, else its area marked not a label. None, or why not."""
+        sha1 = (key or "").split("@")[0]
+        if key in self.frozen_of:
+            return "A frozen print's label photo can't be deleted: unfreeze it first."
+        if sha1 not in self.present:
+            return None
+        if self.photo_keys.get(sha1, set()) - {key}:
+            r = self.solved.get(key)
+            area = None
+            if r:
+                w, h = shapes.LABEL_MM[r["shape"]]
+                area = cv2.perspectiveTransform(np.float64([[[0, 0]], [[w, 0]], [[w, h]], [[0, h]]]),
+                                                np.float64(r["cut_to_photo"])).reshape(-1, 2)
+                area = np.round(area, 1).tolist()
+            marked = self.not_labels()
+            marked[key] = {"photo": sha1, "area": area, "found": self.outlines.get(key), "why": "deleted in review-prints",
+                           "datetime": print_corrections.now()}
+            steps.write_json(find_step.NOT_LABELS, marked)
+            print(f"label photo {key} marked not a label", flush=True)
+        else:
             if sha1 not in photos.all_photos():
                 return "Not in photos/ any more: reload."
             photos.delete(sha1)
             print(f"deleted {sha1}", flush=True)
             self.present.discard(sha1)
-            self.compute()
+        self.compute()
         return None
 
     def undo(self, index, when):
@@ -330,8 +359,8 @@ function printCard(p) {
     const lp = el("div", {class: "lp" + (box.checked ? " ticked" : "") + (k.deleted ? " deleted" : "")},
       el("label", {}, el("img", {loading: "lazy", src: "/label/" + encodeURIComponent(k.key)}),
         box, el("span", {class: (k.serial && k.serial !== p.serial) ? "odd" : ""}, " " + (k.serial || k.release || "no serial read"))));
-    if (k.deleted) lp.append(el("div", {class: "gone"}, "photo deleted"));
-    else lp.append(el("div", {}, el("button", {class: "del", onclick: () => deletePhoto(k.key, p)}, "Delete photo")));
+    if (k.deleted) lp.append(el("div", {class: "gone"}, "deleted"));
+    else if (!p.frozen.length) lp.append(el("div", {}, el("button", {class: "del", onclick: () => post("/delete", {key: k.key})}, "Delete label photo")));
     box.onchange = () => { if (box.checked) lpTicks.add(k.key); else lpTicks.delete(k.key); lp.classList.toggle("ticked", box.checked); split.disabled = !canSplit(); };
     lps.append(lp);
   }
@@ -348,14 +377,6 @@ function printCard(p) {
   const hand = p.keys.every(k => k.by_hand) ? el("span", {class: "note"}, " entered by hand") : "";
   card.append(lps, el("div", {style: "margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"}, split, input, set, hand));
   return card;
-}
-
-async function deletePhoto(key, p) {
-  const sha1 = key.split("@")[0];
-  const others = S.prints.filter(q => q !== p && q.keys.some(k => k.key.split("@")[0] === sha1));
-  if (others.length && !confirm(`This photo also holds label photos of ${others.length} other print${others.length > 1 ? "s" : ""}:\n` +
-      others.map(q => (q.serial || q.release || "no serial") + " (" + (q.id || "new print") + ")").join("\n") + "\n\nDelete anyway?")) return;
-  await post("/delete", {photo: sha1});
 }
 
 function pager(n, per) {
@@ -472,7 +493,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_error(404)
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         with lock:
-            why = (tool.decide(data) if self.path == "/decide" else tool.delete(data.get("photo")) if self.path == "/delete"
+            why = (tool.decide(data) if self.path == "/decide" else tool.delete(data.get("key")) if self.path == "/delete"
                    else tool.set_serial(data.get("keys"), data.get("serial")) if self.path == "/serial"
                    else tool.set_frozen(data.get("keys"), bool(data.get("on"))) if self.path == "/freeze"
                    else tool.undo(data.get("index", -1), data.get("datetime")))
