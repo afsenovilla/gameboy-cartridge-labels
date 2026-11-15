@@ -78,9 +78,9 @@
 #
 #   make remove-photos
 #   A tool, not a step: a local page for deleting photos from photos/ (the file and its record in photo-sources.json),
-#   on two tabs: the photos with no label photo found, 20 at a time; every print with its label photos, the worst first
-#   (badness: the share of the label off the photo or unlike its restored print, and a resolution under 10 px/mm), to
-#   delete one or one and all worse. Asks first if a photo holds label photos of other prints (src/remove_photos.py).
+#   on three tabs: the unused photos, 20 at a time; every print's restored image to mark Good or Bad or freeze; every
+#   print with its label photos, by print id, to delete one. Asks first if a photo holds label photos of other prints
+#   (src/remove_photos.py).
 #
 #   make fit-by-hand SHAPE=cgb
 #   A tool, not a step: a local page for placing labels by hand on one shape's approximate cuts (dmg, cgb or agb; cgb by

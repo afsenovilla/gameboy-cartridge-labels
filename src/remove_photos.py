@@ -13,46 +13,23 @@
 #     frozen/<id>.avif, persistent-prints.md stage 2): its label photos, poses and image are kept as they are and no
 #     step recomputes them. A button only, no key (the user: keys next to S are too easy to hit).
 # The tabs keep their pages as loaded (the user, 2026-11-12: a photo deleted or OK-ed leaves its place, nothing moves).
-#   - Bad photos: every print (prints.json) with its label photos, the worst first; prints by the sum of their label
-#     photos' badness (many bad label photos, and how bad), label photos within a print by their own badness. Each label
-#     photo: "Delete". ("Delete this and worse" removed 2026-11-15, the user.)
-# Bad photos and Restored prints: sorted by print id by default (a game's prints together, the user 2026-11-15), or the
-# tab's own order (worst first; unmarked first); a search box keeps the prints whose id holds every word typed.
-# In Bad photos, deleting a photo that also holds label photos of other prints asks first (confirm()).
-# Badness of a label photo: 1 - usable x resolution, both 0..1:
-#   usable: the share of the label (restore's crop) that is in the photo, inside the sticker's cut, and matches the
-#     reference: its straightened image, colours evened to the reference (restore.even_to), both blurred over BLUR_MM,
-#     within DAMAGE_DE (Oklab) of it. Damage, glare, dirt, blur and a part off the photo all count against it.
-#   resolution: the photo's pixels per mm at the label (from solve's fit) over FULL_PX_PER_MM, at most 1.
-# The reference, never including the label photo itself (leave-one-out, 2026-11-12; the restored print it was before
-#   holds the label photo's own damage, which then hid part of it): in a print of REFERENCE_MIN or more label photos, the
-#   median of the print's other label photos (up to REFERENCE_MAX of them; each straightened, its colours evened to the
-#   median of all, filled from its nearest valid pixel outside its cut), compared only where at least one of them is on
-#   its photo; otherwise the restored print of the print with the most label photos in its family; none if there's
-#   neither (then only the part off the photo or the cut counts).
-# Measured on the full set (25 prints of 4 or more label photos, against the restored print, before leave-one-out):
-#   over DAMAGE_DE, 0.1 % of the label for the cleanest, 5 % at the median, 38 % for the worst; at 0.05 the clean ones
-#   already differed on 10-20 % (noise, slight blur). Against the user's deletions (2026-11-12, the 113 compared photos
-#   deleted from the first pages): 84 % over 0.1 damage, 62 % over 0.2.
-# Computed when the page starts, kept in generated/remove-photos/badness.json until prints.json, solve.json, a restored
-# print is newer, or the settings (BLUR_MM, DAMAGE_DE, REFERENCE_MIN, REFERENCE_MAX, the method) changed.
+#   - Bad photos: every print (prints.json) with its label photos (in prints.json's order), by print id (a game's prints
+#     together); a search box keeps the prints whose id holds every word typed. Each label photo: "Delete"; deleting a
+#     photo that also holds label photos of other prints asks first (confirm()). Each shows its px/mm at the label and
+#     whether solve's fit is poor. (Until 2026-11-15 also a badness per label photo, from comparing it with the print's
+#     other label photos at start, for a worst-first order; it didn't order usefully and made the start slow: removed,
+#     the user.)
+# Restored prints: sorted by print id by default, or the unmarked first; the same search box.
 # Usage: remove_photos.py [port]
-import json, os, sys, threading, time, urllib.parse, warnings
+import json, os, re, sys, threading, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from multiprocessing import Pool
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cv2, numpy as np
-import photos, steps, straighten, cuts, restore, shapes, publish, frozen
+import photos, steps, straighten, shapes, publish, frozen
 
 GEN = "generated"
-BLUR_MM = 0.15          # what a slightly misregistered or less sharp label photo still matches
-DAMAGE_DE = 0.08        # Oklab distance to the reference over which a pixel is damaged
-FULL_PX_PER_MM = 10     # a photo this sharp at the label or more loses nothing by its resolution
-REFERENCE_MIN = 3       # a print with this many label photos: each compared with the median of its others
-REFERENCE_MAX = 30      # the others in that median, at most
 THUMB_PX = 600
-CACHE = os.path.join(GEN, "remove-photos", "badness.json")
 MARKS_FILE = "print-marks.json"  # {image sha1: {mark: good|bad, serial, print, label_photos, date}}: restored prints judged
 OK_FILE = "ok-photos.json"  # {sha1: date OK-ed}: photos the user judged good in Unused, not listed there again
 lock = threading.Lock()
@@ -70,138 +47,13 @@ def restored(pid):
     return os.path.join(GEN, "restore", straighten.file_name(pid)[:-5])
 
 
-def load_label(key, shape, crop):
-    """A label photo's straightened image cropped (BGR 0..1) and where it counts (on the photo, inside its cut), or None."""
-    img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
-    if img is None:
-        return None
-    size, px_to_mm = straighten.canvas(shape)
-    valid = img.max(2) > 1
-    cut = straighten.load_cut(GEN, key)
-    if cut is not None:
-        valid &= cuts.mask(cut, shape, size, px_to_mm)
-    x, y, w, h = publish.crop_box(shape, crop)
-    return img[y:y + h, x:x + w].astype(np.float32) / 255, valid[y:y + h, x:x + w]
-
-
-def damage(img, valid, ref, ref_valid):
-    """The share of the label where img differs from ref by over DAMAGE_DE (both blurred over BLUR_MM), counted where
-    both are valid; img's colours evened to ref first."""
-    both = valid & ref_valid
-    if both.sum() < 100:
-        return None
-    s = BLUR_MM * straighten.PX_PER_MM
-    a = restore.to_oklab(cv2.GaussianBlur(restore.filled(restore.even_to(img, ref, both), valid), (0, 0), s))
-    b = restore.to_oklab(cv2.GaussianBlur(restore.filled(ref, ref_valid), (0, 0), s))
-    return float(((np.linalg.norm(a - b, axis=2) > DAMAGE_DE) & both).mean())
-
-
-def result(key, valid, dmg, ref):
-    coverage = float(valid.mean())
-    return key, {"coverage": round(coverage, 3), "damage": round(dmg or 0.0, 3), "usable": round(coverage - (dmg or 0.0), 3),
-                 "reference": ref if dmg is not None else None}
-
-
-def badness_of(job):
-    """[(key, {usable, coverage, damage, reference})] for one job: ("others", keys, shape, crop): each label photo against
-    the median of the others; ("print", keys, shape, crop, ref_id): each against that print's restored image."""
-    kind, keys, shape, crop = job[:4]
-    loaded = [(k, load_label(k, shape, crop)) for k in keys]
-    loaded = [(k, e) for k, e in loaded if e is not None]
-    out = []
-    if kind == "others" and len(loaded) >= REFERENCE_MIN:
-        dmgs = against_others([e for _, e in loaded])
-        return [result(k, e[1], d, "others") for (k, e), d in zip(loaded, dmgs)]
-    ref_id = job[4] if kind == "print" else None
-    # a print restore made no image for (fewer than restore.MIN_PHOTOS): no reference (and no OpenCV warning per photo)
-    ref = cv2.imread(restored(ref_id) + ".avif") if ref_id and os.path.exists(restored(ref_id) + ".avif") else None
-    for k, (img, valid) in loaded:
-        dmg = None
-        if ref is not None and ref.shape[:2] == img.shape[:2]:
-            dmg = damage(img, valid, ref.astype(np.float32) / 255, np.ones(valid.shape, bool))
-        out.append(result(k, valid, dmg, ref_id))
-    return out
-
-
-def against_others(entries):
-    """Each label photo's damage (image, valid) against the median of the others (up to REFERENCE_MAX), all evened to the
-    median of all first."""
-    imgs = np.stack([e[0] for e in entries])
-    valids = np.stack([e[1] for e in entries])
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)  # pixels no label photo covers
-        median = lambda idx: np.nan_to_num(np.nanmedian(np.where(valids[idx][..., None], imgs_e[idx], np.nan), axis=0))
-        imgs_e = imgs
-        median_all = median(list(range(len(entries))))
-        imgs_e = np.stack([restore.filled(restore.even_to(i, median_all, v), v) for i, v in zip(imgs, valids)])
-        out = []
-        for n, (img, valid) in enumerate(entries):
-            others = [m for m in range(len(entries)) if m != n][:REFERENCE_MAX]
-            out.append(damage(img, valid, median(others), valids[others].any(0)))
-    return out
-
-
-def jobs_of(prints):
-    """badness_of's jobs: a print of REFERENCE_MIN or more label photos compared within itself; another against the
-    print with the most label photos in its family (none if that is itself)."""
-    by_family = {}
-    for p in prints:
-        by_family.setdefault(p["family"], []).append(p)
-    jobs = []
-    for p in prints:
-        if len(p["keys"]) >= REFERENCE_MIN:
-            jobs.append(("others", p["keys"], p["shape"], crop_of(p["id"])))
-        else:
-            ref = max(by_family[p["family"]], key=lambda q: (len(q["keys"]), q is p))
-            jobs.append(("print", p["keys"], p["shape"], crop_of(ref["id"]) if ref is not p else crop_of(p["id"]),
-                         None if ref is p else ref["id"]))
-    return jobs
-
-
-def sized_badness_of(job):
-    """(the job's label photos, badness_of(job)): for progress by label photos."""
-    return len(job[1]), badness_of(job)
-
-
-def crop_of(pid):
-    """restore's crop of a print (its family's; a frozen print's as frozen), or None."""
-    e = frozen.load().get(pid)
+def crop_of(pid, frozen_prints):
+    """restore's crop of a print (its family's; a frozen print's as frozen: frozen_prints, frozen.load()), or None."""
+    e = frozen_prints.get(pid)
     if e:
         return e["crop"]
     path = restored(pid) + ".json"
     return json.load(open(path))["crop"] if os.path.exists(path) else None
-
-
-def badness(prints):
-    """key -> {coverage, damage, usable, reference}, from the cache where it's still good."""
-    inputs = [os.path.join(GEN, "prints", "prints.json"), os.path.join(GEN, "solve", "solve.json")]
-    settings = [BLUR_MM, DAMAGE_DE, REFERENCE_MIN, REFERENCE_MAX, "leave-one-out"]
-    newest = max(os.path.getmtime(f) for f in inputs)
-    restore_dir = os.path.join(GEN, "restore")
-    newest = max([newest] + [os.path.getmtime(os.path.join(restore_dir, f)) for f in os.listdir(restore_dir)])
-    if os.path.exists(CACHE) and os.path.getmtime(CACHE) >= newest:
-        cached = json.load(open(CACHE))
-        if cached.get("settings") == settings:
-            print("badness: from the cache", flush=True)
-            return cached["badness"]
-    jobs = jobs_of(prints)
-    jobs.sort(key=lambda j: -len(j[1]))  # the biggest prints first, so the pool ends evenly
-    out = {}
-    total = sum(len(j[1]) for j in jobs)
-    print(f"comparing {total} label photos ({len(jobs)} prints)", flush=True)
-    done, n, last = 0, 0, time.monotonic()
-    with Pool(8) as pool:
-        for size, res in pool.imap_unordered(sized_badness_of, jobs):
-            for key, b in res:
-                out[key] = b
-            n += 1
-            done += size
-            if time.monotonic() - last >= 30 or n == len(jobs):
-                last = time.monotonic()
-                print(f"compared {done} of {total} label photos ({n} of {len(jobs)} prints)", flush=True)
-    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-    steps.write_json(CACHE, {"settings": settings, "badness": out})
-    return out
 
 
 def unused(all_photos, found, solved):
@@ -252,32 +104,27 @@ class Tool:
         say(f"{len(self.why)} unused photos of {len(self.photos)}; counting their matched features")
         self.matched = matched_features(set(self.why))
         self.unused = sorted(self.why, key=lambda s: self.matched[s])
-        say("the label photos' badness")
-        bad = badness(prints)
         say(f"listing {len(prints)} prints")
         self.crops = {}
         self.prints = []
+        frozen_prints = frozen.load()
         for p in prints:
-            crop = crop_of(p["id"])
+            crop = crop_of(p["id"], frozen_prints)
             entries = []
             for k in p["keys"]:
                 r = solved.get(k, {})
                 lw, lh = shapes.LABEL_MM[p["shape"]]
                 ppm = solve_step.local_scale(np.array(r["cut_to_photo"]), [0, 0, lw, lh]) if "cut_to_photo" in r else 0
-                b = bad.get(k) or {"coverage": 0, "damage": 0, "usable": 0, "reference": None}
-                resolution = min(1.0, ppm / FULL_PX_PER_MM)
-                entries.append({"key": k, "photo": k.split("@")[0], "badness": round(1 - b["usable"] * resolution, 3),
-                                "damage": b["damage"], "off": round(1 - b["coverage"], 3), "px_per_mm": round(ppm, 1),
-                                "compared": b["reference"] is not None,
+                entries.append({"key": k, "photo": k.split("@")[0], "px_per_mm": round(ppm, 1),
                                 "poor_fit": solve_step.poor_fit(r)})
                 self.crops[k] = (p["shape"], crop)
-            entries.sort(key=lambda e: -e["badness"])
             image = restored(p["id"]) + ".avif"
             self.prints.append({"id": p["id"], "serial": p.get("serial") or p.get("release") or "?",
                                 "has_image": os.path.exists(image),
                                 "image_sha1": sha1_file(image) if os.path.exists(image) else None,
-                                "score": round(sum(e["badness"] for e in entries), 3), "label_photos": entries})
-        self.prints.sort(key=lambda p: -p["score"])
+                                "label_photos": entries})
+        natural = lambda pid: [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", pid)]
+        self.prints.sort(key=lambda p: natural(p["id"]))
 
     def state(self):
         have = set(photos.all_photos())
@@ -418,7 +265,6 @@ figcaption { font: 11px ui-monospace, monospace; font-variant-numeric: tabular-n
 figure .buttons { display: flex; gap: 4px }
 figure .buttons button { padding: 4px 6px; font-size: 12px }
 .poor { color: #c62828 }
-.legend { color: #555; margin: 4px 0 }
 #marks { display: grid; grid-template-columns: repeat(2, 1fr); align-content: start; gap: 6px; padding: 6px; height: calc(100% - 48px); overflow-y: auto }
 #marks .cell { position: relative; background: #ddd; display: flex; align-items: center; justify-content: center; padding: 24px 0 40px }
 #marks img { max-width: 100%; max-height: 80vh; object-fit: contain; display: block }
@@ -528,9 +374,9 @@ async function remove(sha1s, here, ask = true) {
   render();
 }
 
-const SORTS = {bad: [["id", "by print id"], ["worst", "the worst first"]],
+const SORTS = {bad: [["id", "by print id"]],
                marks: [["id", "by print id"], ["unmarked", "the unmarked first"]]};
-// the tab's prints as loaded, searched and sorted: by id, or in the order the list was loaded in (worst / unmarked first)
+// the tab's prints as loaded, searched and sorted: by id, or in the order the list was loaded in (unmarked first)
 function view(list) {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const out = list.filter(p => words.every(w => p.id.toLowerCase().includes(w)));
@@ -542,7 +388,8 @@ function sortLabel() { return SORTS[tab].find(([k]) => k === sortBy[tab])[1] + (
 
 function render() {
   const sort = $("#sort");
-  $("#search").hidden = sort.hidden = tab === "nolabels";
+  $("#search").hidden = tab === "nolabels";
+  sort.hidden = !(SORTS[tab] && SORTS[tab].length > 1);
   if (SORTS[tab]) {
     sort.innerHTML = SORTS[tab].map(([k, t]) => `<option value="${k}">${t}</option>`).join("");
     sort.value = sortBy[tab];
@@ -587,11 +434,9 @@ function renderNoLabels() {
   }
 }
 
-function pct(x) { return (100 * x).toFixed(0).padStart(3) + " %"; }
 
 function renderPrints() {
   const prints = view(printList);  // as loaded: a deleted label photo leaves a hole
-  prints.forEach(p => p.left = p.label_photos.filter(e => !deleted.has(e.photo)).reduce((a, e) => a + e.badness, 0));
   const pages = Math.max(1, Math.ceil(prints.length / PRINTS_PER));
   page = Math.min(page, pages - 1);
   $("#count").textContent = `${prints.length} prints, ${sortLabel()} (as when the page was loaded); page ${page + 1} of ${pages}`;
@@ -599,11 +444,11 @@ function renderPrints() {
   $("#controls").append(button("Previous", "", () => { page = Math.max(0, page - 1); render(); $("#prints").scrollTop = 0; }),
                         button("Next", "", () => { page = Math.min(pages - 1, page + 1); render(); $("#prints").scrollTop = 0; }));
   const box = $("#prints");
-  box.innerHTML = `<div class="legend">Badness = 1 - usable × resolution. Usable: the label's share in the photo and the cut, and within reach of the restored print's colours (0.15 mm blur). Resolution: the photo's px/mm at the label over 10, at most 1. "not compared": no other label photo of its family to compare with.</div>`;
+  box.innerHTML = "";
   for (const p of prints.slice(page * PRINTS_PER, page * PRINTS_PER + PRINTS_PER)) {
     const div = document.createElement("div");
     div.className = "print " + (p.image_sha1 && S.marks[p.image_sha1] || "");
-    div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.id}<br>sum ${p.left.toFixed(2)}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
+    div.innerHTML = `<div class="restored">${p.has_image ? `<img loading="lazy" src="/print/${encodeURIComponent(p.id)}">` : ""}<div>${p.id}<br>${p.label_photos.filter(e => !deleted.has(e.photo)).length} label photo(s) left</div></div><div class="photos"></div>`;
     const list = div.querySelector(".photos");
     if (p.image_sha1) { const b = document.createElement("div"); b.className = "buttons"; b.append(...markButtons(p)); div.querySelector(".restored").append(b); }
     p.label_photos.forEach(e => {
@@ -615,7 +460,7 @@ function renderPrints() {
         return;
       }
       fig.innerHTML = `<a href="/photo/${e.photo}" target="_blank"><img loading="lazy" src="/label/${encodeURIComponent(e.key)}"></a>
-        <figcaption>badness ${e.badness.toFixed(2)}<br>damage ${pct(e.damage)} off ${pct(e.off)}<br>${e.px_per_mm.toFixed(1).padStart(4)} px/mm${e.compared ? "" : " not compared"}${e.poor_fit ? '<br><span class="poor">poor fit</span>' : ""}</figcaption><div class="buttons"></div>`;
+        <figcaption>${e.px_per_mm.toFixed(1).padStart(4)} px/mm${e.poor_fit ? '<br><span class="poor">poor fit</span>' : ""}</figcaption><div class="buttons"></div>`;
       fig.querySelector(".buttons").append(button("Delete", "danger", () => remove([e.photo], p.id)));
       list.append(fig);
     });
