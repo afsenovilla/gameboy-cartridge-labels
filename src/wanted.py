@@ -21,7 +21,8 @@ import ebay_photos
 
 MIN_PHOTOS, MIN_PRECISE = 3, 2  # as restore's (not imported: restore loads much more)
 MAX_NEEDED = 2
-REGION_GROUP = {**ebay_photos.REGION_GROUP, **{r: "USA/EUR" for r, g in ebay_photos.REGION_GROUP.items() if g in ("USA", "EUR")}}
+REGION_GROUP = {**ebay_photos.REGION_GROUP, **{r: "USA/EUR" for r, g in ebay_photos.REGION_GROUP.items() if g in ("USA", "EUR")},
+                "SCN": "USA/EUR"}  # Scandinavia (the user, 2026-11-16)
 SYSTEMS = {"dmg": "Game Boy", "cgb": "Game Boy Color", "agb": "Game Boy Advance"}
 
 
