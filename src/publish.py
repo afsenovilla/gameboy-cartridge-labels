@@ -164,7 +164,7 @@ def page(out_dir, index, wanted_count):
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax({MIN_COLUMN}px,1fr));gap:16px;align-items:start}}
 figure{{margin:0;min-width:0}} figure img{{display:block;width:100%;height:auto;margin:0 auto}} figcaption{{font-size:12px;margin:4px 0}}
 .src{{font-size:11px;color:#bbb;margin-top:2px}} .poor{{color:#fa0}} a{{color:#9cf}} h2{{margin-top:32px}}</style>
-<p><a href="wanted.html">Wanted photos</a>: {wanted_count} labels that need a photo or two more</p>
+<p><a href="wanted.html">Wanted photos</a>: help find photos of {wanted_count} cartridges</p>
 <ul>{"".join(links)}</ul>
 {"".join(sections)}""")
 

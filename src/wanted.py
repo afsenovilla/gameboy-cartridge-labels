@@ -8,8 +8,9 @@
 # Ranked by photos needed, then whether the label photos agree (all read the same serial, and no tile differs between
 #   any two: prints.py's pair comparison), then the lowest resolution among them (photo px per mm at the label): the
 #   more likely one more photo makes a good image, the higher.
-# Per print: title, system, serials (its own as read; else the release's in its region group), the photos it has
-# (their sources, so nobody sends one again) and search links (eBay by title, Google Images by serial).
+# wanted.json per print: title, system, serials (its own as read; else the release's in its region group), the photos
+# it has (their sources), the numbers ranked by, and search links (eBay by title, Google Images by serial).
+# wanted.html: plain, for the people helping: title, system, serials, search links, in rank order.
 import html, json, os, re, sys, unicodedata
 import urllib.parse
 import numpy as np
@@ -96,28 +97,18 @@ def search_links(release, serial_list, group):
 
 
 def page(out_dir, wanted):
-    """wanted.html: the wanted prints, best first, in a section per number of photos needed."""
-    sections = []
-    for n in range(1, MAX_NEEDED + 1):
-        rows = []
-        for e in (e for e in wanted if e["needed"] == n):
-            have = ", ".join(f'<a href="{html.escape(s.get("page_url") or s.get("image_url"))}">{html.escape(s.get("source") or "?")}</a>'
-                             if s.get("page_url") or s.get("image_url") else html.escape(s.get("source") or "?") for s in e["sources"])
-            agree = {True: "yes", False: "no", None: ""}[e["agree"]]
-            links = " · ".join(f'<a href="{html.escape(l["url"])}">{html.escape(l["label"])}</a>' for l in e["search"])
-            rows.append(f'<tr><td><b>{html.escape(e["title"])}</b><br><span class="dim">{SYSTEMS[e["system"]]}</span></td>'
-                        f'<td>{"<br>".join(html.escape(s) for s in e["serials"])}</td><td>{e["photos"]}: {have}</td>'
-                        f'<td>{agree}</td><td>{e["px_per_mm"]:g}</td><td>{links}</td></tr>')
-        sections.append(f'<h2>{n} more photo{"" if n == 1 else "s"} ({len(rows)})</h2>'
-                        '<table><tr><th>Game</th><th>Serials</th><th>Photos so far</th><th>Agree</th><th>px/mm</th><th>Search</th></tr>'
-                        + "".join(rows) + "</table>")
+    """wanted.html: the wanted prints, best first, kept plain for the people helping (the user, 2026-11-16: no talk of
+    agreement or of the photos already there)."""
+    rows = []
+    for e in wanted:
+        links = " · ".join(f'<a href="{html.escape(l["url"])}">{html.escape(l["label"])}</a>' for l in e["search"])
+        rows.append(f'<tr><td><b>{html.escape(e["title"])}</b><br><span class="dim">{SYSTEMS[e["system"]]}</span></td>'
+                    f'<td>{"<br>".join(html.escape(s) for s in e["serials"])}</td><td>{links}</td></tr>')
     with open(os.path.join(out_dir, "wanted.html"), "w") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wanted photos</title>
 <style>body{{font:14px system-ui;margin:16px;background:#333;color:#eee}} a{{color:#9cf}} .dim{{color:#bbb;font-size:12px}}
 table{{border-collapse:collapse}} td,th{{padding:4px 8px;border-bottom:1px solid #555;text-align:left;vertical-align:top}}</style>
-<p><a href="index.html">All prints</a></p>
+<p><a href="index.html">All labels</a></p>
 <h1>Wanted photos</h1>
-<p>Cartridge labels that need {MIN_PHOTOS} or more good photos to be recreated, and have some already. A photo helps most if it
-is sharp, shows the whole label straight on, and is a different cartridge than the photos already listed. Best chances first:
-the photos so far agree (same serial read, the same print) and have many pixels per mm of label.</p>
-{"".join(sections)}""")
+<p>Photos of these cartridges help the most, top of the list first. Sharp photos showing the whole label are best.</p>
+<table><tr><th>Game</th><th>Serial</th><th>Search</th></tr>{"".join(rows)}</table>""")
