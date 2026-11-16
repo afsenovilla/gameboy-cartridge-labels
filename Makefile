@@ -17,7 +17,7 @@
 #   save-new-images-here/, with their listing.json entries, for make add-photos (src/move_downloads.py).
 #
 #   make all
-#   Runs every step below in order, remove-low-resolution through restore (not add-photos or publish), each skipping what it has
+#   Runs every step below in order, remove-low-resolution through build (not add-photos or publish), each skipping what it has
 #   already done.
 #
 #   make remove-low-resolution
@@ -62,11 +62,14 @@
 #   An image of every print from its label photos (bands, the median), cropped 0.3 mm inside its family's cuts, paper white
 #   where found, into generated/restore/; the page generated/restore/index.html. Needs make prints.
 #
+#   make build
+#   The site, made anew in generated/publish/: prints/ (the restored prints), index.json (source and URLs from
+#   photo-sources.json), the lists, the page generated/publish/index.html and wanted.html (the prints a photo or two
+#   short of an image, best chances first: src/wanted.py) (src/publish.py). Needs make restore.
+#
 #   make publish
-#   Not in make all: the outputs collected into a temporary work tree of the gh-pages branch: prints/ (the restored
-#   prints), index.json (source and URLs from photo-sources.json), the lists, the page index.html and wanted.html (the
-#   prints a photo or two short of an image, best chances first: src/wanted.py); committed there
-#   (replacing all it held) and pushed to origin (publish.sh, src/publish.py). Needs make restore.
+#   Not in make all: generated/publish/ as it is (make build) committed to the gh-pages branch, replacing all it held,
+#   and pushed to origin (publish.sh).
 #
 #   make refreeze [ID=DMG-TS-USA-mike]
 #   A tool, not a step: every frozen print (or the one given) restored again with today's restore, its frozen image
@@ -102,7 +105,7 @@ PYTHON := .venv/bin/python
 GENERATED := $(if $(SAMPLE),generated-sample,generated)
 SAMPLE_FLAG := $(if $(SAMPLE),--sample,)
 
-.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore publish remove-photos review-prints refreeze fit-by-hand
+.PHONY: help setup test all todo-report add-photos move-downloads remove-low-resolution read-text clean-read-text features clean-features edges clean-edges match clean-match find clean-find solve clean-solve straighten clean-straighten read-serials clean-read-serials prints clean-prints restore clean-restore build clean-build publish remove-photos review-prints refreeze fit-by-hand
 help:
 	@awk '/^#   /{line = substr($$0, 5); if (line ~ /^make / && n++) print ""; print line}' Makefile
 
@@ -122,7 +125,7 @@ move-downloads:
 todo-report:
 	$(PYTHON) src/todo_report.py $(if $(NAME),$(NAME) --note "$(NOTE)",--page)
 
-STEPS := remove-low-resolution read-text features edges match find solve straighten read-serials prints restore
+STEPS := remove-low-resolution read-text features edges match find solve straighten read-serials prints restore build
 
 all:
 	set -e; for step in $(STEPS); do $(MAKE) $$step; done
@@ -189,6 +192,13 @@ restore:
 
 clean-restore:
 	rm -rf $(GENERATED)/restore
+
+build:
+	rm -rf $(GENERATED)/publish
+	$(PYTHON) src/publish.py $(SAMPLE_FLAG) $(GENERATED)/publish
+
+clean-build:
+	rm -rf $(GENERATED)/publish
 
 publish:
 	$(if $(SAMPLE),$(error make publish publishes generated/, not the sample),./publish.sh)

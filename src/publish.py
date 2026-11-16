@@ -1,4 +1,4 @@
-# publish: the outputs collected into the folder given (publish.sh: a temporary work tree of the gh-pages branch):
+# publish (make build): the outputs collected into the folder given (generated/publish; make publish pushes it to gh-pages):
 #   prints/<print>.avif: each restored print, restore's image as it is (paper white where found, else median colours),
 #     named by the print's persistent id (it starts with the serial: DMG-APSJ-JPN-lisa.avif)
 #   No label photo images (the user, 2026-11-10: the straightened photos aren't worth distributing, over 1 GB): each
@@ -13,7 +13,7 @@
 #     with its label photos' sources.
 # Prints of a single label photo (poor fits counted) are left out, with their label photo (the user, 2026-11-15).
 # The source and URLs come from photo-sources.json (by SHA-1): for output only, never read by a detection step.
-# The folder starts empty (publish.sh), so every file is written anew.
+# The folder starts empty (make build removes it first), so every file is written anew.
 # Usage: publish.py [--sample] OUT
 import argparse, html, json, os, re, shutil, sys
 import cv2
