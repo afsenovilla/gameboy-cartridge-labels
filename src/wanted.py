@@ -112,4 +112,5 @@ table{{border-collapse:collapse}} td,th{{padding:4px 8px;border-bottom:1px solid
 <p><a href="index.html">All labels</a></p>
 <h1>Wanted photos</h1>
 <p>Photos of these cartridges help the most, top of the list first. Sharp photos showing the whole label are best.</p>
+<p>If you take or find some photos, please upload them here: <a href="https://www.dropbox.com/request/9pv35ozb0iieahq3z3uf">https://www.dropbox.com/request/9pv35ozb0iieahq3z3uf</a>
 <table><tr><th>Game</th><th>Serial</th><th>Search</th></tr>{"".join(rows)}</table>""")
