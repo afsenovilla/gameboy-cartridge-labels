@@ -3461,16 +3461,6 @@
   "page": "https://gbhwdb.gekkio.fi/cartridges/AGB-AEME-0/",
   "source": "gbhwdb"
  },
- "063b68de75dac286ae69dc1076e23651d6e2c6bf": {
-  "file": "otakaraou/agb/AGB-A8RJ-JPN.jpg",
-  "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250529_d0f150.jpg",
-  "original_name": "otakaraou-9251.jpg",
-  "original_sha1": "34ea25d059bbb225b9b4e51ea2815b55e32e2f64",
-  "page_url": "https://www.otakaraou.com/product/9251",
-  "serial_on_label": "AGB-A8RJ-JPN",
-  "source": "otakaraou",
-  "title_on_page": "テニスの王子様2003 PASSION RED ゲームボーイアドバンスソフト"
- },
  "064090593a1b20f0bc71294d0d0692462d9e712a": {
   "file": "otakaraou/agb/AGB-A5PJ-JPN.jpg",
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20240418_8b87b1.jpg",
@@ -6813,17 +6803,6 @@
   "source": "ebay-search",
   "title_on_page": "MotoGP Gameboy Advance Loose Cart Authentic/Tested"
  },
- "0cd6a74e18610ca5e59f327358596afd30a7e16b": {
-  "fetched": "2026-11-09",
-  "file": "ebay-287694647335.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/y6sAAeSwZypq5gdZ/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/287694647335",
-  "query": "Super Mario Advance 3 Yoshi's Island GBA cartridge",
-  "searched_release": "AGB-A3AE",
-  "searched_serial": "AGB-A3AE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Yoshi's Island: Super Mario Advance 3 Nintendo GBA, 2002 Cartridge Only TESTED"
- },
  "0ce4970345de32947665298e88627d881b00dbb0": {
   "fetched": "2026-11-09",
   "file": "ebay-940057709039.jpg",
@@ -9121,18 +9100,6 @@
   "serial_on_label": "DMG-R9J",
   "source": "ebay-hitjapan"
  },
- "1173a93bdd31884481f9e8b9cbcf66c91d32cae9": {
-  "fetched": "2026-11-12",
-  "file": "yahoo-m1251800258.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0211/user/0968aabd1693f1662547f714efbf52a4f6d4b78cb2c304b4a5b1cdf6890833eb/i-img1200x900-179429318807834ofnuy36.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/m1251800258",
-  "query": "Mother 1+2 GBA",
-  "searched_release": "AGB-A2UJ",
-  "searched_serial": "AGB-A2UJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "MOTHER 1+2 ゲームボーイアドバンス GBA",
-  "via": "https://www.jauce.com/auction/m1251800258"
- },
  "118b965569e8d32c0cfbde5c94140569c0f49ad3": {
   "fetched": "2026-11-09",
   "file": "ebay-116491858806.jpg",
@@ -9908,17 +9875,6 @@
   "original_sha1": "bb67281cd13f0c1e0180d914075262e802ac8c3a",
   "serial_on_label": "DMG-AZLJ-JPN",
   "source": "ebay-hitjapan"
- },
- "12d66a32a031f40428d4d8f1908541f00ee7f58d": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m49978002401.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m49978002401_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m49978002401/",
-  "query": "Star Wars The New Droid Army GBA",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "mercari-search",
-  "title_on_page": "Star Wars the new droid army for gameboy advance"
  },
  "12db12f717df86e54aaafa6ea8cd8da7ebe20892": {
   "fetched": "2026-11-11",
@@ -10866,17 +10822,6 @@
   "serial_on_label": "DMG-AWEP-UKV",
   "source": "emumovies"
  },
- "14a7436b83d5afff7d721642dc575b950cd45721": {
-  "fetched": "2026-11-09",
-  "file": "ebay-156816159403.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/XAAAAeSw38FqRYml/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/156816159403",
-  "query": "Spyro 2 Season of Flame GBA cartridge",
-  "searched_release": "AGB-A2SE",
-  "searched_serial": "AGB-A2SE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Spyro 2 Season of Flame Nintendo Game Boy Advance Cartridge Only - TESTED"
- },
  "14aa9a6532b450171b575cf447a8bf9739810c5d": {
   "fetched": "2026-11-09",
   "file": "ebay-406931258929.jpg",
@@ -11353,17 +11298,6 @@
   "note": "named by nothing: no serial read",
   "original_name": "yugiyahirano-41442.jpg",
   "source": "yugiyahirano"
- },
- "159aea7880976ba2a257c51668c1ff207634511b": {
-  "fetched": "2026-11-10",
-  "file": "ebay-920112236583.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/Ef8AAeSw4fpq7dxi/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/920112236583",
-  "query": "Kirby Nightmare in Dream Land GBA PAL cartridge",
-  "searched_release": "AGB-A7KP",
-  "searched_serial": "AGB-A7KP-EUR",
-  "source": "ebay-search",
-  "title_on_page": "Kirby Nightmare in Dream Land (Game Boy Advance, GBA) Authentic - Tested & Works"
  },
  "159d85dad2f01552db4973692b7b698354101ae2": {
   "fetched": "2026-11-09",
@@ -13172,17 +13106,6 @@
   "source": "zockbar",
   "title_on_page": "T2 Terminator 2: Judgment Day"
  },
- "195293779688f06986a68ad79a939353c7b0733d": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m66108986482.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m66108986482_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m66108986482/",
-  "query": "Star Wars The New Droid Army GBA",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "mercari-search",
-  "title_on_page": "Star Wars The New Droid Army - Nintendo Gameboy Advance | Fast Shipping!"
- },
  "1952c9fdd18376f0349c1d2c05bc958237a88c82": {
   "category": "gameboy-advance/games",
   "file": "retronintendostore/agb/AGB-BH8P-EUR_2.jpg",
@@ -14173,17 +14096,6 @@
   "original_name": "s-l1600 (10).webp",
   "serial_on_label": "DMG-GMA",
   "source": "ebay-hitjapan"
- },
- "1b3f13c52c228210b796467b36102bce7844a904": {
-  "fetched": "2026-11-10",
-  "file": "ebay-168639172749.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/J2IAAeSw8NRqjgyY/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/168639172749",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Star Wars The New Droid Army Nintendo Game Boy Advance GBA Cartridge"
  },
  "1b49da5cc4b53e16e12d7463ffa009a62bc4fd2b": {
   "fetched": "2026-11-11",
@@ -15404,17 +15316,6 @@
   "serial_on_label": "AGB-A62J-JPN",
   "source": "otakaraou",
   "title_on_page": "ロックマンゼロ2 ゲームボーイアドバンスソフト"
- },
- "1dc79eaf9f00fcdb0c520e68b296e57fbe248ff3": {
-  "fetched": "2026-11-10",
-  "file": "ebay-206233022146.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/s7AAAeSwC1Zp6PR~/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/206233022146",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Star Wars The New Droid Army (Nintendo Gameboy Advance GBA) Game Cartridge  Only"
  },
  "1ddc4d8c465a2f51cb7310128a45d2a9fff9838e": {
   "fetched": "2026-11-11",
@@ -21055,17 +20956,6 @@
   "source": "jauce-search",
   "title_on_page": "GBA ゲームボーイアドバンス モンスターファームアドバンス2 ソフトのみ 起動確認済",
   "via": "https://www.jauce.com/auction/f1242475581"
- },
- "27ff6c2d4d7b48420596ced24c82eaa3f4c65758": {
-  "fetched": "2026-11-10",
-  "file": "ebay-267817319035.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/FN8AAeSwgU1q1VbR/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/267817319035",
-  "query": "Sonic Advance 2 GBA cartridge",
-  "searched_release": "AGB-A2NE",
-  "searched_serial": "AGB-A2NE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Sonic Advance 2 (Game Boy Advance) Cartridge | TESTED"
  },
  "28012abc4cf1a7fb6d573782bad295b667db0382": {
   "fetched": "2026-11-11",
@@ -27013,17 +26903,6 @@
   "source": "unrecorded",
   "title_on_page": "Cabela's Big Game Hunter Nintendo Game Boy Advance Cartridge"
  },
- "33d452a7cfe787e59242f990bc421f3b086446d4": {
-  "fetched": "2026-11-09",
-  "file": "ebay-318900645961.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/wHEAAeSw25dqsYN0/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/318900645961",
-  "query": "The Simpsons Road Rage GBA cartridge",
-  "searched_release": "AGB-A4AE",
-  "searched_serial": "AGB-A4AE-USA",
-  "source": "unrecorded",
-  "title_on_page": "The Simpsons Road Rage (Nintendo Game Boy Advance GBA) Cartridge Only TESTED"
- },
  "33dbed3fb592b8b48b3109da0c53d877a527131b": {
   "file": "my-collection/dmg/DMG-YO-EUR.heic",
   "original_name": "IMG_7369.HEIC",
@@ -32151,17 +32030,6 @@
   "source": "ebay-search",
   "title_on_page": "Disney's the Lion King Simba's Mighty Adventure Nintendo Game Boy Color TESTED"
  },
- "3cd170475ef04e171b854a30f606fe3d8d56b2bb": {
-  "fetched": "2026-11-10",
-  "file": "ebay-127422034444.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/r3AAAeSwYIJo59Wv/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/127422034444",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Star Wars The New Droid Army GBA (Nintendo GameBoy Advance, 2002) Cartridge Only"
- },
  "3cd47e69752462b81a3cf919c1a74e84c1f79dc7": {
   "file": "ebay-elrocinante/dmg/DMG-ASZJ-JPN_2.jpg",
   "original_name": "s-l1600 (5).webp",
@@ -36912,17 +36780,6 @@
   "title_on_page": "GBA ゲームボーイアドバンス とっとこハム太郎4 にじいろ大行進でちゅ ソフトのみ 起動確認済",
   "via": "https://www.jauce.com/auction/o1242498377"
  },
- "45208f28dc36c7d98226489ec9066c4c3b241f07": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m43586447914.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m43586447914_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m43586447914/",
-  "query": "Bionicle Matoran Adventures GBA",
-  "searched_release": "AGB-A5AE",
-  "searched_serial": "AGB-A5AE-USA",
-  "source": "mercari-search",
-  "title_on_page": "Bionicle Matoran Adventures Nintendo Game Boy Advance GBA Game AGB-A5AE-USA"
- },
  "45235735b00fde34f9ef4a8a6c9c1709ec8a125a": {
   "fetched": "2026-11-12",
   "file": "ebay-920083971998.jpg",
@@ -37163,17 +37020,6 @@
   "site": "retroravengames.com",
   "source": "retroraven",
   "title_on_page": "Quad Desert Fury - Game Boy Advance"
- },
- "45a2cd79a225c85eb65df867f4014762e7232c32": {
-  "fetched": "2026-11-10",
-  "file": "ebay-117106763662.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/ul0AAeSw2QVpwyn3/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/117106763662",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Star Wars The New Droid Army (Nintendo GBA, 2002)"
  },
  "45aad2ab50ba7a9ff2f0b8de49486e5457ba49a5": {
   "fetched": "2026-11-11",
@@ -42027,17 +41873,6 @@
   "title_on_page": "1円出品 GBA ゲームボーイアドバンス 川のぬし釣り5 ～不思議の森から～ ソフトのみ 起動確認済",
   "via": "https://www.jauce.com/auction/j1249286122"
  },
- "4f5c87bc57024ac4608c260364db96c4964f5586": {
-  "fetched": "2026-11-09",
-  "file": "ebay-327218506767.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/R6gAAeSw77hqMtz5/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/327218506767",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Game Boy Advance Star Wars The New Droid Army GBA Authentic Cartridge"
- },
  "4f5d3c4a25150a061d8f96da153c85b205d5a10a": {
   "fetched": "2026-11-13",
   "file": "mercari-m97020916019.jpg",
@@ -46360,17 +46195,6 @@
   "serial_on_label": "DMG-A98J-JPN",
   "source": "emumovies"
  },
- "57cf4813382cdd99166eadf025e8bcbd123e03b2": {
-  "fetched": "2026-11-09",
-  "file": "ebay-206515625649.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/zjsAAeSwehZqji0D/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/206515625649",
-  "query": "MLB SlugFest 2004 GBA cartridge",
-  "searched_release": "AGB-A5ME",
-  "searched_serial": "AGB-A5ME-USA",
-  "source": "unrecorded",
-  "title_on_page": "MLB Slugfest 2004 (Nintendo GameBoy Advance, 2003)"
- },
  "57cffa2e35be3dd96e2f7c70ee5d1d5b68e4bf84": {
   "file": "ebay-hitjapan/dmg/DMG-YMJ.webp",
   "note": "named by the serial read on it (exact)",
@@ -50595,17 +50419,6 @@
   "searched_serial": "AGB-BWWP-UKV",
   "source": "ebay-search",
   "title_on_page": "Nintendo WWE Survivor Series Game Boy Advance GBA Cartridge AGB-BWWP-UKV"
- },
- "600cde756f8b3430bae53307a87a5258b7e02614": {
-  "fetched": "2026-11-13",
-  "file": "ebay-377437703180.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/-f0AAeSwz0Jqh-jb/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/377437703180",
-  "query": "Mother 1+2 GBA Japan cartridge",
-  "searched_release": "AGB-A2UJ",
-  "searched_serial": "AGB-A2UJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "MOTHER 1+2 Nintendo Game Boy Advance GBA Cartridge Japanese Japan g005"
  },
  "600ea05d90f6c30b0405e066772209bdc1c42b55": {
   "fetched": "2026-11-12",
@@ -70567,18 +70380,6 @@
   "source": "retronintendostore",
   "title_on_page": "Supreme Snowboarding"
  },
- "8414598f025a7703ac9b8d0f886f5ccc89090cb0": {
-  "fetched": "2026-11-11",
-  "file": "yahoo-u1250364707.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/f192beb0e9bd374a4d4a5e590c46665c8dc99b073999180eb8b0916ef41c462d/i-img1200x1200-17933457174462whyfmt35.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/u1250364707",
-  "query": "逆転裁判 ゲームボーイアドバンス",
-  "searched_release": "AGB-ASBJ",
-  "searched_serial": "AGB-ASBJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "GBA ゲームボーイアドバンス 逆転裁判3 ソフトのみ 起動確認済",
-  "via": "https://www.jauce.com/auction/u1250364707"
- },
  "841af78f563ef065e50c1fa5b28fd52304e2fbb8": {
   "fetched": "2026-11-09",
   "file": "ebay-287703426227.jpg",
@@ -71177,29 +70978,6 @@
   "source": "jauce-search",
   "title_on_page": "デュエルマスターズ GameBoy Advance ゲームボーイアドバンス 動作確認済・端子清掃済[GBA10587_58]",
   "via": "https://www.jauce.com/auction/x1251259557"
- },
- "85a30a308b1b5fe37e9a97d3a02c6d4a87c1a671": {
-  "fetched": "2026-11-11",
-  "file": "yahoo-u1250144023.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/6dbcc07e7f7801fb2fa15448e9da949f2e7bb45677e4ed18d8c13515e450cf81/i-img1200x1200-17932297907534i4euo91579.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/u1250144023",
-  "query": "星のカービィ 夢の泉デラックス ゲームボーイアドバンス",
-  "searched_release": "AGB-A7KJ",
-  "searched_serial": "AGB-A7KJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "GBAソフト 星のカービィ 夢の泉デラックス ゲームボーイアドバンス AGB-A7KJ",
-  "via": "https://www.jauce.com/auction/u1250144023"
- },
- "85a35324bd1051000effcd6724daa03a5df5a415": {
-  "fetched": "2026-11-09",
-  "file": "ebay-366617036308.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/tjUAAeSw9OVqhkYT/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/366617036308",
-  "query": "Sonic Advance GBA cartridge",
-  "searched_release": "AGB-ASOE",
-  "searched_serial": "AGB-ASOE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Sonic Advance 2 (Nintendo Game Boy Advance, 2003) Authentic GBA Cartridge EX"
  },
  "85b569fb6ef396427645dd0a031aaed0c5cfec94": {
   "file": "otakaraou/cgb/CGB-AG5J-JPN.jpg",
@@ -77236,17 +77014,6 @@
   "serial_on_label": "DMG-ACJJ-JPN",
   "source": "ebay-elrocinante"
  },
- "923e365759c38d1efb9cc20a902c994e29029e80": {
-  "fetched": "2026-11-10",
-  "file": "ebay-396472832874.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/i68AAOSwLihn~gdD/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/396472832874",
-  "query": "Super Mario Advance 3 Yoshi's Island GBA cartridge",
-  "searched_release": "AGB-A3AE",
-  "searched_serial": "AGB-A3AE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Yoshi's Island: Super Mario Advance 3 Nintendo Game Boy Advance GBA Cartridge"
- },
  "924071dfdee9d191fefbbd04bc816b3a2ee1bba2": {
   "fetched": "2026-11-10",
   "file": "yahoo-m1245211542.jpg",
@@ -82443,17 +82210,6 @@
   "source": "ebay-search",
   "title_on_page": "Ultimate Puzzle Games Game Boy Advance Nintendo GBA"
  },
- "9c8cef59055da75e57917c7b87a85e3e8b95684d": {
-  "fetched": "2026-11-09",
-  "file": "ebay-960141992807.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/LeMAAeSwcuJq56Lg/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/960141992807",
-  "query": "007 NightFire GBA cartridge",
-  "searched_release": "AGB-A7OE",
-  "searched_serial": "AGB-A7OE-USA",
-  "source": "unrecorded",
-  "title_on_page": "007 NightFire GBA Tested Nintendo Game Boy Advance James Bond Cartridge"
- },
  "9c90da23b782ce8cde86c439bf2f4011daa54adb": {
   "fetched": "2026-11-12",
   "file": "mercari-m59330984001.jpg",
@@ -86931,18 +86687,6 @@
   "source": "mercari-search",
   "title_on_page": "Battle Arena Toshinden Nintendo Game Boy GB Authentic Cartridge 1996"
  },
- "a4fb44c2cc7216063346f5856d5f68fe0e9b3ba8": {
-  "fetched": "2026-11-12",
-  "file": "yahoo-s1251657991.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0211/user/0968aabd1693f1662547f714efbf52a4f6d4b78cb2c304b4a5b1cdf6890833eb/i-img1200x900-17941998248824frsxco84184.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/s1251657991",
-  "query": "Mother 1+2 GBA",
-  "searched_release": "AGB-A2UJ",
-  "searched_serial": "AGB-A2UJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "MOTHER 1+2 ゲームボーイアドバンス GBA",
-  "via": "https://www.jauce.com/auction/s1251657991"
- },
  "a505a1d1a6c699cf8ae6f02d7a6f6e6430f7f5d5": {
   "fetched": "2026-11-11",
   "file": "ebay-227577430219.jpg",
@@ -87594,17 +87338,6 @@
   "searched_serial": "CGB-BADP-EUR",
   "source": "ebay-search",
   "title_on_page": "Aladdin Nintendo Gameboy Color Cartridge  Retro Video Game Vintage."
- },
- "a667afd398adf123e1aefd6c092cc6581b97455f": {
-  "fetched": "2026-11-13",
-  "file": "mercari-m35875979345.jpg",
-  "image_url": "https://u-mercari-images.mercdn.net/photos/m35875979345_1.jpg",
-  "page_url": "https://www.mercari.com/us/item/m35875979345/",
-  "query": "Kirby Nightmare in Dream Land GBA",
-  "searched_release": "AGB-A7KE",
-  "searched_serial": "AGB-A7KE-USA",
-  "source": "mercari-search",
-  "title_on_page": "Kirby Nightmare in Dream Land Nintendo Gameboy Advance game"
  },
  "a66930c3184fdfa220d8b931cd15975f131d423a": {
   "file": "gbhwdb/agb/AGB-BEYP-FAH.jpg",
@@ -95710,17 +95443,6 @@
   "source": "unrecorded",
   "title_on_page": "Sword of Mana Nintendo Game Boy Advance GBA Authentic Original Cartridge USA"
  },
- "b55fc86543bf0199e8f0222afeb67ad0dc9e0f4e": {
-  "fetched": "2026-11-13",
-  "file": "ebay-314703464452.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/dMgAAeSwavppQYMT/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/314703464452",
-  "query": "Hoshi no Kirby Yume no Izumi Deluxe GBA Japan cartridge",
-  "searched_release": "AGB-A7KJ",
-  "searched_serial": "AGB-A7KJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "Hoshi no Kirby Yume no Izumi DX Nintendo Gameboy Advance 2002 AGB-A7KJ-JPN"
- },
  "b561b019bb281d734b49a9286a6364e0e71d3499": {
   "fetched": "2026-11-11",
   "file": "yahoo-w1251421316.jpg",
@@ -96333,17 +96055,6 @@
   "original_name": "Jeopardy! - Teen Tournament (USA).png",
   "serial_on_label": "DMG-AJQE-USA",
   "source": "launchbox-abeezy1388"
- },
- "b67c668d1b3bd9bbda70203e7e0361b759e09018": {
-  "fetched": "2026-11-09",
-  "file": "ebay-820163876474.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/wA0AAeSwRLlpwe15/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/820163876474",
-  "query": "Spyro 2 Season of Flame GBA cartridge",
-  "searched_release": "AGB-A2SE",
-  "searched_serial": "AGB-A2SE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Spyro 2: Season of Flame Nintendo Game Boy Advance GBA Cartridge Only"
  },
  "b680db55e94c70ad0029cfd0e4ad725aea5d5f18": {
   "fetched": "2026-11-11",
@@ -103385,17 +103096,6 @@
   "source": "retronintendostore",
   "title_on_page": "Dennis"
  },
- "c34834c00ed1a8dca75af131f39c1d7b2430da1f": {
-  "fetched": "2026-11-09",
-  "file": "ebay-198681513477.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/h2kAAeSw2t1qvw-X/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/198681513477",
-  "query": "Castlevania Aria of Sorrow GBA cartridge",
-  "searched_release": "AGB-A2CE",
-  "searched_serial": "AGB-A2CE-USA",
-  "source": "unrecorded",
-  "title_on_page": "CASTLEVANIA Aria Of Sorrow Gameboy Advance GBA Nintendo Cartridge Only Tested"
- },
  "c34a6d07f7eda14964d0ccb87346e8692287e35d": {
   "file": "jnlgame/dmg/DMG-ZL-USA.jpg",
   "original_name": "image_ec077c28-da6e-4681-aa1e-97499b722ab3.webp",
@@ -103829,13 +103529,6 @@
   "searched_serial": "CGB-BA2E-USA",
   "source": "unrecorded",
   "title_on_page": "Army Men 2 (Nintendo Game Boy Color GBC) - Cartridge Authentic Works Watch Video"
- },
- "c4595f46f31fabb9eb4831cac5ae9ce90c26bcf1": {
-  "file": "ebay-hitjapan/agb/AGB-A3GJ-JPN_2.webp",
-  "note": "named by the serial read on it (exact)",
-  "original_name": "312193106043-s-l1600.webp",
-  "serial_on_label": "AGB-A3GJ-JPN",
-  "source": "ebay-hitjapan"
  },
  "c45ceee678a27305bd544648b487aaaa81261922": {
   "file": "ebay-hitjapan/agb/AGB-FTUJ-JPN_2.webp",
@@ -104617,17 +104310,6 @@
   "original_name": "i-img743x825-17473683292425lxws0w8473.jpg",
   "serial_on_label": "DMG-AAJ",
   "source": "jauce"
- },
- "c5dbb25d39fe049e16983a7278cb1382e89dbbf6": {
-  "fetched": "2026-11-10",
-  "file": "ebay-227444844300.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/~XoAAeSwWXRqYrVe/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/227444844300",
-  "query": "I Spy Challenger! GBA cartridge",
-  "searched_release": "AGB-A4CE",
-  "searched_serial": "AGB-A4CE-USA",
-  "source": "ebay-search",
-  "title_on_page": "Nintendo Gameboy Advanced GBA I Spy Challenger! (Scholastic) Cartridge Only"
  },
  "c5ebea6b868cd9eb1a984f4b838f14ba7260c390": {
   "fetched": "2026-11-12",
@@ -114683,17 +114365,6 @@
   "source": "unrecorded",
   "title_on_page": "Racin' Ratz (Nintendo Game Boy Color) GBC Authentic Tested"
  },
- "d8a8cbd7603b44d1d35ac8b88e1ad39767e1dc34": {
-  "fetched": "2026-11-13",
-  "file": "ebay-377606240660.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/o74AAeSwYmBq43o-/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/377606240660",
-  "query": "Hoshi no Kirby Yume no Izumi Deluxe GBA Japan cartridge",
-  "searched_release": "AGB-A7KJ",
-  "searched_serial": "AGB-A7KJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "Kirby Nightmare in Dream Land Hoshi no Kirby Yume no Izumi DX GBA Japan AGB-A7KJ"
- },
  "d8b26ef8d2cd1a39ddba5ba178b13fd78b4c56d2": {
   "file": "launchbox-abeezy1388/dmg/DMG-L8-USA_3.png",
   "note": "named by the serial read on it (exact)",
@@ -116471,17 +116142,6 @@
   "source": "unrecorded",
   "title_on_page": "Vintage That's So Raven 2 Nintendo Game Boy Advance GBA Game Cartridge Only"
  },
- "dba7079af189cdc7a7736b34c1f7b86132c2087d": {
-  "fetched": "2026-11-09",
-  "file": "ebay-388860181547.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/I0oAAeSwPVRopfE-/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/388860181547",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Star Wars The New Droid Army GBA (Nintendo GameBoy Advance, 2002) Cartridge Only"
- },
  "dbac4faf48315eaa8caaba91d29d16631cbc8124": {
   "fetched": "2026-11-11",
   "file": "yahoo-p1161279976.jpg",
@@ -117462,17 +117122,6 @@
   "original_name": "yugiyahirano-42996.jpg",
   "serial_on_label": "DMG-ATNJ-JPN",
   "source": "yugiyahirano"
- },
- "ddbe175a59d2db8ecb635732bc3a302e0e43df96": {
-  "fetched": "2026-11-09",
-  "file": "ebay-327382034840.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/DTYAAeSwN89qvYmq/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/327382034840",
-  "query": "I Spy Challenger! GBA cartridge",
-  "searched_release": "AGB-A4CE",
-  "searched_serial": "AGB-A4CE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Nintendo Gameboy Advanced GBA I Spy Challenger! (Scholastic) Cartridge Only"
  },
  "ddc1059726e4b15676cb899d811068c70e4d7db2": {
   "file": "gbhwdb/agb/AGB-BPRI-ITA.jpg",
@@ -123668,17 +123317,6 @@
   "title_on_page": "即決！動作確認済み　GBA 爆転シュート ベイブレード 激闘！最強ブレーダー ソフトのみ ゲームボーイアドバンス",
   "via": "https://www.jauce.com/auction/h1240736857"
  },
- "e88802d89e0c4d11c7d7d77abcecf74493a74632": {
-  "fetched": "2026-11-10",
-  "file": "ebay-315634851197.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/AS4AAOSwI9tmsU~e/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/315634851197",
-  "query": "Tennis no Ouji-sama 2003 Passion Red GBA Japan cartridge",
-  "searched_release": "AGB-A8RJ",
-  "searched_serial": "AGB-A8RJ-JPN",
-  "source": "ebay-search",
-  "title_on_page": "Tennis No Ouji-Sama 2003: Passion Red (Game Boy Advance) Japanese Version"
- },
  "e8884e5f5d623f184cc8ae6b8f854b4ca4840356": {
   "file": "otakaraou/cgb/CGB-BLVJ-JPN.jpg",
   "image_url": "https://www.otakaraou.com/data/otakaraou/product/20250330_07be3b.jpg",
@@ -125837,17 +125475,6 @@
   "searched_serial": "AGB-AGWE-USA",
   "source": "unrecorded",
   "title_on_page": "GT Advance 2 Rally Racing Nintendo Game Boy Advance GBA Cartridge AGB-AGWE-USA"
- },
- "ecd82a7cd1c859f1aebf550de39e98de475ec445": {
-  "fetched": "2026-11-09",
-  "file": "ebay-257719744266.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/hk0AAeSwicFqmNwh/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/257719744266",
-  "query": "Star Wars The New Droid Army GBA cartridge",
-  "searched_release": "AGB-A2WE",
-  "searched_serial": "AGB-A2WE-USA",
-  "source": "unrecorded",
-  "title_on_page": "Star Wars The New Droid Army - Nintendo Game Boy Advance (GBA) Cartridge"
  },
  "ecd850ac6425f4dcd54ad692ded95a0a171cd1f8": {
   "file": "ebay-hitjapan/dmg/DMG-A3SJ-JPN.jpg",
@@ -130294,18 +129921,6 @@
   "source": "retronintendostore",
   "title_on_page": "Banjo Kazooie Grunty's Revenge"
  },
- "f4dde5115cdb8a9bd74e2d6bdbeeb991e345e977": {
-  "fetched": "2026-11-11",
-  "file": "yahoo-v1234276530.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0206/user/c91a48a33690784d198daca386c318fbd776a3a2d77059fbf8cd4c156937526c/i-img900x1200-17819477607120eqpvsi36.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/v1234276530",
-  "query": "ソニック アドバンス 2 ゲームボーイアドバンス",
-  "searched_release": "AGB-A2NJ",
-  "searched_serial": "AGB-A2NJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "Nintendo ニンテンドー　GBA ソニックアドバンス2 ゲームボーイアドバンス",
-  "via": "https://www.jauce.com/auction/v1234276530"
- },
  "f4e612abcb347f00958eb0a704b19a32c05b2bb9": {
   "fetched": "2026-11-11",
   "file": "ebay-336883953646.jpg",
@@ -132997,17 +132612,6 @@
   "source": "unrecorded",
   "title_on_page": "BattleTanx (Nintendo Game Boy Color, 2000) • Cartridge Only • Tested Working"
  },
- "fa05a48a83a38740c04ab29f88a8b2fb16839b3d": {
-  "fetched": "2026-11-10",
-  "file": "ebay-336890631068.jpg",
-  "image_url": "https://i.ebayimg.com/images/g/bz4AAeSwok1q82WW/s-l1600.jpg",
-  "page_url": "https://www.ebay.com/itm/336890631068",
-  "query": "Super Mario Advance 3 Yoshi's Island GBA cartridge",
-  "searched_release": "AGB-A3AE",
-  "searched_serial": "AGB-A3AE-USA",
-  "source": "ebay-search",
-  "title_on_page": "New ListingYoshi's Island: Super Mario Advance 3 Nintendo GBA Authentic Cartridge Only"
- },
  "fa0fede58c3a229b2873bc515a11605d3ed02123": {
   "fetched": "2026-11-13",
   "file": "ebay-167659527250.jpg",
@@ -133314,18 +132918,6 @@
   "original_name": "IMG_7372.HEIC",
   "serial_on_label": "DMG-H3-UKV",
   "source": "my-collection"
- },
- "fa8d19a5b4e069c5bffd87b11b33fda49c8b9a36": {
-  "fetched": "2026-11-12",
-  "file": "yahoo-e1249488773.jpg",
-  "image_url": "https://auctions.c.yimg.jp/images.auctions.yahoo.co.jp/image/dr000/auc0210/user/ec8fe79170aa9110ec5fa32ccdcbb78a0d8301ee01153cf04c4a3a7cc1587008/i-img900x1200-17927697250455ct4oha35.jpg",
-  "page_url": "https://page.auctions.yahoo.co.jp/jp/auction/e1249488773",
-  "query": "Mother 1+2 GBA",
-  "searched_release": "AGB-A2UJ",
-  "searched_serial": "AGB-A2UJ-JPN",
-  "source": "jauce-search",
-  "title_on_page": "ゲームボーイアドバンス MOTHER1＋2 動作品",
-  "via": "https://www.jauce.com/auction/e1249488773"
  },
  "fa9126a58e45b1b6d7471cc9d1309660bd7b337f": {
   "fetched": "2026-11-11",
