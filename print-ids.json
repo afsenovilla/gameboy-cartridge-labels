@@ -115,6 +115,11 @@
    "datetime": "2026-11-15T19:36:50+01:00",
    "why": "no label photo left"
   },
+  "AGB-A4MP-jill": {
+   "datetime": "2026-11-16T21:13:04+01:00",
+   "into": "AGB-A4MP-EUR-fred",
+   "why": "merged"
+  },
   "AGB-A4NE-USA-lucy": {
    "datetime": "2026-11-15T19:36:50+01:00",
    "into": "AGB-A4NE-USA-nora",
@@ -185,10 +190,18 @@
    "into": "AGB-A7KE-USA-pete",
    "why": "merged"
   },
+  "AGB-A7OE-USA-sara": {
+   "datetime": "2026-11-16T21:13:04+01:00",
+   "why": "no label photo left"
+  },
   "AGB-A84P-EUR-mike": {
    "datetime": "2026-11-15T19:36:50+01:00",
    "into": "AGB-A84P-EUR-ann",
    "why": "merged"
+  },
+  "AGB-A8RJ-JPN-rose": {
+   "datetime": "2026-11-16T21:13:04+01:00",
+   "why": "no label photo left"
   },
   "AGB-A9BE-USA-lucy": {
    "datetime": "2026-11-15T19:36:50+01:00",
@@ -927,6 +940,10 @@
    "datetime": "2026-11-14T21:40:36+01:00",
    "into": "AGB-APCE-USA-ann",
    "why": "merged"
+  },
+  "AGB-APCJ-JPN-ella": {
+   "datetime": "2026-11-16T21:13:04+01:00",
+   "why": "no label photo left"
   },
   "AGB-APCJ-JPN-jack-frank": {
    "datetime": "2026-11-15T19:36:50+01:00",
@@ -3684,6 +3701,10 @@
    "datetime": "2026-11-14T13:38:15+01:00",
    "into": "CGB-BP8E-USA-frank",
    "why": "merged"
+  },
+  "CGB-BPEE-USA-ted": {
+   "datetime": "2026-11-16T21:13:04+01:00",
+   "why": "no label photo left"
   },
   "CGB-BPJE-USA-jack": {
    "datetime": "2026-11-15T19:36:50+01:00",
@@ -7046,6 +7067,10 @@
    "datetime": "2026-11-13T17:46:37+01:00",
    "why": "no label photo left"
   },
+  "UNKNOWN-emma-mike": {
+   "datetime": "2026-11-16T21:13:04+01:00",
+   "why": "no label photo left"
+  },
   "UNKNOWN-emma-nora": {
    "datetime": "2026-11-14T13:38:15+01:00",
    "why": "no label photo left"
@@ -8201,7 +8226,6 @@
    "keys": [
     "0c157aaf92b2888e8fe4d5bcbe18e90c3cfd879b@57,43",
     "8d3bf6eac071b815bd244dad13de6bb591bbf294@63,54",
-    "c34834c00ed1a8dca75af131f39c1d7b2430da1f@63,37",
     "c695feb17acc049209775a39b71ed6aa342a6889@70,39"
    ]
   },
@@ -8251,8 +8275,6 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "0a11010ccd24aa8ea82fad58a9a94fbcf79bc69e@52,55",
-    "27ff6c2d4d7b48420596ced24c82eaa3f4c65758@64,62",
-    "85a35324bd1051000effcd6724daa03a5df5a415@61,82",
     "b1e0bed167a999b91827bdc9928ef995a0b0928d@52,65",
     "dd4b16e720928c9a5612d2d16e8c121c9ba44ff8@53,58",
     "ee08d6ec065530b3c2d3695092db7cc4d0290d86@54,56",
@@ -8271,8 +8293,7 @@
     "d95f276384f5b736065f9f222db2262a7d0500bf@35,41",
     "dc7459b3294e72adba583a593ae7fc0d7c835045@31,51",
     "e8e4b8adaa5da65d5d77e6bebfa614bb4fb99067@36,46",
-    "ec40a8c5a872900683e75355371b6fccba0142ed@34,52",
-    "f4dde5115cdb8a9bd74e2d6bdbeeb991e345e977@32,54"
+    "ec40a8c5a872900683e75355371b6fccba0142ed@34,52"
    ]
   },
   "AGB-A2NP-UKV-vera": {
@@ -8311,9 +8332,7 @@
   "AGB-A2SE-USA-kim": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
-    "14a7436b83d5afff7d721642dc575b950cd45721@56,63",
     "35cacdfa9525f5ea5c1d0246808276bc0a490ede@52,70",
-    "b67c668d1b3bd9bbda70203e7e0361b759e09018@62,62",
     "c846ba6ed1aee07e849c839c354a672182c512ef@70,62",
     "d54b1b7090800fe0d06d99b8da25958cf62ef55a@69,55"
    ]
@@ -8329,32 +8348,19 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "095e5e9779afd14f48b9bc15842def1ddc15ec5d@53,20",
-    "1173a93bdd31884481f9e8b9cbcf66c91d32cae9@55,45",
     "3c74a46eef5a093f8c017d12aeb34be3caceeea7@48,37",
     "52f0c0c90b8bfc3f9999146b2829c3276594eb10@48,39",
-    "600cde756f8b3430bae53307a87a5258b7e02614@62,49",
-    "a4fb44c2cc7216063346f5856d5f68fe0e9b3ba8@58,51",
-    "e0a96a423ecbc6830b5ae4281ace6192c1d65d59@52,41",
-    "fa8d19a5b4e069c5bffd87b11b33fda49c8b9a36@59,51"
+    "e0a96a423ecbc6830b5ae4281ace6192c1d65d59@52,41"
    ]
   },
   "AGB-A2WE-USA-beth": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "0a52061c8d10b5d746e3d9d5ceab061684721f38@70,61",
-    "12d66a32a031f40428d4d8f1908541f00ee7f58d@61,55",
-    "195293779688f06986a68ad79a939353c7b0733d@62,54",
-    "1b3f13c52c228210b796467b36102bce7844a904@70,66",
-    "1dc79eaf9f00fcdb0c520e68b296e57fbe248ff3@55,63",
     "2da06f3dca1485bb866e728f7c494700ef5fef89@36,48",
-    "3cd170475ef04e171b854a30f606fe3d8d56b2bb@63,59",
-    "45a2cd79a225c85eb65df867f4014762e7232c32@62,68",
-    "4f5c87bc57024ac4608c260364db96c4964f5586@64,76",
     "80a0b7241b56bcb83bfd67541932b578dafecc2d@66,63",
     "9f2b74e5cef96bdb1bcff1f01df2efb430b2ffdb@61,59",
-    "dba7079af189cdc7a7736b34c1f7b86132c2087d@67,66",
-    "eb6b992f762429be7effb2eff26a53e786949617@53,63",
-    "ecd82a7cd1c859f1aebf550de39e98de475ec445@70,69"
+    "eb6b992f762429be7effb2eff26a53e786949617@53,63"
    ]
   },
   "AGB-A2XE-USA-beth": {
@@ -8392,15 +8398,12 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "019ca19707d313a01bd45ab5e7419b27ef646742@55,58",
-    "0cd6a74e18610ca5e59f327358596afd30a7e16b@70,63",
     "15ce75b24184dc69aa6b4b736b97824e671261ac@44,40",
     "366f681b0f43579a0c3a167e6b5220134d48cadb@60,66",
     "3f664dc8d2ffa11b2294cc404f60b9d65652bcc6@51,81",
     "8637b990d40ebf3e907885ae60a43fa465b81a5f@54,56",
     "9223af55ed913c1d7906cf8d7dc00f23198f6b8e@51,55",
-    "923e365759c38d1efb9cc20a902c994e29029e80@51,67",
-    "e6cfd8537ebc30a0ff2d3b606746e65ba71533ea@58,71",
-    "fa05a48a83a38740c04ab29f88a8b2fb16839b3d@53,68"
+    "e6cfd8537ebc30a0ff2d3b606746e65ba71533ea@58,71"
    ]
   },
   "AGB-A3AJ-JPN-ella": {
@@ -8443,9 +8446,6 @@
   "AGB-A3EJ-JPN-zoe": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
-    "2ec2cafebfe496cfa6ce7f9e7dbe1cb3d3e4ef70@35,41",
-    "690734378357917d7720b1abf37ceb358712dabc@33,43",
-    "6c519e3ffebcdb99ec3055dfa94723bbf40e6847@35,42",
     "7fa3e2f50749ee91936591b14316ddca255a549d@33,37",
     "96018a3488c615b71ca341f2c606ac6457ca91ca@29,42",
     "d0d02a1b729ee13bd7fbcc3cea357ee59ee20a53@33,43",
@@ -8458,7 +8458,6 @@
     "224844b7ca700c3abe2fdc4b8f5eab25808bb22e@53,40",
     "5f9e70ed700a979bec16f81ec5b44bcffba4ee0e@50,40",
     "8eb8e311400f666fd8e6238cce73cdd8317bd291@54,41",
-    "c4595f46f31fabb9eb4831cac5ae9ce90c26bcf1@54,41",
     "de9eb2645ed4c9994b8759d8e9593f0f70dc1ab2@40,34",
     "fb8966230d97bb41ce6a5632253fb93100e398f9@52,36"
    ]
@@ -8468,7 +8467,6 @@
    "keys": [
     "3cb3b892b4cb778d6eaa4a6a5472ee3fbf873192@45,41",
     "5513ed76f56eea850be5b20a21d506c6d306f470@53,41",
-    "8414598f025a7703ac9b8d0f886f5ccc89090cb0@52,39",
     "d6906b40c468e235d39b8cf188bf63a95dda1bd7@51,49",
     "e8946c3e1877856344bfa4de4d4fb266066624d3@52,33"
    ]
@@ -8529,6 +8527,15 @@
     "2991d4f46498ceba9f85c2eb623403aa90a7168c@67,56"
    ]
   },
+  "AGB-A3WJ-JPN-rick": {
+   "created": "2026-11-16T21:13:04+01:00",
+   "keys": [
+    "2ec2cafebfe496cfa6ce7f9e7dbe1cb3d3e4ef70@35,41",
+    "690734378357917d7720b1abf37ceb358712dabc@33,43",
+    "6c519e3ffebcdb99ec3055dfa94723bbf40e6847@35,42"
+   ],
+   "split_from": "AGB-A3EJ-JPN-zoe"
+  },
   "AGB-A3XE-USA-jill": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
@@ -8573,7 +8580,6 @@
    "keys": [
     "20433699b39e51d97ba9c1209492b5a88096caba@71,68",
     "2fba4fcaac8dbc30c90e8d08d02835f8b0d9f4d1@59,63",
-    "33d452a7cfe787e59242f990bc421f3b086446d4@51,53",
     "a4317a52b053015ac1fd3b7f116cfaac67fc47d2@48,63",
     "ce6d44f6938bb4f0f5a7fb93ef3da8af178d23c1@57,74"
    ]
@@ -8584,9 +8590,7 @@
     "0b91eb349fe63e548a6761274feb3b5bef5e8078@66,68",
     "4427f5e25c6ce4b208ab4450029431c8fe2235ef@53,54",
     "8f5b8602f2df797db2c1f3be770bfebfe75f2e77@62,66",
-    "c5967703eac0924c88e45bca76e598ee68b48feb@52,64",
-    "c5dbb25d39fe049e16983a7278cb1382e89dbbf6@67,64",
-    "ddbe175a59d2db8ecb635732bc3a302e0e43df96@64,59"
+    "c5967703eac0924c88e45bca76e598ee68b48feb@52,64"
    ]
   },
   "AGB-A4GJ-JPN-lisa": {
@@ -8608,13 +8612,8 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "2c1f543973d72c2d7df56f3abefb793ec4c55ae4@65,56",
+    "5e05e014310cf5576b2c9b42e9386cf80fc29b69@68,75",
     "befff4d2701f88fd450a221ae35c8020b06a172c@41,78"
-   ]
-  },
-  "AGB-A4MP-jill": {
-   "created": "2026-11-13T13:41:17+01:00",
-   "keys": [
-    "5e05e014310cf5576b2c9b42e9386cf80fc29b69@68,75"
    ]
   },
   "AGB-A4ND-USA-beth": {
@@ -8718,7 +8717,6 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "18e17a4fd770672fadb8e260d4f1a0c7870bdf78@53,59",
-    "45208f28dc36c7d98226489ec9066c4c3b241f07@53,59",
     "82c8df6d262050d6ab9c4b650410af0a85c93b60@60,67",
     "a03c03eb7ba2f66163adadaf4f4159e9d682348a@70,56",
     "c2ebfb502ee57e53d3796153ac75d224b3dc1216@61,74"
@@ -8769,7 +8767,6 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "54741d76b4f12b37c87a29177ff3a1d98a53a8ce@53,65",
-    "57cf4813382cdd99166eadf025e8bcbd123e03b2@58,56",
     "64a92d11a9774b216407654e8a567b93ed715bf9@64,64",
     "d524115f8e7c1b42315e32455e3684950c314373@58,69"
    ]
@@ -9005,10 +9002,8 @@
   "AGB-A7KE-USA-pete": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
-    "159aea7880976ba2a257c51668c1ff207634511b@70,65",
     "3a491b6a55b40ef4b1609446c59e3af379c32a7e@70,52",
     "4e13bc8cd67318ab2d719a239b52e905dde5a626@74,54",
-    "a667afd398adf123e1aefd6c092cc6581b97455f@59,63",
     "b7ef5ba696d9f3240f047d5a2fd70ca8d2c31dc7@55,47",
     "c14f152917185aa9ede373809fcadaaa1a536029@67,49",
     "d14c5c37aa7b0df366718032ec63e0ecbdb2a6d4@71,54",
@@ -9021,11 +9016,8 @@
     "2a1fd0e972caf66d938a84e9f33a78393cb09365@49,42",
     "540ed1de30ee3315da5466e2af464abe58ddcd0e@51,41",
     "69ae65c5fcbb94a8cb667e472d6f5f76dae4259a@52,41",
-    "85a30a308b1b5fe37e9a97d3a02c6d4a87c1a671@52,51",
     "8ffe824171db56f780510a2d11a1564844f01699@52,38",
-    "b55fc86543bf0199e8f0222afeb67ad0dc9e0f4e@50,44",
     "d24fc8ab9de32c77865c933a84b02e583289c1f4@52,24",
-    "d8a8cbd7603b44d1d35ac8b88e1ad39767e1dc34@46,43",
     "e152305c2b265f797e9f413827f0026593f6d7b6@48,43"
    ]
   },
@@ -9053,12 +9045,6 @@
     "2fe1f808635bf8b9f517935c7f86941e90143cb8@50,60",
     "809d9ce75e6e210d9d647db844e2724c2413ec6d@51,58",
     "d2019e3b5e839caac86ea9fa84c0d8584cd49021@58,52"
-   ]
-  },
-  "AGB-A7OE-USA-sara": {
-   "created": "2026-11-13T13:41:17+01:00",
-   "keys": [
-    "9c8cef59055da75e57917c7b87a85e3e8b95684d@66,59"
    ]
   },
   "AGB-A7SP-NOE-alex": {
@@ -9245,14 +9231,7 @@
     "6b4ccf0825fcf86e515c8f63d7a739fbe84f58c2@53,50",
     "bc22bd3154fd1b979b8a269efa5e2b30de1d964b@52,52",
     "c5d5279ba41541b00d5514264f9359e32a583209@55,49",
-    "d3e9b5b5c9460f07c591f1a1949f5af30b5cf7a2@51,53",
-    "e88802d89e0c4d11c7d7d77abcecf74493a74632@51,48"
-   ]
-  },
-  "AGB-A8RJ-JPN-rose": {
-   "created": "2026-11-13T13:41:17+01:00",
-   "keys": [
-    "063b68de75dac286ae69dc1076e23651d6e2c6bf@53,52"
+    "d3e9b5b5c9460f07c591f1a1949f5af30b5cf7a2@51,53"
    ]
   },
   "AGB-A8TJ-JPN-mike": {
@@ -13653,12 +13632,6 @@
     "bd61e579105a4d311c5e53d576669b35895c3b39@47,61",
     "cbb7c1a388d90b7b662b58fc1ea03d576d8b1a94@61,60",
     "d0849cdd1995c770fde529e9d3cb4c4d60056b48@64,61"
-   ]
-  },
-  "AGB-APCJ-JPN-ella": {
-   "created": "2026-11-15T19:36:50+01:00",
-   "keys": [
-    "1da88a972285f0d331bc864c0b92fa2dac032ac1@80,12"
    ]
   },
   "AGB-APCJ-JPN-rose": {
@@ -26731,8 +26704,7 @@
     "55b3cb73eafb1f3229ac7683767f0325bc5533f0@31,53",
     "563e6d500e4fe8258ecdd4d422d84d9f99bf6437@25,57",
     "890fba8dc51a2913b7222b5aab312e79a28bd06f@26,60",
-    "a249602ee9b1ada51bc6dd934a6d55fad52c4c32@42,54",
-    "e59f3f7431b6ae0f26902df14d874fd0f003ecf3@37,64"
+    "a249602ee9b1ada51bc6dd934a6d55fad52c4c32@42,54"
    ]
   },
   "CGB-BERP-EUR-gina": {
@@ -28415,12 +28387,6 @@
     "96990880dc9237549b256887121b38fd381b9e2c@61,55"
    ]
   },
-  "CGB-BPEE-USA-ted": {
-   "created": "2026-11-13T13:41:17+01:00",
-   "keys": [
-    "206333430b752484ef54d3fbf3dbf7a3e71fdc08@46,33"
-   ]
-  },
   "CGB-BPEE-USA-vera": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
@@ -29743,7 +29709,6 @@
   "CGB-BY3J-JPN-jack": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
-    "230c4ad304f8fceb54d6c9d2739685518c7d1992@70,56",
     "503e77a27764e55f91df3f08efd2b3edaae7fe18@51,62",
     "f93b372886bb99bbd9293e9ac0674f7951baa741@44,58"
    ]
@@ -30696,8 +30661,7 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "627e516ff2f7e4e96fffc201ce9b0c9c9ae0d247@51,56",
-    "80bacb1ba8fc6a2a9a63db20746b8553d6f5caeb@50,59",
-    "d7b1596fcd534acd6a1500dc784d6d5cf3d7c380@59,75"
+    "80bacb1ba8fc6a2a9a63db20746b8553d6f5caeb@50,59"
    ]
   },
   "DMG-AA7E-USA-ella": {
@@ -37101,6 +37065,13 @@
     "de5db33fdf1558b8169ca660d61146a5d3d71607@46,59"
    ]
   },
+  "DMG-BA-AUS-emma": {
+   "created": "2026-11-16T21:13:04+01:00",
+   "keys": [
+    "a3331cd4bf56831d6174c44c0991a282548dcbb8@49,56"
+   ],
+   "split_from": "DMG-BA-FRG-ann"
+  },
   "DMG-BA-FAH-karl": {
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
@@ -37110,9 +37081,7 @@
   "DMG-BA-FRG-ann": {
    "created": "2026-11-14T10:33:38+01:00",
    "keys": [
-    "26b5902c0327c3c802e583e58320d45e708e216a@48,51",
-    "a3331cd4bf56831d6174c44c0991a282548dcbb8@49,56",
-    "b19dab9999b262311785d7b33237c73ea1d57b17@49,54"
+    "26b5902c0327c3c802e583e58320d45e708e216a@48,51"
    ],
    "split_from": "DMG-BA-USA-dan"
   },
@@ -37129,6 +37098,13 @@
     "8113b2128cc839eafd31d91a5c5d3d1ee1c0c08e@38,55",
     "a6710ddc4228645d9a1dc657581225dffe6c2d3d@53,65"
    ]
+  },
+  "DMG-BA-USA-kim": {
+   "created": "2026-11-16T21:13:04+01:00",
+   "keys": [
+    "b19dab9999b262311785d7b33237c73ea1d57b17@49,54"
+   ],
+   "split_from": "DMG-BA-FRG-ann"
   },
   "DMG-BAA-mary": {
    "created": "2026-11-13T13:41:17+01:00",
@@ -43011,7 +42987,6 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "08fd5354bf77e3312032f71d9a06c16e37fa1fee@30,50",
-    "1c037e88c0f9c3d1992cd0d07db3d1e23cd89d25@60,71",
     "6b1c040160d18dc355b156b6980e5b365098c1f8@32,50",
     "8ceff47a6738c64ac37ef7c90d61c96ad6af4155@36,56",
     "c6d39e3cce75f50ed6ef8dc38a95b54c725b7ac7@34,46"
@@ -47211,7 +47186,6 @@
    "created": "2026-11-13T13:41:17+01:00",
    "keys": [
     "3c2a576d7572910eef55bafff3b189b8e3990101@59,57",
-    "3cb2e9f3d486a344b7d0333288ae17a715d7203c@60,75",
     "64f2e2253dcda665d807500455bf8245fa91f8c7@65,62",
     "717115faaf3346bb3f555749f3f7e26312d0087f@71,62",
     "a934b3911344c26ab54ae71968ba65f382b95b91@64,47",
@@ -47744,12 +47718,6 @@
    "created": "2026-11-13T17:46:37+01:00",
    "keys": [
     "c470ec3aa8b9b1bfe2ef8f25bb54146ab0955e68@87,92"
-   ]
-  },
-  "UNKNOWN-emma-mike": {
-   "created": "2026-11-13T13:41:17+01:00",
-   "keys": [
-    "9fe1955ff5b75591ffc9072c2db5290937b266bb@31,12"
    ]
   },
   "UNKNOWN-eve": {
