@@ -8,6 +8,7 @@
 #     label_photos, frozen, restored_from (the label photos its image was restored from)}}, "label_photos": {key: {print,
 #     serial, source, page_url, image_url, poor_fit}}}. Print ids persist between runs (print-ids.json); keys hold within a run only.
 #   missing.json, unknown-serials.json (read-serials), few-photos.json (prints): the lists, copied as they are.
+#   wanted.html, wanted.json: the prints that need photos (src/wanted.py), linked from index.html.
 #   index.html: per platform (linked from the top, with its image count) every print with an image, by game title,
 #     with its label photos' sources.
 # Prints of a single label photo (poor fits counted) are left out, with their label photo (the user, 2026-11-15).
@@ -18,7 +19,8 @@ import argparse, html, json, os, re, shutil, sys
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import photos, steps, shapes, straighten, frozen
+import photos, steps, shapes, straighten, frozen, wanted
+import prints as prints_step
 import serials as serials_module
 
 SOURCES = "photo-sources.json"
@@ -75,12 +77,14 @@ def main():
     index = {"prints": {}, "label_photos": {}}
     copies = []
     frozen_entries = frozen.load()
-    single = 0
+    single, has_image = 0, set()
     for p in prints["prints"]:
+        name = straighten.file_name(p["id"])
+        if os.path.exists(os.path.join(gen, "restore", name)) or (p.get("frozen") in frozen_entries and os.path.exists(frozen.image_path(p["frozen"]))):
+            has_image.add(p["id"])
         if len(p["keys"]) < 2:  # a single label photo: not published
             single += 1
             continue
-        name = straighten.file_name(p["id"])
         restored = os.path.join(gen, "restore", name)
         desc_file = restored[:-5] + ".json"
         desc = json.load(open(desc_file)) if os.path.exists(desc_file) else {}
@@ -111,9 +115,18 @@ def main():
         if os.path.exists(os.path.join(gen, step, f)):
             shutil.copyfile(os.path.join(gen, step, f), os.path.join(out_dir, f))
     steps.write_json(os.path.join(out_dir, "index.json"), index)
-    page(out_dir, index)
+    differences = {}
+    for name, tiles in prints_step.load_pairs(os.path.join(gen, "prints", "pairs.npz"), prints_step.comparison_version()).items():
+        a, b = name.split("|")[:2]
+        differences[a, b] = differences[b, a] = int(tiles.sum())
+    releases = {r["id"]: r for r in json.load(open(serials_module.DATABASE))}
+    wanted_list = wanted.entries(prints["prints"], has_image, solved, serials, releases, src, differences)
+    steps.write_json(os.path.join(out_dir, "wanted.json"), wanted_list)
+    wanted.page(out_dir, wanted_list)
+    page(out_dir, index, len(wanted_list))
     print(f"{single} prints of a single label photo left out")
     print(f"{len(copies)} prints, {len(index['label_photos'])} label photos listed ({len(poor & set(index['label_photos']))} poor fits)")
+    print(f"{len(wanted_list)} prints wanted (wanted.html)")
     print(f"page: {os.path.join(out_dir, 'index.html')}")
 
 
@@ -121,7 +134,7 @@ PLATFORMS = [("dmg", "Game Boy"), ("cgb", "Game Boy Color"), ("agb", "Game Boy A
 MIN_COLUMN = 260  # px: the grid's columns at least this wide, as many as fit, stretched to the page's width
 
 
-def page(out_dir, index):
+def page(out_dir, index, wanted_count):
     """index.html: per platform (linked from the top, with its image count) the prints with an image, by game title
     (prints without one last, by serial), in a grid of as many columns as fit (MIN_COLUMN); each image at most half
     its pixel width wide, so it shows at 2x pixel density or more."""
@@ -151,6 +164,7 @@ def page(out_dir, index):
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax({MIN_COLUMN}px,1fr));gap:16px;align-items:start}}
 figure{{margin:0;min-width:0}} figure img{{display:block;width:100%;height:auto;margin:0 auto}} figcaption{{font-size:12px;margin:4px 0}}
 .src{{font-size:11px;color:#bbb;margin-top:2px}} .poor{{color:#fa0}} a{{color:#9cf}} h2{{margin-top:32px}}</style>
+<p><a href="wanted.html">Wanted photos</a>: {wanted_count} labels that need a photo or two more</p>
 <ul>{"".join(links)}</ul>
 {"".join(sections)}""")
 

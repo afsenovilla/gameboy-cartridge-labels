@@ -64,7 +64,8 @@
 #
 #   make publish
 #   Not in make all: the outputs collected into a temporary work tree of the gh-pages branch: prints/ (the restored
-#   prints), index.json (source and URLs from photo-sources.json), the lists and the page index.html; committed there
+#   prints), index.json (source and URLs from photo-sources.json), the lists, the page index.html and wanted.html (the
+#   prints a photo or two short of an image, best chances first: src/wanted.py); committed there
 #   (replacing all it held) and pushed to origin (publish.sh, src/publish.py). Needs make restore.
 #
 #   make refreeze [ID=DMG-TS-USA-mike]
