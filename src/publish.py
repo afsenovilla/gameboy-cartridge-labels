@@ -1,4 +1,4 @@
-# publish: the outputs collected into <generated>/publish/:
+# publish: the outputs collected into the folder given (publish.sh: a temporary work tree of the gh-pages branch):
 #   prints/<print>.avif: each restored print, restore's image as it is (paper white where found, else median colours),
 #     named by the print's persistent id (it starts with the serial: DMG-APSJ-JPN-lisa.avif)
 #   No label photo images (the user, 2026-11-10: the straightened photos aren't worth distributing, over 1 GB): each
@@ -12,9 +12,8 @@
 #     with its label photos' sources.
 # Prints of a single label photo (poor fits counted) are left out, with their label photo (the user, 2026-11-15).
 # The source and URLs come from photo-sources.json (by SHA-1): for output only, never read by a detection step.
-# A print's image is copied again when it's missing or older than restore's; files of prints no longer there are
-# removed, and the label-photos/ folder an older version wrote.
-# Usage: publish.py [--sample]
+# The folder starts empty (publish.sh), so every file is written anew.
+# Usage: publish.py [--sample] OUT
 import argparse, html, json, os, re, shutil, sys
 import cv2
 
@@ -52,14 +51,11 @@ def poor_fits(solved):
     return {k for k, r in solved.items() if solve_step.poor_fit(r)}
 
 
-def newer(out, *ins):
-    return os.path.exists(out) and all(os.path.getmtime(out) >= os.path.getmtime(i) for i in ins)
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true")
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("out", help="the folder to write to")
     args = ap.parse_args()
     gen = photos.generated(args.sample)
     need = [os.path.join(gen, "prints", "prints.json"), os.path.join(gen, "solve", "solve.json"),
@@ -73,10 +69,8 @@ def main():
     src = sources()
     titles = {r["id"]: r["title"] for r in json.load(open(serials_module.DATABASE))}
     poor = poor_fits(solved)
-    out_dir = os.path.join(gen, "publish")
+    out_dir = args.out
     os.makedirs(os.path.join(out_dir, "prints"), exist_ok=True)
-    if os.path.isdir(os.path.join(out_dir, "label-photos")):  # written by an older version
-        shutil.rmtree(os.path.join(out_dir, "label-photos"))
 
     index = {"prints": {}, "label_photos": {}}
     copies = []
@@ -111,14 +105,8 @@ def main():
                                         "source": s.get("source"), "page_url": s.get("page_url"),
                                         "image_url": s.get("image_url"), "poor_fit": k in poor}
 
-    wanted = {os.path.basename(b) for _, b in copies}
-    for f in os.listdir(os.path.join(out_dir, "prints")):
-        if f not in wanted:
-            os.remove(os.path.join(out_dir, "prints", f))
     for a, b in copies:
-        if not newer(b, a):
-            shutil.copyfile(a, b + ".tmp")
-            os.replace(b + ".tmp", b)
+        shutil.copyfile(a, b)
     for step, f in LISTS:
         if os.path.exists(os.path.join(gen, step, f)):
             shutil.copyfile(os.path.join(gen, step, f), os.path.join(out_dir, f))
