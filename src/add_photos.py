@@ -24,7 +24,7 @@ import photos  # noqa: E402
 
 DROP_OFF = "save-new-images-here"
 SOURCES = "photo-sources.json"
-KEEP = {"README.md", "listing.json", ".DS_Store"}
+KEEP = {"README.md", "listing.json", ".DS_Store", "Thumbs.db", "desktop.ini"}
 
 
 def sha1(path):
@@ -44,6 +44,8 @@ def save(path, data):
 
 
 def main():
+    os.makedirs(photos.ROOT, exist_ok=True)
+    os.makedirs(DROP_OFF, exist_ok=True)
     sources = json.load(open(SOURCES, encoding="utf-8")) if os.path.exists(SOURCES) else {}
     have = photos.all_photos()
     added, duplicates, left = 0, 0, []
@@ -81,7 +83,7 @@ def main():
                 save(listing_path, listing)
             elif os.path.exists(listing_path):
                 os.remove(listing_path)
-            rest = [f for f in os.listdir(folder) if f != ".DS_Store"]
+            rest = [f for f in os.listdir(folder) if f not in KEEP - {"README.md", "listing.json"}]
             if not rest:
                 shutil.rmtree(folder)
     save(SOURCES, sources)

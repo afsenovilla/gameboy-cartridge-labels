@@ -56,3 +56,7 @@ def test_delete_writes_utf8_and_lf(tmp_path):
     photos.delete("abc", root=str(tmp_path), sources_file=str(sources))
     raw = sources.read_bytes()
     assert b"\r" not in raw and "ポケモン é".encode() in raw
+
+
+def test_no_photos_folder_yet_means_no_photos(tmp_path):
+    assert photos.all_photos(str(tmp_path / "photos")) == {}

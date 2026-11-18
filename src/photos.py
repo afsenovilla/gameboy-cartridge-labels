@@ -11,7 +11,9 @@ EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".avif", ".heic", ".heif")
 
 
 def all_photos(root=ROOT):
-    """SHA-1 -> path, for every photo in root."""
+    """SHA-1 -> path, for every photo in root (none if there is no such folder yet)."""
+    if not os.path.isdir(root):
+        return {}
     return {os.path.splitext(f)[0]: os.path.join(root, f) for f in sorted(os.listdir(root))
             if f.lower().endswith(EXTENSIONS)}
 
