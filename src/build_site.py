@@ -86,7 +86,7 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .rep[hidden]{display:none}
 .rep label{display:flex;gap:8px;align-items:center;font-size:14px}
 .rep input[type=checkbox]{width:16px;height:16px;accent-color:var(--on)}
-.rep textarea{width:100%;min-height:64px;resize:vertical;border:1.5px solid var(--ink);border-radius:6px;background:var(--page);color:var(--ink);font:14px var(--font);padding:8px}
+.rep textarea{width:100%;min-height:64px;resize:none;overflow:hidden;border:1.5px solid var(--ink);border-radius:6px;background:var(--page);color:var(--ink);font:14px var(--font);padding:8px}
 .rep .row{display:flex;gap:8px;flex-wrap:wrap}
 .rep button,.rep a,#reports button,#reports a{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:8px 12px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
 .rep button.main,#reports button.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
@@ -361,11 +361,12 @@ function issueLink() {  // the new-issue link carries what is ticked and typed n
   const body = info.map(([k, v]) => "**" + k + ":** " + v).join("\n") + "\n\n**What's wrong:** " + (reasons.join("; ") || "not specified") + "\n\n**More info:** " + (note || "none") + "\n";
   $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body);
 }
-$("rep").addEventListener("input", () => { if (ISSUES) issueLink(); });
+const grow = () => { $("note").style.height = "auto"; $("note").style.height = $("note").scrollHeight + 2 + "px"; };
+$("rep").addEventListener("input", () => { grow(); if (ISSUES) issueLink(); });
 function openReportForm() {
   const l = shown[current].labels[inGroup], r = reports[l.id];
   $("reasons").querySelectorAll("input").forEach(c => c.checked = !!r && r.reasons.includes(c.value));
-  $("note").value = r ? r.note : ""; $("rep-remove").hidden = !r; $("rep").hidden = false;
+  $("note").value = r ? r.note : ""; $("rep-remove").hidden = !r; $("rep").hidden = false; grow();
   if (ISSUES) { $("rep-issue").hidden = false; issueLink(); }
   $("reasons").querySelector("input").focus();
 }
