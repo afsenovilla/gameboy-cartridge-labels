@@ -27,13 +27,14 @@ def fetch(url, tries=4):
 
 
 def listing(index, system=None):
-    """[{id, serial, release, title, system, image}] of the prints that have an image."""
+    """[{id, serial, release, title, system, image, size, photos}] of the prints that have an image."""
     out = []
     for pid, p in sorted(index["prints"].items()):
         if not p.get("image") or (system and p.get("shape") != system):
             continue
         out.append({"id": pid, "serial": p.get("serial"), "release": p.get("release"), "title": p.get("title"),
-                    "system": p.get("shape"), "image": p["image"]})
+                    "system": p.get("shape"), "image": p["image"], "size": p.get("size"),
+                    "photos": len(p.get("label_photos") or [])})
     return out
 
 
