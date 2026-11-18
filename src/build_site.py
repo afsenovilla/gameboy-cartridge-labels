@@ -1,7 +1,10 @@
 # A page for browsing the downloaded labels: published-labels/index.html (made by download_published.py), one file with
 # its data inside, opened from the folder in a browser: search, system and region filters, sorting, pages, a viewer.
 #
-#   python run.py py src/build_site.py [folder]
+#   python run.py py src/build_site.py [folder] [--issues https://github.com/owner/repo]
+#
+# Each label has a "Report a problem" button: reports are kept in the browser (localStorage) and exported as JSON or CSV.
+# With --issues, the report form also offers a prefilled new-issue page of that repository.
 import html, json, os, sys
 
 FOLDER = "published-labels"
@@ -74,6 +77,22 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .thumbs button{width:64px;padding:0;border:2px solid transparent;border-radius:4px;background:var(--well);cursor:pointer;overflow:hidden}
 .thumbs button[aria-current=true]{border-color:var(--on)}
 .thumbs img{display:block;width:100%;height:auto;max-height:64px;object-fit:contain}
+.flag{position:absolute;z-index:3;left:8px;top:8px;background:#b3261e;color:#fff;border-radius:5px;padding:2px 8px;font:700 12px var(--font)}
+.rep{display:flex;flex-direction:column;gap:8px;border:1.5px solid var(--line);border-radius:8px;padding:12px}
+.rep[hidden]{display:none}
+.rep label{display:flex;gap:8px;align-items:center;font-size:14px}
+.rep input[type=checkbox]{width:16px;height:16px;accent-color:var(--on)}
+.rep textarea{width:100%;min-height:64px;resize:vertical;border:1.5px solid var(--ink);border-radius:6px;background:var(--page);color:var(--ink);font:14px var(--font);padding:8px}
+.rep .row{display:flex;gap:8px;flex-wrap:wrap}
+.rep button,.rep a,#reports button,#reports a{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:8px 12px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
+.rep button.main,#reports button.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
+#reports{width:min(720px,94vw)}
+#reports .in{padding:22px;display:flex;flex-direction:column;gap:14px}
+#reports h2{margin:0;font:750 22px var(--font)}
+#reports ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+#reports li{border-bottom:1px solid var(--line);padding-bottom:10px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+#reports li small{display:block;color:var(--muted)}
+.opt[hidden]{display:none}
 .opt{display:inline-flex;gap:8px;align-items:center;color:var(--ink);font-weight:600;cursor:pointer}
 .opt input{width:17px;height:17px;accent-color:var(--on)}
 .item span.s{display:block;color:var(--muted);font-size:13px;margin-top:2px}
@@ -120,7 +139,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="az" id="az" role="group" aria-label="Starts with"></div>
 </div>
 <main>
-  <div class="meta"><span id="range"></span><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></div>
+  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><button type="button" id="open-reports" class="opt" hidden style="border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:6px 12px;font:600 14px var(--font)"></button><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty" hidden>No labels match. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
   <nav class="pages" id="pages" aria-label="Pages"></nav>
@@ -131,13 +150,25 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="info">
     <h2 id="vtitle"></h2>
     <dl id="vdl"></dl>
-    <div class="acts"><button id="prev">Previous game</button><button id="next">Next game</button><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
+    <form class="rep" id="rep" hidden>
+      <strong>What's wrong with this label?</strong>
+      <div id="reasons"></div>
+      <textarea id="note" placeholder="Anything else? (optional)" aria-label="Details"></textarea>
+      <div class="row"><button type="submit" class="main">Save report</button><button type="button" id="rep-cancel">Cancel</button><button type="button" id="rep-remove" hidden>Remove report</button><a id="rep-issue" target="_blank" rel="noopener" hidden>Open as GitHub issue</a></div>
+    </form>
+    <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
   </div>
+</div></dialog>
+<dialog id="reports"><div class="in">
+  <h2>Your reports</h2><ul id="rlist"></ul>
+  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="main" id="exp-json">Download JSON</button><button id="exp-csv">Download CSV</button><button id="rclose">Close</button></div>
 </div></dialog>
 <script type="application/json" id="data">__DATA__</script>
 <script>
 const LABELS = JSON.parse(document.getElementById("data").textContent);
 const FOLDER = "__FOLDER__";
+const ISSUES = "__ISSUES__";
+const REASONS = ["Blurry or low resolution", "Glare or reflections", "Dirt, scratches or damage", "Crooked or badly cropped", "Wrong colours", "Wrong title or serial", "Not a label", "Other"];
 const SYSTEMS = [["", "All"], ["dmg", "Game Boy"], ["cgb", "Game Boy Color"], ["agb", "Game Boy Advance"]];
 const SYSTEM_NAME = {dmg: "Game Boy", cgb: "Game Boy Color", agb: "Game Boy Advance"};
 const PER_PAGE = 48;
@@ -226,7 +257,7 @@ function update(push) {
     const regions = [...new Set(g.labels.map(x => x.region === "other" ? "—" : x.region))].join(", ");
     a.innerHTML = '<span class="stackwrap">' + behind + '<span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
       '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + encodeURIComponent(l.file) + '"></span>' +
-      (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
+      (g.labels.some(x => reports[x.id]) ? '<span class="flag">Reported</span>' : "") + (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
       '</b><span class="s">' + esc(many ? regions : l.serial) + "</span>";
     a.onclick = e => { e.preventDefault(); openView(from + i); };
     $("grid").append(a);
@@ -253,6 +284,38 @@ function paging(pages) {
   }
   add("Next", state.p + 1, {disabled: state.p === pages, nav: true});
 }
+let reports = {};
+try { reports = JSON.parse(localStorage.getItem("label-reports") || "{}"); } catch (e) { reports = {}; }
+function saveReports() { try { localStorage.setItem("label-reports", JSON.stringify(reports)); } catch (e) {} refreshReports(); }
+function refreshReports() { const n = Object.keys(reports).length; $("open-reports").hidden = !n; $("open-reports").textContent = "Your reports (" + n + ")"; }
+function download(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+function openReports() {
+  const items = Object.values(reports);
+  $("rlist").innerHTML = items.map(r => '<li><div><b>' + esc(r.title) + "</b> " + esc(r.serial) + "<small>" + esc(r.reasons.join(", ")) + (r.note ? " — " + esc(r.note) : "") +
+    '</small></div><button data-id="' + esc(r.id) + '">Remove</button></li>').join("") || "<li>No reports yet.</li>";
+  $("rlist").querySelectorAll("button").forEach(b => b.onclick = () => { delete reports[b.dataset.id]; saveReports(); update(false); openReports(); if (!Object.keys(reports).length) $("reports").close(); });
+  if (!$("reports").open) $("reports").showModal();
+}
+$("open-reports").onclick = openReports; $("rclose").onclick = () => $("reports").close();
+$("exp-json").onclick = () => download("label-reports.json", JSON.stringify(Object.values(reports), null, 1), "application/json");
+$("exp-csv").onclick = () => { const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  download("label-reports.csv", "\ufeffid,serial,title,reasons,note,date\n" + Object.values(reports).map(r => [r.id, r.serial, r.title, r.reasons.join("; "), r.note, r.date].map(q).join(",")).join("\n"), "text/csv"); };
+$("reasons").innerHTML = REASONS.map((r, i) => '<label><input type="checkbox" value="' + esc(r) + '"> ' + esc(r) + "</label>").join("");
+function openReportForm() {
+  const l = shown[current].labels[inGroup], r = reports[l.id];
+  $("reasons").querySelectorAll("input").forEach(c => c.checked = !!r && r.reasons.includes(c.value));
+  $("note").value = r ? r.note : ""; $("rep-remove").hidden = !r; $("rep").hidden = false;
+  if (ISSUES) { const body = "Label: " + l.title + "\nSerial: " + l.serial + "\nImage: " + l.file + "\n"; $("rep-issue").hidden = false;
+    $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body + "\nProblem: "); }
+  $("reasons").querySelector("input").focus();
+}
+$("report").onclick = openReportForm; $("rep-cancel").onclick = () => { $("rep").hidden = true; };
+$("rep").onsubmit = e => { e.preventDefault(); const l = shown[current].labels[inGroup];
+  const reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
+  if (!reasons.length && !note) { $("reasons").querySelector("input").focus(); return; }
+  reports[l.id] = {id: l.id, serial: l.serial, title: l.title, file: l.file, reasons, note, date: new Date().toISOString()};
+  saveReports(); $("rep").hidden = true; $("report").textContent = "Reported (edit)"; update(false); };
+$("rep-remove").onclick = () => { const l = shown[current].labels[inGroup]; delete reports[l.id]; saveReports(); $("rep").hidden = true; $("report").textContent = "Report a problem"; update(false); };
 let current = -1, inGroup = 0;
 function openView(i, k = 0) {
   if (i < 0 || i >= shown.length) return;
@@ -271,6 +334,7 @@ function openView(i, k = 0) {
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file;
+  $("rep").hidden = true; $("report").textContent = reports[l.id] ? "Reported (edit)" : "Report a problem";
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
 }
@@ -284,6 +348,7 @@ $("stack").onchange = e => { state.g = e.target.checked ? "1" : "0"; state.p = 1
 $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true); };
 $("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: "title", p: 1}; update(true); };
 addEventListener("hashchange", () => { readHash(); update(false); });
+refreshReports();
 readHash(); update(false);
 </script>
 </body>
@@ -291,7 +356,7 @@ readHash(); update(false);
 """
 
 
-def build(folder=FOLDER):
+def build(folder=FOLDER, issues=""):
     with open(os.path.join(folder, "labels.json"), encoding="utf-8") as f:
         labels = json.load(f)
     for l in labels:  # a release with no title in the database shows under its serial
@@ -302,7 +367,7 @@ def build(folder=FOLDER):
                        for l in labels], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__CREDIT__", credit).replace("__FOLDER__", ".").replace("__DATA__", data)
+    page = PAGE.replace("__CREDIT__", credit).replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__DATA__", data)
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
@@ -310,5 +375,8 @@ def build(folder=FOLDER):
 
 
 if __name__ == "__main__":
-    out, n = build(sys.argv[1] if len(sys.argv) > 1 else FOLDER)
+    args = sys.argv[1:]
+    issues = args[args.index("--issues") + 1] if "--issues" in args else ""
+    folders = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i - 1] != "--issues")]
+    out, n = build(folders[0] if folders else FOLDER, issues)
     print(n, "labels:", os.path.abspath(out))
