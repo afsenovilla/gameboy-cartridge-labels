@@ -43,12 +43,32 @@ def pil_open(path):
 
 
 def imread(path):
-    """cv2.imread, from the file's bytes: OpenCV can't open a path with non-ASCII characters on Windows. None if the file
-    can't be read or decoded."""
+    """cv2.imread, from the file's bytes: OpenCV can't open a path with non-ASCII characters on Windows. A format
+    OpenCV's build can't decode (AVIF in the Windows wheel) through Pillow. None if the file can't be read."""
     try:
-        return cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
     except OSError:
         return None
+    if img is None and path.lower().endswith((".avif", ".webp")):
+        try:
+            from PIL import ImageOps
+            with pil_open(path) as pil:
+                img = cv2.cvtColor(np.asarray(ImageOps.exif_transpose(pil).convert("RGB")), cv2.COLOR_RGB2BGR)
+        except Exception:
+            return None
+    return img
+
+
+def write_avif(path, img, quality):
+    """An 8-bit BGR image as an AVIF file: with OpenCV, or with Pillow where OpenCV's build has no AVIF writer (the
+    Windows wheel). path must end in .avif."""
+    try:
+        if cv2.imwrite(path, img, [cv2.IMWRITE_AVIF_QUALITY, quality]):
+            return
+    except cv2.error:
+        pass
+    from PIL import Image
+    Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)).save(path, format="AVIF", quality=quality)
 
 
 def load(path):

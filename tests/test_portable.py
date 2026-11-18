@@ -77,3 +77,14 @@ def test_imread_reads_a_file_with_a_japanese_name(tmp_path):
     cv2.imencode(".png", np.full((10, 20, 3), 5, np.uint8))[1].tofile(path)
     assert photos.imread(path).shape == (10, 20, 3)
     assert photos.imread(str(tmp_path / "nothing.png")) is None
+
+
+def test_avif_round_trip_also_without_an_opencv_avif_writer(tmp_path, monkeypatch):
+    img = np.random.default_rng(0).integers(0, 255, (40, 60, 3), dtype=np.uint8)
+    path = str(tmp_path / "a.avif")
+    photos.write_avif(path, img, 90)
+    assert photos.imread(path).shape == (40, 60, 3)
+    monkeypatch.setattr(cv2, "imwrite", lambda *a, **k: (_ for _ in ()).throw(cv2.error("no writer")))
+    path2 = str(tmp_path / "b.avif")
+    photos.write_avif(path2, img, 90)
+    assert photos.imread(path2).shape == (40, 60, 3)

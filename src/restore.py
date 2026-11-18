@@ -315,7 +315,7 @@ def canonical_crop(shape):
 
 def write_avif(path, img):
     tmp = path + ".tmp.avif"
-    cv2.imwrite(tmp, (np.clip(img, 0, 1) * 255).round().astype(np.uint8), [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
+    photos.write_avif(tmp, (np.clip(img, 0, 1) * 255).round().astype(np.uint8), QUALITY)
     os.replace(tmp, path)
 
 

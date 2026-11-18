@@ -75,7 +75,7 @@ def do_one(job):
             return key
         img = straightened(photo, r["photo_to_ink"], r["shape"])
         tmp = out + ".tmp.avif"
-        cv2.imwrite(tmp, img, [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
+        photos.write_avif(tmp, img, QUALITY)
         os.replace(tmp, out)
     img = photos.imread(out)
     if img is not None:
