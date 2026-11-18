@@ -217,7 +217,7 @@ def page(out_dir, chosen):
     rel = os.path.relpath(".", out_dir)
     img = lambda s: f'<a href="{rel}/{chosen[s]}"><img loading="lazy" src="{rel}/{chosen[s]}"></a>'
     weakest = steps.few(sorted(matches, key=lambda m: len(m[3])))
-    with open(os.path.join(out_dir, "index.html"), "w") as f:
+    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(f"""<!doctype html><meta charset="utf-8"><title>match</title>
 <style>body{{font:14px system-ui;margin:16px}} img{{max-width:200px;max-height:200px}} td{{vertical-align:top;padding:4px 8px;border-top:1px solid #ccc}}</style>
 <h1>match</h1>
@@ -247,7 +247,7 @@ def main():
     if not os.path.exists(version_file):
         # the files from before the fingerprint (2026-11-12) were made by this matching: kept
         steps.write_json(version_file, {"version": current})
-    if json.load(open(version_file)).get("version") != current:
+    if json.load(open(version_file, encoding="utf-8")).get("version") != current:
         for s in chosen:  # the matching changed: pairs may move between files, so all are redone
             if os.path.exists(out(s)):
                 os.remove(out(s))

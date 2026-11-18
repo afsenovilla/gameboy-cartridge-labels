@@ -92,7 +92,7 @@ def detections(gen, chosen, workers=8, folder=DETAILS):
     jobs = [(s, os.path.join(gen, "features", s + ".npz"), out(s)) for s in chosen
             if not os.path.exists(out(s)) or os.path.getmtime(out(s)) < newest]
     steps.run(detect_photo, jobs, workers, what="details searched in")
-    return {s: json.load(open(out(s))) for s in chosen}
+    return {s: json.load(open(out(s), encoding="utf-8")) for s in chosen}
 
 
 # Details at one place on every label of their shape (details/places.json): such a detail, found, places the whole label.
@@ -102,7 +102,7 @@ PLACES = "places.json"
 def load_places(folder=DETAILS):
     """Detail name -> {"shape", "centre_mm"}."""
     path = os.path.join(folder, PLACES)
-    return json.load(open(path))["places"] if os.path.exists(path) else {}
+    return json.load(open(path, encoding="utf-8"))["places"] if os.path.exists(path) else {}
 
 
 def label_mm_to_detail_px(centre_mm, detail_size):

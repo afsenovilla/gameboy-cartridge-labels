@@ -1,8 +1,9 @@
 # photos/: every photo, named by its SHA-1 (<sha1>.<ext>), never re-encoded. Which photos a run works on (all of
 # photos/, or the sample in sample.txt) and where its output goes (generated/ or generated-sample/), and loading a photo
 # the way every step sees it: upright (its EXIF turn applied), as BGR pixels.
-import os, subprocess, tempfile
+import os
 import cv2
+import numpy as np
 
 ROOT = "photos"
 SAMPLE = "sample.txt"
@@ -20,7 +21,7 @@ def chosen(sample=False, root=ROOT, sample_file=SAMPLE):
     photos = all_photos(root)
     if not sample:
         return photos
-    return {s: photos[s] for s in open(sample_file).read().split() if s in photos}
+    return {s: photos[s] for s in open(sample_file, encoding="utf-8").read().split() if s in photos}
 
 
 def generated(sample=False):
@@ -28,29 +29,53 @@ def generated(sample=False):
     return "generated-sample" if sample else "generated"
 
 
+def pil_open(path):
+    """A PIL image of the file, with HEIC/HEIF support if pillow-heif is installed."""
+    from PIL import Image
+    try:
+        import pillow_heif
+        pillow_heif.register_heif_opener()
+    except ImportError:
+        pass
+    return Image.open(path)
+
+
 def load(path):
-    """The photo, upright (OpenCV applies the EXIF orientation); formats OpenCV can't read (HEIC) through a JPEG copy
-    made by macOS's sips. None if it can't be read."""
-    photo = cv2.imread(path)
+    """The photo, upright (OpenCV applies the EXIF orientation), as BGR pixels; formats OpenCV can't read (HEIC) through
+    Pillow + pillow-heif. Read from bytes, as cv2.imread can't open paths with non-ASCII characters on Windows. None if
+    it can't be read."""
+    try:
+        photo = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+    except OSError:
+        return None
     if photo is None:
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = os.path.join(tmp, "photo.jpg")
-            done = subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "95", path, "--out", copy],
-                                  capture_output=True)
-            if done.returncode == 0:
-                photo = cv2.imread(copy)
+        try:
+            from PIL import ImageOps
+            with pil_open(path) as img:
+                rgb = np.asarray(ImageOps.exif_transpose(img).convert("RGB"))
+            photo = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        except Exception:
+            return None
     return photo
 
 
 def delete(sha1, root=ROOT, sources_file="photo-sources.json"):
     """Deletes a photo from photos/: its file and its record in photo-sources.json."""
     os.remove(all_photos(root)[sha1])
-    import json
+    import json, time
     if os.path.exists(sources_file):
-        sources = json.load(open(sources_file))
+        with open(sources_file, encoding="utf-8") as f:
+            sources = json.load(f)
         if sources.pop(sha1, None) is not None:
             tmp = sources_file + ".tmp"
-            with open(tmp, "w") as f:
+            with open(tmp, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(sources, f, indent=1, ensure_ascii=False, sort_keys=True)
                 f.write("\n")
-            os.replace(tmp, sources_file)
+            for attempt in range(10):  # Windows refuses to replace a file another program has open; retry briefly
+                try:
+                    os.replace(tmp, sources_file)
+                    break
+                except PermissionError:
+                    if attempt == 9:
+                        raise
+                    time.sleep(0.2)

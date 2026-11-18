@@ -53,7 +53,7 @@ def crop_of(pid, frozen_prints):
     if e:
         return e["crop"]
     path = restored(pid) + ".json"
-    return json.load(open(path))["crop"] if os.path.exists(path) else None
+    return json.load(open(path, encoding="utf-8"))["crop"] if os.path.exists(path) else None
 
 
 def unused(all_photos, found, solved):
@@ -93,11 +93,11 @@ class Tool:
         say = lambda m: print(m, flush=True)
         say("loading photos/, find's, solve's and prints' results")
         self.photos = photos.all_photos()
-        self.ok = json.load(open(OK_FILE)) if os.path.exists(OK_FILE) else {}
-        self.marks = json.load(open(MARKS_FILE)) if os.path.exists(MARKS_FILE) else {}
-        found = json.load(open(os.path.join(GEN, "find", "label-photos.json")))["label_photos"]
-        prints = json.load(open(os.path.join(GEN, "prints", "prints.json")))["prints"]
-        solved = json.load(open(os.path.join(GEN, "solve", "solve.json")))["label_photos"]
+        self.ok = json.load(open(OK_FILE, encoding="utf-8")) if os.path.exists(OK_FILE) else {}
+        self.marks = json.load(open(MARKS_FILE, encoding="utf-8")) if os.path.exists(MARKS_FILE) else {}
+        found = json.load(open(os.path.join(GEN, "find", "label-photos.json"), encoding="utf-8"))["label_photos"]
+        prints = json.load(open(os.path.join(GEN, "prints", "prints.json"), encoding="utf-8"))["prints"]
+        solved = json.load(open(os.path.join(GEN, "solve", "solve.json"), encoding="utf-8"))["label_photos"]
         self.solved, self.found_outlines = solved, {lp["key"]: lp["outline"] for lp in found}
         self.prints_json = {p["id"]: p for p in prints}
         self.why = unused(self.photos, found, solved)
