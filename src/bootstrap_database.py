@@ -12,9 +12,11 @@ def releases_of(index):
     """[{id, gameId, title, system, cartridgeSerials}] from the prints of an index.json."""
     out = {}
     for p in index["prints"].values():
+        if not p.get("release") or not p.get("shape"):  # a print not matched to a release yet
+            continue
         r = out.setdefault(p["release"], {"id": p["release"], "gameId": p["release"], "title": p.get("title") or "",
                                           "system": p["shape"], "cartridgeSerials": []})
-        if p["serial"] != p["release"] and p["serial"] not in r["cartridgeSerials"]:
+        if p.get("serial") and p["serial"] != p["release"] and p["serial"] not in r["cartridgeSerials"]:
             r["cartridgeSerials"].append(p["serial"])
     return sorted(out.values(), key=lambda r: r["id"])
 
