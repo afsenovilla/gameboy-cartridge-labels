@@ -361,7 +361,7 @@ let current = -1, inGroup = 0;
 // the label is an <img> placed over the cartridge's label recess with a CSS matrix3d that follows the same camera.
 // (A WebGL texture would need the image to be readable by script, which a page opened from a folder can't do.)
 const CART = (() => { const el = document.getElementById("cart-data"); try { return el ? JSON.parse(el.textContent) : null; } catch (e) { return null; } })();
-const PX_PER_MM = 20, COLORS = {dmg: [0.80, 0.79, 0.75], cgb: [0.24, 0.24, 0.27]};
+const PX_PER_MM = 20, COLORS = {dmg: [0.64, 0.64, 0.61], cgb: [0.24, 0.24, 0.27]};
 let three = false, gl = null, G = null, spin = {rx: -12, ry: -28, drag: null, raf: 0, touched: false};
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const m4 = {
