@@ -110,6 +110,16 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 .view{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(240px,1fr)}
 .view .big{background:var(--well);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .view .big img{max-width:100%;max-height:78vh;height:auto;display:block}
+.view .big img[hidden]{display:none}
+.tdbtn{margin-top:14px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:7px 14px;font:600 14px var(--font);cursor:pointer}
+.tdbtn[aria-pressed=true]{background:var(--ink);color:var(--page)}
+.scene{width:100%;height:min(70vh,520px);display:flex;align-items:center;justify-content:center;perspective:1200px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 16px 14px rgba(0,0,0,.35))}
+.scene[hidden]{display:none}
+.scene:active{cursor:grabbing}
+.cart{position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx)) rotateY(var(--ry))}
+.cart .slice{position:absolute;left:0;top:0;width:100%;height:100%}
+.cart .lab{position:absolute;display:block;box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+.cart .hint{position:absolute;left:0;right:0;top:100%;margin-top:34px;text-align:center;font:500 13px var(--font);color:var(--muted)}
 .view .info{padding:22px;display:flex;flex-direction:column;gap:14px}
 .view h2{margin:0;font:750 22px/1.15 var(--font);letter-spacing:-.01em}
 .view dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
@@ -167,7 +177,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 </main>
 <footer>__CREDIT__</footer>
 <dialog id="view"><div class="view">
-  <div class="big"><img id="vimg" alt=""><div class="thumbs" id="thumbs"></div></div>
+  <div class="big"><img id="vimg" alt=""><div class="scene" id="scene" hidden></div><button type="button" class="tdbtn" id="v3d" aria-pressed="false">View on a cartridge</button><div class="thumbs" id="thumbs"></div></div>
   <div class="info">
     <h2 id="vtitle"></h2>
     <dl id="vdl"></dl>
@@ -347,6 +357,42 @@ function openReportForm() {
 $("report").onclick = openReportForm; $("rep-cancel").onclick = () => { $("rep").hidden = true; };
 $("rep-issue").onclick = e => { if (!$("reasons").querySelector("input:checked") && !$("note").value.trim()) { e.preventDefault(); $("reasons").querySelector("input").focus(); } };
 let current = -1, inGroup = 0;
+// The label on a cartridge you can turn: the shell is a stack of 1 px slices (CSS 3D, no library), the label on its front.
+// Sizes in mm (the prints are at 20 px per mm); the shapes are close, not exact.
+const SHELL = {
+  dmg: {w: 58, h: 65, color: [172, 171, 162], clip: "polygon(0 0,100% 0,100% 82%,91% 100%,9% 100%,0 82%)", top: 6},
+  cgb: {w: 58, h: 65, color: [62, 62, 68], clip: "polygon(0 0,89% 0,100% 11%,100% 82%,91% 100%,9% 100%,0 82%)", top: 6},
+  agb: {w: 35, h: 65, color: [169, 169, 174], clip: "polygon(0 0,100% 0,100% 90%,86% 100%,14% 100%,0 90%)", top: 5},
+};
+const PX_PER_MM = 20, DEPTH_MM = 7.5, SCALE = 5;
+let three = false, spin = {rx: -12, ry: -28, drag: null, raf: 0};
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function buildScene(l) {
+  const sh = SHELL[l.system] || SHELL.dmg, W = Math.round(sh.w * SCALE), H = Math.round(sh.h * SCALE), D = Math.round(DEPTH_MM * SCALE);
+  let lw = (l.size ? l.size[0] : 800) / PX_PER_MM, lh = (l.size ? l.size[1] : 700) / PX_PER_MM;
+  const fit = Math.min(1, sh.w * 0.94 / lw); lw *= fit; lh *= fit;
+  const slices = [];
+  for (let i = 0; i < D; i++) {
+    const edge = Math.min(i, D - 1 - i) / (D / 2), k = 0.72 + 0.2 * edge, c = sh.color.map(v => Math.round(v * k));
+    slices.push('<div class="slice" style="clip-path:' + sh.clip + ";background:rgb(" + c + ");transform:translateZ(" + (i - D / 2) + 'px)"></div>');
+  }
+  const front = '<div class="slice" style="clip-path:' + sh.clip + ";background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(0,0,0,.14)),rgb(" + sh.color +
+    ");transform:translateZ(" + D / 2 + 'px)"><img class="lab" alt="" src="' + FOLDER + "/" + enc(l.file) + '" style="left:' + (W - lw * SCALE) / 2 + "px;top:" + sh.top * SCALE +
+    "px;width:" + lw * SCALE + "px;height:" + lh * SCALE + 'px"></div>';
+  $("scene").innerHTML = '<div class="cart" id="cart" style="width:' + W + "px;height:" + H + 'px">' + slices.join("") + front + "</div>";
+  drawCart();
+}
+function drawCart() { const c = $("cart"); if (c) { c.style.setProperty("--rx", spin.rx + "deg"); c.style.setProperty("--ry", spin.ry + "deg"); } }
+function sway(t) { if (!three || !$("view").open) { spin.raf = 0; return; } if (!spin.drag && !spin.touched) { spin.ry = -28 + Math.sin(t / 1400) * 24; spin.rx = -12 + Math.sin(t / 2100) * 4; drawCart(); } spin.raf = requestAnimationFrame(sway); }
+function showThree(on) {
+  three = on; $("vimg").hidden = on; $("scene").hidden = !on; $("v3d").setAttribute("aria-pressed", String(on));
+  $("v3d").textContent = on ? "View flat" : "View on a cartridge";
+  if (on) { buildScene(shown[current].labels[inGroup]); if (!still && !spin.raf) spin.raf = requestAnimationFrame(sway); }
+}
+$("v3d").onclick = () => { spin.touched = false; showThree(!three); };
+$("scene").addEventListener("pointerdown", e => { spin.drag = {x: e.clientX, y: e.clientY}; spin.touched = true; $("scene").setPointerCapture(e.pointerId); });
+$("scene").addEventListener("pointermove", e => { const d = spin.drag; if (!d) return; spin.ry += (e.clientX - d.x) * 0.6; spin.rx = Math.max(-70, Math.min(70, spin.rx - (e.clientY - d.y) * 0.6)); d.x = e.clientX; d.y = e.clientY; drawCart(); });
+$("scene").addEventListener("pointerup", () => { spin.drag = null; });
 function openView(i, k = 0) {
   if (i < 0 || i >= shown.length) return;
   current = i; inGroup = k; const g = shown[i], l = g.labels[k], file = FOLDER + "/" + enc(l.file);
@@ -367,6 +413,7 @@ function openView(i, k = 0) {
   $("rep").hidden = true; $("report").hidden = !ISSUES;
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
+  showThree(three);
 }
 $("prev").onclick = () => openView(current - 1); $("next").onclick = () => openView(current + 1);
 $("close").onclick = () => $("view").close();
