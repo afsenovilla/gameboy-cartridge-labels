@@ -31,3 +31,11 @@ def test_wanted_json_is_embedded_when_present_and_the_page_still_builds_without_
     out, _, w = build_site.build(str(tmp_path))
     page = open(out, encoding="utf-8").read()
     assert w == 1 and "DMG-A-USA" in page and "<\\/script> Wanted" in page and page.count("</script>") == 3
+
+
+def test_remote_page_reads_the_data_from_the_given_site_and_reports_to_the_given_repository(tmp_path):
+    out = build_site.build_remote(str(tmp_path / "b.html"), "https://github.com/geon/gameboy-cartridge-labels", base="https://geon.github.io/gameboy-cartridge-labels")
+    page = open(out, encoding="utf-8").read()
+    assert 'getJson("https://geon.github.io/gameboy-cartridge-labels/index.json")' in page
+    assert 'FOLDER = "https://geon.github.io/gameboy-cartridge-labels"' in page
+    assert 'ISSUES = "https://github.com/geon/gameboy-cartridge-labels"' in page

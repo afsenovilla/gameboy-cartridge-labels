@@ -2,6 +2,8 @@
 # its data inside, opened from the folder in a browser: search, system and region filters, sorting, pages, a viewer.
 #
 #   python run.py py src/build_site.py [folder] [--issues https://github.com/owner/repo] [--upload URL]
+#   python run.py py src/build_site.py --remote out.html [--base https://geon.github.io/gameboy-cartridge-labels/] [--issues URL]
+# --remote makes the page published sites use: it reads index.json, wanted.json and prints/ from --base (beside the page if none).
 #
 # Each label has a "Report a problem" button: reports are kept in the browser (localStorage) and exported as JSON or CSV.
 # With --issues, the report form also offers a prefilled new-issue page of that repository.
@@ -414,16 +416,18 @@ REMOTE_LOAD = """const fromIndex = index => Object.entries(index.prints).filter(
     release: p.release || p.serial || id, title: p.title || p.serial || p.release || id, system: p.shape, file: p.image, size: p.size,
     photos: (p.label_photos || []).length}));
 const getJson = (url, fallback) => fetch(url).then(r => { if (!r.ok) throw new Error(url + ": HTTP " + r.status); return r.json(); }).catch(e => { if (fallback) return fallback; throw e; });
-Promise.all([getJson("index.json"), getJson("wanted.json", [])]).then(([index, WANTED_RAW]) => {
+Promise.all([getJson("__BASE__index.json"), getJson("__BASE__wanted.json", [])]).then(([index, WANTED_RAW]) => {
 const LABELS = fromIndex(index);"""
 REMOTE_END = """}).catch(e => { document.getElementById("grid").textContent = "Could not load the data (" + e.message + "). Open this page from the site, next to index.json."; });"""
 
 
-def build_remote(out, issues="", upload=UPLOAD):
+def build_remote(out, issues="", upload=UPLOAD, base=""):
     """A copy of the page that reads index.json beside it and the images at prints/<id>.avif: for the published site."""
-    page = (PAGE.replace("__LOAD_START__", REMOTE_LOAD).replace("__LOAD_END__", REMOTE_END).replace("__TITLE__", "Browse the labels")
-            .replace("__CREDIT__", '<a href="index.html">The plain list of all labels</a> · <a href="wanted.html">Wanted photos</a>')
-            .replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', ""))
+    base = base.replace('"', "")
+    base = base + "/" if base and not base.endswith("/") else base  # "" = beside the page; else the site's URL
+    page = (PAGE.replace("__LOAD_START__", REMOTE_LOAD.replace("__BASE__", base)).replace("__LOAD_END__", REMOTE_END).replace("__TITLE__", "Browse the labels")
+            .replace("__CREDIT__", f'<a href="{base}index.html">The plain list of all labels</a> · <a href="{base}wanted.html">Wanted photos</a>')
+            .replace("__FOLDER__", base.rstrip("/") or ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', ""))
             .replace('<script type="application/json" id="data">__DATA__</script>\n<script type="application/json" id="wanted">__WANTED__</script>\n', ""))
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
@@ -459,7 +463,8 @@ if __name__ == "__main__":
     if "--remote" in args:  # --remote <output file>: the page for the published site
         i = args.index("--remote")
         issues = args[args.index("--issues") + 1] if "--issues" in args else ""
-        print(build_remote(args[i + 1], issues, args[args.index("--upload") + 1] if "--upload" in args else UPLOAD))
+        print(build_remote(args[i + 1], issues, args[args.index("--upload") + 1] if "--upload" in args else UPLOAD,
+                           args[args.index("--base") + 1] if "--base" in args else ""))
         sys.exit(0)
     issues = args[args.index("--issues") + 1] if "--issues" in args else ""
     upload = args[args.index("--upload") + 1] if "--upload" in args else UPLOAD
