@@ -42,14 +42,20 @@ def pil_open(path):
     return Image.open(path)
 
 
+def imread(path):
+    """cv2.imread, from the file's bytes: OpenCV can't open a path with non-ASCII characters on Windows. None if the file
+    can't be read or decoded."""
+    try:
+        return cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+    except OSError:
+        return None
+
+
 def load(path):
     """The photo, upright (OpenCV applies the EXIF orientation), as BGR pixels; formats OpenCV can't read (HEIC) through
     Pillow + pillow-heif. Read from bytes, as cv2.imread can't open paths with non-ASCII characters on Windows. None if
     it can't be read."""
-    try:
-        photo = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
-    except OSError:
-        return None
+    photo = imread(path)
     if photo is None:
         try:
             from PIL import ImageOps

@@ -509,7 +509,7 @@ class Handler(BaseHTTPRequestHandler):
             body = file and thumbnail(file, THUMB_PX if part == "thumb" else 4000)
             return self.send(body, "image/jpeg", cache=True) if body else self.send_error(404)
         if part == "label" and name in tool.crops:
-            img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(name)))
+            img = photos.imread(os.path.join(GEN, "straighten", straighten.file_name(name)))
             if img is None:
                 return self.send_error(404)
             img = publish.cut(img, *tool.crops[name])

@@ -77,7 +77,7 @@ def do_one(job):
         tmp = out + ".tmp.avif"
         cv2.imwrite(tmp, img, [cv2.IMWRITE_AVIF_QUALITY, QUALITY])
         os.replace(tmp, out)
-    img = cv2.imread(out)
+    img = photos.imread(out)
     if img is not None:
         steps.write_json(cut_file(out), find_cut(img, r))
         steps.write_json(drawn_file(out), record)

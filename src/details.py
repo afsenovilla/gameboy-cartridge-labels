@@ -9,6 +9,7 @@
 # Seals and the CE have too few keypoints for this (18); they're found later, in straightened label photos.
 import json, os
 import cv2, numpy as np
+import photos
 
 import steps, match
 
@@ -31,7 +32,7 @@ def load_details(folder=DETAILS):
         for name in sorted(os.listdir(folder)):
             if not name.lower().endswith(".png"):
                 continue
-            img = cv2.imread(os.path.join(folder, name))
+            img = photos.imread(os.path.join(folder, name))
             kp, des = sift.detectAndCompute(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), None)
             if des is not None and len(kp) >= MIN_INLIERS:
                 _details.append((name, (img.shape[1], img.shape[0]), np.float32([k.pt for k in kp]), des.astype(np.float32)))

@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cv2, numpy as np
+import photos
 import solve as solve_step, straighten, cuts, shapes, steps, find as find_step
 
 GEN = "generated"
@@ -76,7 +77,7 @@ class Hand:
         return {"key": key, "corners": np.round(corners, 2).tolist(), "label_mm": [w, h], "px_per_mm": straighten.PX_PER_MM, "notes": notes}
 
     def image(self, key):
-        img = cv2.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
+        img = photos.imread(os.path.join(GEN, "straighten", straighten.file_name(key)))
         return cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])[1].tobytes()
 
     def save(self, key, corners_view):

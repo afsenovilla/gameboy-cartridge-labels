@@ -40,7 +40,7 @@ MIN_DIFF_TILES = 3
 def tile_views(image_path, shape):
     """A straightened label photo's tiles: (lighting-evened gray per tile, flattened; gray spread per tile)."""
     P, M = straighten.PX_PER_MM, straighten.MARGIN
-    img = cv2.imread(image_path).astype(np.float32)
+    img = photos.imread(image_path).astype(np.float32)
     lw, lh = shapes.LABEL_MM[shape]
     x0, y0, x1, y1 = int((M + 1) * P), int((M + 1) * P), int((M + lw - 1) * P), int((M + lh - 1) * P)
     g = cv2.GaussianBlur(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), (0, 0), 0.25 * P)

@@ -70,3 +70,10 @@ def test_match_worker_pool_runs_jobs_with_the_index_set_before_it():
     from multiprocessing.pool import ThreadPool
     with ThreadPool(2) as pool:  # what Windows gets
         assert pool.map(lambda _: match._index[3], [0]) == [["a", "b"]]
+
+
+def test_imread_reads_a_file_with_a_japanese_name(tmp_path):
+    path = str(tmp_path / "アタマを.png")
+    cv2.imencode(".png", np.full((10, 20, 3), 5, np.uint8))[1].tofile(path)
+    assert photos.imread(path).shape == (10, 20, 3)
+    assert photos.imread(str(tmp_path / "nothing.png")) is None

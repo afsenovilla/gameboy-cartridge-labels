@@ -245,7 +245,7 @@ def restore_print(job):
     size, px_to_mm = straighten.canvas(shape)
 
     def load(key, path):  # (image 0..1 BGR cropped, valid mask, px/mm) or None
-        img = cv2.imread(path)
+        img = photos.imread(path)
         if img is None:
             return None
         valid = img.max(2) > 1    # straighten's border outside the photo is black

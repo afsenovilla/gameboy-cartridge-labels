@@ -47,7 +47,7 @@ def fit_file(ocr_path):
 
 def ocr_job(job):
     image_path, out, photo_to_ink = job
-    img = cv2.imread(image_path)
+    img = photos.imread(image_path)
     lines = read_text.read(img) if img is not None else []
     steps.write_json(out, lines)
     steps.write_json(fit_file(out), {"photo_to_ink": photo_to_ink})

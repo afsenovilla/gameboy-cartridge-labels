@@ -1339,7 +1339,7 @@ def from_frozen_match(out, lps, failed, photo_paths, frozen_entries):
         ink = img_to_ink @ np.float64(lp["frozen_match"])
         cut = np.linalg.inv(ink)
         cut /= cut[2, 2]
-        path, image = photo_paths.get(lp["photo"]), cv2.imread(frozen.image_path(P))
+        path, image = photo_paths.get(lp["photo"]), photos.imread(frozen.image_path(P))
         photo = photos.load(path) if path else None
         if photo is None or image is None or not usable(cut, shape):
             continue
