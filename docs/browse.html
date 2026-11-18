@@ -66,21 +66,15 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .thumbs button{width:64px;padding:0;border:2px solid transparent;border-radius:4px;background:var(--well);cursor:pointer;overflow:hidden}
 .thumbs button[aria-current=true]{border-color:var(--on)}
 .thumbs img{display:block;width:100%;height:auto;max-height:64px;object-fit:contain}
-.flag{position:absolute;z-index:3;left:8px;top:8px;background:#b3261e;color:#fff;border-radius:5px;padding:2px 8px;font:700 12px var(--font)}
 .rep{display:flex;flex-direction:column;gap:8px;border:1.5px solid var(--line);border-radius:8px;padding:12px}
 .rep[hidden]{display:none}
 .rep label{display:flex;gap:8px;align-items:center;font-size:14px}
 .rep input[type=checkbox]{width:16px;height:16px;accent-color:var(--on)}
 .rep textarea{width:100%;min-height:64px;resize:none;overflow:hidden;border:1.5px solid var(--ink);border-radius:6px;background:var(--page);color:var(--ink);font:14px var(--font);padding:8px}
 .rep .row{display:flex;gap:8px;flex-wrap:wrap}
-.rep button,.rep a,#reports button,#reports a{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:8px 12px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
-.rep button.main,#reports button.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
-#reports{width:min(720px,94vw)}
-#reports .in{padding:22px;display:flex;flex-direction:column;gap:14px}
-#reports h2{margin:0;font:750 22px var(--font)}
-#reports ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-#reports li{border-bottom:1px solid var(--line);padding-bottom:10px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-#reports li small{display:block;color:var(--muted)}
+.rep button,.rep a{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:8px 12px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
+.rep button.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
+
 .opt[hidden]{display:none}
 .opt{display:inline-flex;gap:8px;align-items:center;color:var(--ink);font-weight:600;cursor:pointer}
 .opt input{width:17px;height:17px;accent-color:var(--on)}
@@ -147,7 +141,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="az" id="az" role="group" aria-label="Starts with"></div>
 </div>
 <main>
-  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><button type="button" id="open-reports" class="opt" hidden style="border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:6px 12px;font:600 14px var(--font)"></button><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
+  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
   <div class="grid" id="grid"></div>
   <div class="wlist" id="wlist" hidden></div>
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
@@ -163,14 +157,10 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
       <strong>What's wrong with this label?</strong>
       <div id="reasons"></div>
       <textarea id="note" placeholder="Anything else? (optional)" aria-label="Details"></textarea>
-      <div class="row"><button type="submit" class="main">Save report</button><button type="button" id="rep-cancel">Cancel</button><button type="button" id="rep-remove" hidden>Remove report</button><a id="rep-issue" target="_blank" rel="noopener" hidden>Open as GitHub issue</a></div>
+      <div class="row"><a id="rep-issue" class="main" target="_blank" rel="noopener">Open as GitHub issue</a><button type="button" id="rep-cancel">Cancel</button></div>
     </form>
     <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
   </div>
-</div></dialog>
-<dialog id="reports"><div class="in">
-  <h2>Your reports</h2><ul id="rlist"></ul>
-  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="main" id="exp-json">Download JSON</button><button id="exp-csv">Download CSV</button><button id="rclose">Close</button></div>
 </div></dialog>
 <script>
 const fromIndex = index => Object.entries(index.prints).filter(([, p]) => p.image).map(([id, p]) => ({id, serial: p.serial || p.release || id,
@@ -274,7 +264,6 @@ function update(push) {
   $("tab-w").setAttribute("aria-selected", String(wv)); $("tab-l").setAttribute("aria-selected", String(!wv));
   $("lede").textContent = wv ? WANTED.length + " cartridges are only a photo or two short of a restored label. Find one, photograph the label straight on in good light, and send it with the serial printed on the cartridge (like DMG-A2XP-SCN) in the file name."
     : "Restored labels of Game Boy, Game Boy Color and Game Boy Advance cartridges. Search by title or serial, then open one to see it large.";
-  refreshReports();
   $("count").textContent = matched.length + (wv ? " cartridges" : " labels");
   const from = (state.p - 1) * state.n, slice = shown.slice(from, from + state.n);
   $("range").textContent = shown.length ? "Showing " + (from + 1) + " to " + (from + slice.length) + " of " + shown.length + (wv ? " cartridges" : state.g === "1" ? " games" : " labels") : "";
@@ -296,7 +285,7 @@ function update(push) {
     const regions = [...new Set(g.labels.map(x => x.region === "other" ? "—" : x.region))].join(", ");
     a.innerHTML = '<span class="stackwrap">' + behind + '<span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
       '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + enc(l.file) + '"></span>' +
-      (g.labels.some(x => reports[x.id]) ? '<span class="flag">Reported</span>' : "") + (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
+      (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
       '</b><span class="s">' + esc(many ? regions : l.serial) + "</span>";
     a.onclick = e => { e.preventDefault(); openView(from + i); };
     $("grid").append(a);
@@ -323,23 +312,7 @@ function paging(pages) {
   }
   add("Next", state.p + 1, {disabled: state.p === pages, nav: true});
 }
-let reports = {};
-try { reports = JSON.parse(localStorage.getItem("label-reports") || "{}"); } catch (e) { reports = {}; }
-function saveReports() { try { localStorage.setItem("label-reports", JSON.stringify(reports)); } catch (e) {} refreshReports(); }
-function refreshReports() { const n = Object.keys(reports).length; $("open-reports").hidden = !n || state.v === "w"; $("open-reports").textContent = "Your reports (" + n + ")"; }
-function download(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
-function openReports() {
-  const items = Object.values(reports);
-  $("rlist").innerHTML = items.map(r => '<li><div><b>' + esc(r.title) + "</b> " + esc(r.serial) + "<small>" + esc(r.reasons.join(", ")) + (r.note ? " — " + esc(r.note) : "") +
-    '</small></div><button data-id="' + esc(r.id) + '">Remove</button></li>').join("") || "<li>No reports yet.</li>";
-  $("rlist").querySelectorAll("button").forEach(b => b.onclick = () => { delete reports[b.dataset.id]; saveReports(); update(false); openReports(); if (!Object.keys(reports).length) $("reports").close(); });
-  if (!$("reports").open) $("reports").showModal();
-}
-$("open-reports").onclick = openReports; $("rclose").onclick = () => $("reports").close();
-$("exp-json").onclick = () => download("label-reports.json", JSON.stringify(Object.values(reports), null, 1), "application/json");
-$("exp-csv").onclick = () => { const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-  download("label-reports.csv", "\ufeffid,serial,title,reasons,note,date\n" + Object.values(reports).map(r => [r.id, r.serial, r.title, r.reasons.join("; "), r.note, r.date].map(q).join(",")).join("\n"), "text/csv"); };
-$("reasons").innerHTML = REASONS.map((r, i) => '<label><input type="checkbox" value="' + esc(r) + '"> ' + esc(r) + "</label>").join("");
+$("reasons").innerHTML = REASONS.map(r => '<label><input type="checkbox" value="' + esc(r) + '"> ' + esc(r) + "</label>").join("");
 function issueLink() {  // the new-issue link carries what is ticked and typed now
   const l = shown[current].labels[inGroup], reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
   const img = /^https?:/.test(FOLDER) ? FOLDER + "/" + l.file : l.file;
@@ -350,21 +323,14 @@ function issueLink() {  // the new-issue link carries what is ticked and typed n
   $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body);
 }
 const grow = () => { $("note").style.height = "auto"; $("note").style.height = $("note").scrollHeight + 2 + "px"; };
-$("rep").addEventListener("input", () => { grow(); if (ISSUES) issueLink(); });
+$("rep").addEventListener("input", () => { grow(); issueLink(); });
 function openReportForm() {
-  const l = shown[current].labels[inGroup], r = reports[l.id];
-  $("reasons").querySelectorAll("input").forEach(c => c.checked = !!r && r.reasons.includes(c.value));
-  $("note").value = r ? r.note : ""; $("rep-remove").hidden = !r; $("rep").hidden = false; grow();
-  if (ISSUES) { $("rep-issue").hidden = false; issueLink(); }
+  $("reasons").querySelectorAll("input").forEach(c => c.checked = false);
+  $("note").value = ""; $("rep").hidden = false; grow(); issueLink();
   $("reasons").querySelector("input").focus();
 }
 $("report").onclick = openReportForm; $("rep-cancel").onclick = () => { $("rep").hidden = true; };
-$("rep").onsubmit = e => { e.preventDefault(); const l = shown[current].labels[inGroup];
-  const reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
-  if (!reasons.length && !note) { $("reasons").querySelector("input").focus(); return; }
-  reports[l.id] = {id: l.id, serial: l.serial, title: l.title, file: l.file, reasons, note, date: new Date().toISOString()};
-  saveReports(); $("rep").hidden = true; $("report").textContent = "Reported (edit)"; update(false); };
-$("rep-remove").onclick = () => { const l = shown[current].labels[inGroup]; delete reports[l.id]; saveReports(); $("rep").hidden = true; $("report").textContent = "Report a problem"; update(false); };
+$("rep-issue").onclick = e => { if (!$("reasons").querySelector("input:checked") && !$("note").value.trim()) { e.preventDefault(); $("reasons").querySelector("input").focus(); } };
 let current = -1, inGroup = 0;
 function openView(i, k = 0) {
   if (i < 0 || i >= shown.length) return;
@@ -383,7 +349,7 @@ function openView(i, k = 0) {
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
-  $("rep").hidden = true; $("report").textContent = reports[l.id] ? "Reported (edit)" : "Report a problem";
+  $("rep").hidden = true; $("report").hidden = !ISSUES;
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
 }
@@ -400,7 +366,6 @@ $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true);
 $("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v, n: state.n}; update(true); };
 for (const v of ["w", "l"]) $("tab-" + v).onclick = () => { if (state.v === v) return; state = {...state, v, s: "", r: "", l: "", o: defaultSort(v), p: 1}; update(true); scrollTo({top: 0}); };
 addEventListener("hashchange", () => { readHash(); update(false); });
-refreshReports();
 readHash(); update(false);
 }).catch(e => { document.getElementById("grid").textContent = "Could not load the data (" + e.message + "). Open this page from the site, next to index.json."; });
 </script>
