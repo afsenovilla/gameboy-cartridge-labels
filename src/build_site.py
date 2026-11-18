@@ -58,12 +58,17 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .item img{display:block;width:100%;height:auto}
 .item:hover .pic,.item:focus-visible .pic{outline:3px solid var(--on);outline-offset:3px}
 .item b{display:block;margin-top:8px;font-weight:650;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.stackwrap{display:block;position:relative;margin-top:12px}
-.stack .stackwrap{margin-right:12px}
-.stack .stackwrap::before,.stack .stackwrap::after{content:"";position:absolute;inset:0;border:1.5px solid var(--muted);background:var(--shell);border-radius:3px}
-.stack .stackwrap::before{transform:translate(6px,-6px)}
-.stack .stackwrap::after{transform:translate(12px,-12px)}
-.stackwrap .pic{position:relative;z-index:1}
+.stackwrap{display:block;position:relative;margin-top:14px}
+.stack .stackwrap{margin:16px 14px 6px}
+.layer{position:absolute;inset:0;border-radius:3px;overflow:hidden;background:var(--well);box-shadow:0 1px 6px rgba(0,0,0,.28);transform-origin:50% 90%}
+.layer img{display:block;width:100%;height:100%;object-fit:cover}
+.layer.l1{transform:rotate(-5deg)}
+.layer.l2{transform:rotate(5deg)}
+.stack.two .layer.l1{transform:rotate(5deg)}
+.item.stack:hover .layer.l1,.item.stack:focus-visible .layer.l1{transform:rotate(-10deg) translateX(-4%)}
+.item.stack:hover .layer.l2,.item.stack:focus-visible .layer.l2{transform:rotate(10deg) translateX(4%)}
+.item.stack.two:hover .layer.l1,.item.stack.two:focus-visible .layer.l1{transform:rotate(10deg) translateX(4%)}
+.stackwrap .pic{position:relative;z-index:1;box-shadow:0 1px 6px rgba(0,0,0,.28)}
 .badge{position:absolute;z-index:2;right:8px;bottom:8px;white-space:nowrap;background:var(--ink);color:var(--page);border-radius:5px;padding:2px 8px;font:700 12px var(--font)}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
 .thumbs button{width:64px;padding:0;border:2px solid transparent;border-radius:4px;background:var(--well);cursor:pointer;overflow:hidden}
@@ -94,7 +99,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 .acts a.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
 @media (max-width:900px){.bar-in{grid-template-columns:1fr 1fr}.lcd{grid-column:1/-1}.view{grid-template-columns:1fr}}
 @media (max-width:560px){.bar-in{grid-template-columns:1fr}.seg{overflow-x:auto}.grid{grid-template-columns:repeat(2,1fr);gap:20px 14px}}
-@media (prefers-reduced-motion:no-preference){.item .pic{transition:outline-offset .12s}}
+@media (prefers-reduced-motion:no-preference){.item .pic{transition:outline-offset .12s}.layer{transition:transform .18s ease-out}}
 </style>
 </head>
 <body>
@@ -215,10 +220,11 @@ function update(push) {
   slice.forEach((g, i) => {
     const l = g.rep, many = g.labels.length > 1;
     const a = document.createElement("a");
-    a.className = "item" + (many ? " stack" : ""); a.href = "#"; a.dataset.i = from + i;
+    a.className = "item" + (many ? " stack" : "") + (g.labels.length === 2 ? " two" : ""); a.href = "#"; a.dataset.i = from + i;
+    const behind = g.labels.filter(x => x !== l).slice(0, 2).map((x, j) => '<span class="layer l' + (j + 1) + '"><img loading="lazy" alt="" src="' + FOLDER + "/" + encodeURIComponent(x.file) + '"></span>').join("");
     const [w, h] = l.size || [4, 3];
     const regions = [...new Set(g.labels.map(x => x.region === "other" ? "—" : x.region))].join(", ");
-    a.innerHTML = '<span class="stackwrap"><span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
+    a.innerHTML = '<span class="stackwrap">' + behind + '<span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
       '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + encodeURIComponent(l.file) + '"></span>' +
       (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
       '</b><span class="s">' + esc(many ? regions : l.serial) + "</span>";
