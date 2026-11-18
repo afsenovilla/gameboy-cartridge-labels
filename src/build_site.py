@@ -235,6 +235,10 @@ readHash(); update(false);
 def build(folder=FOLDER):
     with open(os.path.join(folder, "labels.json"), encoding="utf-8") as f:
         labels = json.load(f)
+    for l in labels:  # a release with no title in the database shows under its serial
+        l["title"] = l.get("title") or l.get("serial") or l.get("release") or l["id"]
+        l["serial"] = l.get("serial") or l.get("release") or l["id"]
+        l["release"] = l.get("release") or l["serial"]
     data = json.dumps([{k: l.get(k) for k in ("id", "serial", "release", "title", "system", "file", "size", "photos")}
                        for l in labels], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = (f'Images restored by geon from photos found online and sent in by contributors: '
