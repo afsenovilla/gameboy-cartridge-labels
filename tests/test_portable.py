@@ -60,3 +60,15 @@ def test_delete_writes_utf8_and_lf(tmp_path):
 
 def test_no_photos_folder_yet_means_no_photos(tmp_path):
     assert photos.all_photos(str(tmp_path / "photos")) == {}
+
+
+def _index_shas(_):
+    import match
+    return match._index[3]
+
+
+def test_match_workers_get_the_index_also_with_spawn():
+    import multiprocessing, match
+    index = ([], [], [], ["a", "b"], "features")
+    with multiprocessing.get_context("spawn").Pool(1, initializer=match.init_worker, initargs=(index,)) as pool:
+        assert pool.map(_index_shas, [0]) == [["a", "b"]]
