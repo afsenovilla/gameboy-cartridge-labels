@@ -11,7 +11,12 @@ formats (250-square, 500-square, 750-square) are crops. Only each listing's firs
 Listings whose title says they are complete in box (CIB, komplett, kartong, ...) come last (the user, 2026-11-17).
 A photo under MIN_SIDE on its long side is not kept.
 
+    python3 src/tradera_photos.py crawl 300201 [pages]     (Game Boy: 300201; Game Boy Advance: 300306)
     python3 src/tradera_photos.py download downloaded-photos/tradera-listings.json
+
+crawl reads the category's pages (one every 4 s) and adds each listing (itemId, shortDescription, imageUrlTemplate,
+itemUrl, categoryId) to downloaded-photos/tradera-listings.json; the pages carry them inside a Next.js script as a JSON
+string, in "items":[...]. Run it again to add listings that are new; pages is how many to read (default: all).
 
 Photos go to downloaded-photos/tradera-category/ as tradera-<itemId>.jpg with a listing.json there, moved to
 save-new-images-here/ by make move-downloads for make add-photos. Records: downloaded-photos/tradera-sources.json
@@ -43,7 +48,57 @@ def is_cib(title):
     return bool(CIB.search(title or ""))
 
 
-def download(listings_file):
+LISTINGS = os.path.join(ebay_photos.DOWNLOADED, "tradera-listings.json")
+FIELDS = ("itemId", "shortDescription", "imageUrlTemplate", "itemUrl", "categoryId")
+PAGE = "https://www.tradera.com/category/{}?paging={}"
+
+
+def page_listings(html):
+    """(total listings in the category, [listing]) from a category page's HTML: the items of its embedded data."""
+    items, total = [], None
+    for script in re.findall(r"<script[^>]*>(self\.__next_f\.push\(.*?\))</script>", html, re.S):
+        try:
+            text = json.loads(script[script.index("(") + 1:script.rindex(")")])[1]
+        except (ValueError, IndexError):
+            continue
+        if not isinstance(text, str) or '"items":[' not in text:
+            continue
+        m = re.search(r'"totalItemCount":(\d+)', text)
+        total = int(m.group(1)) if m else total
+        decoder = json.JSONDecoder()
+        for m in re.finditer(r'"items":\[', text):  # several "items" arrays in a page: the listings' has itemIds
+            try:
+                found, _ = decoder.raw_decode(text, m.end() - 1)
+            except ValueError:
+                continue
+            items += [{k: v[k] for k in FIELDS if k in v} for v in found if isinstance(v, dict) and "itemId" in v]
+    return total, list({v["itemId"]: v for v in items}.values())
+
+
+def crawl(category, pages=None):
+    import urllib.request
+    listings = {v["itemId"]: v for v in (json.load(open(LISTINGS, encoding="utf-8")) if os.path.exists(LISTINGS) else [])}
+    page, last = 1, pages
+    while last is None or page <= last:
+        req = urllib.request.Request(PAGE.format(category, page), headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            total, items = page_listings(r.read().decode("utf-8"))
+        if not items:
+            break
+        if pages is None and total:
+            last = -(-total // 80)
+        new = [v for v in items if v["itemId"] not in listings]
+        listings.update({v["itemId"]: v for v in new})
+        print(f"page {page} of {last or '?'}: {len(items)} listings, {len(new)} new", flush=True)
+        page += 1
+        time.sleep(4)
+    os.makedirs(os.path.dirname(LISTINGS), exist_ok=True)
+    with open(LISTINGS, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(list(listings.values()), f, indent=1, ensure_ascii=False)
+    print(len(listings), "listings in", LISTINGS)
+
+
+def download(listings_file, limit=None):
     listings = json.load(open(listings_file, encoding="utf-8"))
     listings.sort(key=lambda v: is_cib(v["shortDescription"]))  # stable: page order otherwise
     sources = load(SOURCES)
@@ -53,6 +108,8 @@ def download(listings_file):
         name = f"tradera-{v['itemId']}.jpg"
         if name in sources or not v.get("imageUrlTemplate"):
             continue
+        if limit is not None and done >= limit:
+            break
         image_url = v["imageUrlTemplate"].replace("{format}", "images")
         os.makedirs(DROP, exist_ok=True)
         path = os.path.join(DROP, name)
@@ -89,5 +146,7 @@ def download(listings_file):
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "download":  # download <listings.json>
-        download(sys.argv[2])
+    if sys.argv[1] == "crawl":  # crawl <category id> [pages]
+        crawl(sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else None)
+    elif sys.argv[1] == "download":  # download <listings.json> [how many photos at most]
+        download(sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else None)
