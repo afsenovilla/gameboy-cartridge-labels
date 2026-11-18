@@ -1,5 +1,6 @@
 """The Makefile's targets for where there is no make (plain Windows): python run.py <target> [SAMPLE=1] [ID=..] [SHAPE=..]
-[NAME=..] [NOTE=..]. python run.py lists them. Same steps, same scripts; `make publish` (publish.sh) needs Git Bash."""
+[NAME=..] [NOTE=..]. python run.py lists them.
+python run.py py <script> [arguments] runs any script of the project in the .venv environment. Same steps, same scripts; `make publish` (publish.sh) needs Git Bash."""
 import os, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +63,9 @@ def step(name, v):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if args and args[0] == "py":  # python run.py py src/tradera_photos.py download ...: any script, in the environment
+        run(*args[1:])
+        sys.exit(0)
     v = dict(a.split("=", 1) for a in args if "=" in a)
     names = [a for a in args if "=" not in a]
     step(names[0] if names else "help", v)
