@@ -352,12 +352,18 @@ $("exp-json").onclick = () => download("label-reports.json", JSON.stringify(Obje
 $("exp-csv").onclick = () => { const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
   download("label-reports.csv", "\ufeffid,serial,title,reasons,note,date\n" + Object.values(reports).map(r => [r.id, r.serial, r.title, r.reasons.join("; "), r.note, r.date].map(q).join(",")).join("\n"), "text/csv"); };
 $("reasons").innerHTML = REASONS.map((r, i) => '<label><input type="checkbox" value="' + esc(r) + '"> ' + esc(r) + "</label>").join("");
+function issueLink() {  // the new-issue link carries what is ticked and typed now
+  const l = shown[current].labels[inGroup], reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
+  const img = /^https?:/.test(FOLDER) ? FOLDER + "/" + l.file : l.file;
+  const body = "Label: " + l.title + "\nSerial: " + l.serial + "\nImage: " + img + "\n\nWhat's wrong: " + (reasons.join("; ") || "(not specified)") + (note ? "\n\n" + note : "") + "\n";
+  $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body);
+}
+$("rep").addEventListener("input", () => { if (ISSUES) issueLink(); });
 function openReportForm() {
   const l = shown[current].labels[inGroup], r = reports[l.id];
   $("reasons").querySelectorAll("input").forEach(c => c.checked = !!r && r.reasons.includes(c.value));
   $("note").value = r ? r.note : ""; $("rep-remove").hidden = !r; $("rep").hidden = false;
-  if (ISSUES) { const body = "Label: " + l.title + "\nSerial: " + l.serial + "\nImage: " + l.file + "\n"; $("rep-issue").hidden = false;
-    $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body + "\nProblem: "); }
+  if (ISSUES) { $("rep-issue").hidden = false; issueLink(); }
   $("reasons").querySelector("input").focus();
 }
 $("report").onclick = openReportForm; $("rep-cancel").onclick = () => { $("rep").hidden = true; };
@@ -392,7 +398,7 @@ function openView(i, k = 0) {
 $("prev").onclick = () => openView(current - 1); $("next").onclick = () => openView(current + 1);
 $("close").onclick = () => $("view").close();
 $("view").addEventListener("click", e => { if (e.target === $("view")) $("view").close(); });
-$("view").addEventListener("keydown", e => { if (e.key === "ArrowLeft") openView(current - 1); if (e.key === "ArrowRight") openView(current + 1); });
+$("view").addEventListener("keydown", e => { if (e.target.closest("textarea,input,select")) return; if (e.key === "ArrowLeft") openView(current - 1); if (e.key === "ArrowRight") openView(current + 1); });
 let timer; $("q").addEventListener("input", e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.p = 1; update(false); }, 150); });
 $("region").onchange = e => { state.r = e.target.value; state.p = 1; update(true); };
 $("stack").onchange = e => { state.g = e.target.checked ? "1" : "0"; state.p = 1; update(true); };
