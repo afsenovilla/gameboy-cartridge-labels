@@ -42,7 +42,7 @@ MIN_AREA = 0.002   # of the smaller photo's area
 
 INDEX_ROWS = 8_000_000  # keypoints per part of the index (see above)
 
-_index = None  # set in each worker (init_worker): (index parts, owner, keypoint number, shas, features_dir)
+_index = None  # set before the workers start: (index parts, owner, keypoint number, shas, features_dir)
 
 
 def load_features(features_dir, sha1):
@@ -50,15 +50,13 @@ def load_features(features_dir, sha1):
     return {k: f[k] for k in ("points", "responses", "descriptors", "size")}
 
 
-def start_method():
-    """fork where there is one (the workers share the index built before them); Windows has only spawn."""
-    return "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
-
-
-def init_worker(index):
-    """Gives a worker the index (with spawn it isn't inherited; with fork it is already there)."""
-    global _index
-    _index = index
+def worker_pool(workers):
+    """Where there is fork, processes that share the index built before them; on Windows (spawn only, and the FLANN
+    index can't be pickled to a new process) threads, which share it too: OpenCV and numpy release the GIL."""
+    if "fork" in multiprocessing.get_all_start_methods():
+        return multiprocessing.get_context("fork").Pool(workers)
+    from multiprocessing.pool import ThreadPool
+    return ThreadPool(workers)
 
 
 def build_index(features_dir, shas):
@@ -277,8 +275,7 @@ def main():
         print(f"index: {len(owner)} keypoints in {len(parts)} parts", flush=True)
         _index = (parts, owner, which, shas, features_dir)
         jobs = [(len(done) + k, out(s)) for k, s in enumerate(todo)]
-        ctx = multiprocessing.get_context(start_method())
-        with ctx.Pool(args.workers, initializer=init_worker, initargs=(_index,)) as pool:
+        with worker_pool(args.workers) as pool:
             for n, _ in enumerate(pool.imap_unordered(match_photo, jobs), 1):
                 if n % 50 == 0 or n == len(jobs):
                     print(f"matched {n} of {len(jobs)}", flush=True)

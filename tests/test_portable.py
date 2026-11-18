@@ -62,13 +62,11 @@ def test_no_photos_folder_yet_means_no_photos(tmp_path):
     assert photos.all_photos(str(tmp_path / "photos")) == {}
 
 
-def _index_shas(_):
+def test_match_worker_pool_runs_jobs_with_the_index_set_before_it():
     import match
-    return match._index[3]
-
-
-def test_match_workers_get_the_index_also_with_spawn():
-    import multiprocessing, match
-    index = ([], [], [], ["a", "b"], "features")
-    with multiprocessing.get_context("spawn").Pool(1, initializer=match.init_worker, initargs=(index,)) as pool:
-        assert pool.map(_index_shas, [0]) == [["a", "b"]]
+    match._index = ([], [], [], ["a", "b"], "features")
+    with match.worker_pool(2) as pool:
+        assert pool.map(len, [[1], [1, 2]]) == [1, 2]
+    from multiprocessing.pool import ThreadPool
+    with ThreadPool(2) as pool:  # what Windows gets
+        assert pool.map(lambda _: match._index[3], [0]) == [["a", "b"]]
