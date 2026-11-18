@@ -25,3 +25,4 @@ photos/
 # ScreenScraper credentials and test downloads
 screenscraper.json
 screenscraper-sample/
+published-labels/
