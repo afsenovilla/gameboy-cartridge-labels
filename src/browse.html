@@ -8,11 +8,13 @@
 :root{
   --page:#cfcdc6; --shell:#dedcd5; --well:#bdbbb3; --ink:#22241f; --muted:#5b5e53; --line:#aeaca4;
   --lcd:#8bac0f; --lcd-ink:#0f380f; --on:#306230; --on-ink:#e9ecdc; --focus:#0f380f;
+  --gb:#5f7d0c; --gbc:#7a3fb0; --gba:#3d4fc4;
   --font:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
   --page:#1c201a; --shell:#262b23; --well:#303629; --ink:#e4e6da; --muted:#9ea493; --line:#3c4235;
   --on:#4b7a2c; --on-ink:#f2f5e6; --focus:#b7d84a;
+  --gb:#a9c93a; --gbc:#b98af0; --gba:#8d9bff;
 }}
 *{box-sizing:border-box}
 html{scroll-padding-top:190px}
@@ -62,6 +64,8 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .item.stack.two:hover .layer.l1,.item.stack.two:focus-visible .layer.l1{transform:rotate(10deg) translateX(4%)}
 .stackwrap .pic{position:relative;z-index:1;box-shadow:0 1px 6px rgba(0,0,0,.28)}
 .badge{position:absolute;z-index:2;right:8px;bottom:8px;white-space:nowrap;background:var(--ink);color:var(--page);border-radius:5px;padding:2px 8px;font:700 12px var(--font)}
+.sys{display:inline-block;border:2px solid currentColor;border-radius:999px;padding:0 7px;margin-right:6px;font:700 11px/1.5 var(--font);vertical-align:1px}
+.sys-dmg{color:var(--gb)}.sys-cgb{color:var(--gbc)}.sys-agb{color:var(--gba)}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
 .thumbs button{width:64px;padding:0;border:2px solid transparent;border-radius:4px;background:var(--well);cursor:pointer;overflow:hidden}
 .thumbs button[aria-current=true]{border-color:var(--on)}
@@ -286,7 +290,7 @@ function update(push) {
     a.innerHTML = '<span class="stackwrap">' + behind + '<span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
       '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + enc(l.file) + '"></span>' +
       (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
-      '</b><span class="s" title="' + esc(SYSTEM_NAME[l.system] || "") + '">' + esc((SYSTEM_SHORT[l.system] ? SYSTEM_SHORT[l.system] + " · " : "") + (many ? regions : l.serial)) + "</span>";
+      '</b><span class="s">' + (SYSTEM_SHORT[l.system] ? '<span class="sys sys-' + l.system + '" title="' + esc(SYSTEM_NAME[l.system]) + '">' + SYSTEM_SHORT[l.system] + "</span>" : "") + esc(many ? regions : l.serial) + "</span>";
     a.onclick = e => { e.preventDefault(); openView(from + i); };
     $("grid").append(a);
   });
