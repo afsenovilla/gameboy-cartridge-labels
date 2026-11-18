@@ -80,6 +80,13 @@ def main():
             print(f"{n} of {len(labels)} ({done} downloaded now, {failed} failed)", flush=True)
     with open(os.path.join(OUT, "labels.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump([l for l in labels if "file" in l], f, indent=1, ensure_ascii=False)
+    try:  # the cartridges still needing photos (wanted.json), for the browsing page's Wanted tab
+        data = fetch(base + "wanted.json")
+        json.loads(data.decode("utf-8"))
+        with open(os.path.join(OUT, "wanted.json"), "wb") as f:
+            f.write(data)
+    except Exception as e:
+        print("no wanted.json:", e)
     print(f"{len(labels)} labels in {os.path.abspath(OUT)}")
 
 

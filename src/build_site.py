@@ -1,7 +1,7 @@
 # A page for browsing the downloaded labels: published-labels/index.html (made by download_published.py), one file with
 # its data inside, opened from the folder in a browser: search, system and region filters, sorting, pages, a viewer.
 #
-#   python run.py py src/build_site.py [folder] [--issues https://github.com/owner/repo]
+#   python run.py py src/build_site.py [folder] [--issues https://github.com/owner/repo] [--upload URL]
 #
 # Each label has a "Report a problem" button: reports are kept in the browser (localStorage) and exported as JSON or CSV.
 # With --issues, the report form also offers a prefilled new-issue page of that repository.
@@ -9,13 +9,14 @@ import html, json, os, sys
 
 FOLDER = "published-labels"
 SOURCE = "https://geon.github.io/gameboy-cartridge-labels/"
+UPLOAD = "https://www.dropbox.com/request/9pv35ozb0iieahq3z3uf"  # where the project asks for photos (its wanted.html)
 
 PAGE = r"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cartridge labels</title>
+<title>__TITLE__</title>
 <style>
 :root{
   --page:#cfcdc6; --shell:#dedcd5; --well:#bdbbb3; --ink:#22241f; --muted:#5b5e53; --line:#aeaca4;
@@ -41,6 +42,7 @@ header p{margin:8px 0 0;color:var(--muted);max-width:60ch}
 .az button[aria-pressed=true],.az button[aria-pressed=true]:hover:not(:disabled){background:var(--on);color:var(--on-ink)}
 .az button:disabled{opacity:.3;cursor:default}
 .bar-in{max-width:1500px;margin:0 auto;display:grid;gap:12px;grid-template-columns:minmax(240px,1fr) auto auto auto;align-items:center}
+.bar-in>*{min-width:0}
 .lcd{display:flex;align-items:center;gap:12px;background:var(--lcd);color:var(--lcd-ink);border-radius:6px 6px 22px 6px;padding:9px 16px;
   box-shadow:inset 0 0 0 3px rgba(15,56,15,.35),inset 3px 3px 0 rgba(15,56,15,.25)}
 .lcd input{flex:1;min-width:0;background:none;border:0;color:inherit;font:600 17px/1.2 ui-monospace,"Cascadia Mono",Consolas,monospace;outline:0}
@@ -116,6 +118,24 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
 .acts a,.acts button{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:9px 14px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
 .acts a.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
+.grid[hidden],.wlist[hidden]{display:none}
+.lede{display:flex;gap:10px 20px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.lede p{margin:0;max-width:62ch}
+.cta{display:inline-block;background:var(--on);color:var(--on-ink);border-radius:8px;padding:10px 16px;font:700 15px var(--font);text-decoration:none;white-space:nowrap}
+.cta[hidden]{display:none}
+.tabs{display:flex;gap:6px;margin-top:20px;border-bottom:2px solid var(--ink)}
+.tabs button{border:2px solid var(--ink);border-bottom:0;border-radius:10px 10px 0 0;background:transparent;color:var(--ink);padding:10px 18px;font:700 16px var(--font);cursor:pointer;margin-bottom:-2px}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--page)}
+.tabs small{font-weight:500;opacity:.8;margin-left:6px}
+.wlist{display:flex;flex-direction:column;border-top:1.5px solid var(--ink)}
+.wrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 24px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.wrow h3{margin:0;font:650 17px/1.25 var(--font)}
+.wrow .s{display:block;color:var(--muted);font-size:13px;margin-top:3px;overflow-wrap:anywhere}
+.need{display:inline-block;background:var(--lcd);color:var(--lcd-ink);border-radius:5px;padding:2px 9px;font:700 13px var(--font);margin-right:8px;white-space:nowrap}
+.wlinks{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.wlinks a{border:1.5px solid var(--ink);border-radius:8px;padding:6px 11px;font:600 13px var(--font);text-decoration:none;white-space:nowrap}
+.wlinks a:hover{background:var(--well)}
+@media (max-width:700px){.wrow{grid-template-columns:1fr}.wlinks{justify-content:flex-start}}
 @media (max-width:900px){.bar-in{grid-template-columns:1fr 1fr}.lcd{grid-column:1/-1}.view{grid-template-columns:1fr}}
 @media (max-width:560px){.bar-in{grid-template-columns:1fr}.seg{overflow-x:auto}.grid{grid-template-columns:repeat(2,1fr);gap:20px 14px}}
 @media (prefers-reduced-motion:no-preference){.item .pic{transition:outline-offset .12s}.layer{transition:transform .18s ease-out}}
@@ -124,7 +144,8 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 <body>
 <header>
   <h1>Cartridge labels</h1>
-  <p>Restored labels of Game Boy, Game Boy Color and Game Boy Advance cartridges. Search by title or serial, then open one to see it large.</p>
+  <div class="lede"><p id="lede"></p><a class="cta" id="send" href="__UPLOAD__" target="_blank" rel="noopener" hidden>Send photos</a></div>
+  <div class="tabs" role="tablist" aria-label="What to show"><button type="button" role="tab" id="tab-w"></button><button type="button" role="tab" id="tab-l"></button></div>
 </header>
 <div class="bar"><div class="bar-in">
   <label class="lcd"><input id="q" type="search" placeholder="Title or serial" autocomplete="off" aria-label="Search title or serial"><output id="count" aria-live="polite"></output></label>
@@ -141,7 +162,8 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 <main>
   <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><button type="button" id="open-reports" class="opt" hidden style="border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:6px 12px;font:600 14px var(--font)"></button><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
   <div class="grid" id="grid"></div>
-  <div class="empty" id="empty" hidden>No labels match. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
+  <div class="wlist" id="wlist" hidden></div>
+  <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
   <nav class="pages" id="pages" aria-label="Pages"></nav>
 </main>
 <footer>__CREDIT__</footer>
@@ -164,9 +186,11 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="main" id="exp-json">Download JSON</button><button id="exp-csv">Download CSV</button><button id="rclose">Close</button></div>
 </div></dialog>
 <script type="application/json" id="data">__DATA__</script>
+<script type="application/json" id="wanted">__WANTED__</script>
 <script>
-const LABELS = JSON.parse(document.getElementById("data").textContent);
+__LOAD_START__
 const FOLDER = "__FOLDER__";
+const enc = f => f.split("/").map(encodeURIComponent).join("/");
 const ISSUES = "__ISSUES__";
 const REASONS = ["Blurry or low resolution", "Glare or reflections", "Dirt, scratches or damage", "Crooked or badly cropped", "Wrong colours", "Wrong title or serial", "Not a label", "Other"];
 const SYSTEMS = [["", "All"], ["dmg", "Game Boy"], ["cgb", "Game Boy Color"], ["agb", "Game Boy Advance"]];
@@ -175,24 +199,33 @@ const PER_PAGE = 48;
 const fold = s => (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const regionOf = s => { const m = /-([A-Z]{3})(?:-\d)?$/.exec(s || ""); return m ? m[1] : "other"; };
 const letterOf = t => { const c = fold(t).replace(/[^\p{L}\p{N}]/gu, "")[0] || ""; return /[a-z]/.test(c) ? c.toUpperCase() : /[0-9]/.test(c) ? "#" : "…"; };
+const UPLOAD = "__UPLOAD__";
+const WANTED = WANTED_RAW.filter(w => w.print).map((w, i) => { const serial = (w.serials || []).join(", ") || w.release || "", title = w.title || serial || w.print;
+  return {id: w.print, rank: i, title, serial, release: w.release || "", system: w.system, region: w.region || "other", needed: w.needed, photos: w.photos || 0, search: w.search || [],
+    letter: "", hay: fold([title, serial, w.release].join(" "))}; });
+for (const w of WANTED) w.letter = letterOf(w.title);
+const HOME = WANTED.length ? "w" : "l";
+const SORTS = {w: [["rank", "Closest to done first"], ["title", "Title A to Z"], ["photos", "Most photos already"]], l: [["title", "Title A to Z"], ["serial", "Serial"], ["photos", "Most photos first"]]};
+const defaultSort = v => SORTS[v][0][0];
 for (const l of LABELS) { l.letter = letterOf(l.title); l.region = regionOf(l.serial); l.hay = fold([l.title, l.serial, l.release].join(" ")); }
 const $ = id => document.getElementById(id);
-let state = {q: "", s: "", r: "", l: "", g: "1", o: "title", p: 1}, shown = [], groups = [];
+let state = {q: "", s: "", r: "", l: "", g: "1", o: "title", p: 1, v: HOME}, shown = [], groups = [];
 
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
-  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: h.get("o") || "title", p: parseInt(h.get("p")) || 1};
+  const v = h.get("v") === "l" || h.get("v") === "w" ? h.get("v") : HOME, o = h.get("o");
+  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v};
 }
 function writeHash(push) {
   const h = new URLSearchParams();
   if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l); if (state.g === "0") h.set("g", "0");
-  if (state.o !== "title") h.set("o", state.o); if (state.p > 1) h.set("p", state.p);
+  if (state.v !== HOME) h.set("v", state.v); if (state.o !== defaultSort(state.v)) h.set("o", state.o); if (state.p > 1) h.set("p", state.p);
   const url = location.pathname + (h.toString() ? "#" + h : "");
   push ? history.pushState(null, "", url) : history.replaceState(null, "", url);
 }
 function filtered(ignoreSystem, ignoreLetter) {
   const words = fold(state.q).split(/\s+/).filter(Boolean);
-  return LABELS.filter(l => (ignoreSystem || !state.s || l.system === state.s) && (ignoreLetter || !state.l || l.letter === state.l) &&
+  return (state.v === "w" ? WANTED : LABELS).filter(l => (ignoreSystem || !state.s || l.system === state.s) && (ignoreLetter || !state.l || l.letter === state.l) &&
     (!state.r || l.region === state.r) &&
     words.every(w => l.hay.includes(w)));
 }
@@ -200,10 +233,11 @@ const sorters = {
   title: (a, b) => a.title.localeCompare(b.title, undefined, {sensitivity: "base", numeric: true}) || a.serial.localeCompare(b.serial),
   serial: (a, b) => a.serial.localeCompare(b.serial, undefined, {numeric: true}),
   photos: (a, b) => b.photos - a.photos || sorters.title(a, b),
+  rank: (a, b) => a.rank - b.rank,
 };
 const groupKey = l => l.system + "|" + fold(l.title).replace(/[^\p{L}\p{N}]/gu, "");
 function groupUp(labels) {
-  if (state.g === "0") return labels.map(l => ({title: l.title, labels: [l], rep: l}));
+  if (state.g === "0" || state.v === "w") return labels.map(l => ({title: l.title, labels: [l], rep: l}));
   const by = new Map();
   for (const l of labels) { const k = groupKey(l); if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
   return [...by.values()].map(ls => ({title: ls[0].title, labels: ls, rep: ls.reduce((a, b) => b.photos > a.photos ? b : a)}));
@@ -230,7 +264,7 @@ function build() {
     $("az").append(b);
   }
   const counts = {};
-  for (const l of LABELS.filter(l => !state.s || l.system === state.s)) counts[l.region] = (counts[l.region] || 0) + 1;
+  for (const l of (state.v === "w" ? WANTED : LABELS).filter(l => !state.s || l.system === state.s)) counts[l.region] = (counts[l.region] || 0) + 1;
   const keep = state.r;
   $("region").innerHTML = '<option value="">All regions</option>' + Object.keys(counts).sort().map(r =>
     '<option value="' + r + '">' + (r === "other" ? "No region" : r) + " (" + counts[r] + ")</option>").join("");
@@ -242,21 +276,36 @@ function update(push) {
   const pages = Math.max(1, Math.ceil(shown.length / PER_PAGE));
   state.p = Math.min(Math.max(1, state.p), pages);
   build();
+  const wv = state.v === "w";
+  $("sort").innerHTML = SORTS[state.v].map(([k, n]) => '<option value="' + k + '">' + n + "</option>").join("");
   $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1";
-  $("count").textContent = matched.length + " labels";
+  $("stack").parentElement.hidden = wv; $("grid").hidden = wv; $("wlist").hidden = !wv; $("send").hidden = !wv || !UPLOAD;
+  $("tab-w").innerHTML = "Wanted<small>" + WANTED.length + "</small>"; $("tab-l").innerHTML = "Restored labels<small>" + LABELS.length + "</small>";
+  $("tab-w").setAttribute("aria-selected", String(wv)); $("tab-l").setAttribute("aria-selected", String(!wv));
+  $("lede").textContent = wv ? WANTED.length + " cartridges are only a photo or two short of a restored label. Find one, photograph the label straight on in good light, and send it with the serial printed on the cartridge (like DMG-A2XP-SCN) in the file name."
+    : "Restored labels of Game Boy, Game Boy Color and Game Boy Advance cartridges. Search by title or serial, then open one to see it large.";
+  refreshReports();
+  $("count").textContent = matched.length + (wv ? " cartridges" : " labels");
   const from = (state.p - 1) * PER_PAGE, slice = shown.slice(from, from + PER_PAGE);
-  $("range").textContent = shown.length ? "Showing " + (from + 1) + " to " + (from + slice.length) + " of " + shown.length + (state.g === "1" ? " games" : " labels") : "";
+  $("range").textContent = shown.length ? "Showing " + (from + 1) + " to " + (from + slice.length) + " of " + shown.length + (wv ? " cartridges" : state.g === "1" ? " games" : " labels") : "";
   $("empty").hidden = shown.length > 0;
-  $("grid").innerHTML = "";
-  slice.forEach((g, i) => {
+  $("grid").innerHTML = ""; $("wlist").innerHTML = "";
+  if (wv) slice.forEach(g => {
+    const w = g.rep, n = w.needed, row = document.createElement("div"); row.className = "wrow";
+    const links = w.search.filter(x => /^https:\/\//.test(x.url)).map(x => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.label) + "</a>").join("");
+    row.innerHTML = "<div><h3>" + esc(w.title) + '</h3><span class="s"><span class="need">' + n + " more photo" + (n === 1 ? "" : "s") + " needed</span>" +
+      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial].filter(Boolean).join(" · ")) + " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + ' so far</span></div><div class="wlinks">' + links + "</div>";
+    $("wlist").append(row);
+  });
+  else slice.forEach((g, i) => {
     const l = g.rep, many = g.labels.length > 1;
     const a = document.createElement("a");
     a.className = "item" + (many ? " stack" : "") + (g.labels.length === 2 ? " two" : ""); a.href = "#"; a.dataset.i = from + i;
-    const behind = g.labels.filter(x => x !== l).slice(0, 2).map((x, j) => '<span class="layer l' + (j + 1) + '"><img loading="lazy" alt="" src="' + FOLDER + "/" + encodeURIComponent(x.file) + '"></span>').join("");
+    const behind = g.labels.filter(x => x !== l).slice(0, 2).map((x, j) => '<span class="layer l' + (j + 1) + '"><img loading="lazy" alt="" src="' + FOLDER + "/" + enc(x.file) + '"></span>').join("");
     const [w, h] = l.size || [4, 3];
     const regions = [...new Set(g.labels.map(x => x.region === "other" ? "—" : x.region))].join(", ");
     a.innerHTML = '<span class="stackwrap">' + behind + '<span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
-      '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + encodeURIComponent(l.file) + '"></span>' +
+      '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + enc(l.file) + '"></span>' +
       (g.labels.some(x => reports[x.id]) ? '<span class="flag">Reported</span>' : "") + (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
       '</b><span class="s">' + esc(many ? regions : l.serial) + "</span>";
     a.onclick = e => { e.preventDefault(); openView(from + i); };
@@ -287,7 +336,7 @@ function paging(pages) {
 let reports = {};
 try { reports = JSON.parse(localStorage.getItem("label-reports") || "{}"); } catch (e) { reports = {}; }
 function saveReports() { try { localStorage.setItem("label-reports", JSON.stringify(reports)); } catch (e) {} refreshReports(); }
-function refreshReports() { const n = Object.keys(reports).length; $("open-reports").hidden = !n; $("open-reports").textContent = "Your reports (" + n + ")"; }
+function refreshReports() { const n = Object.keys(reports).length; $("open-reports").hidden = !n || state.v === "w"; $("open-reports").textContent = "Your reports (" + n + ")"; }
 function download(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 function openReports() {
   const items = Object.values(reports);
@@ -319,13 +368,13 @@ $("rep-remove").onclick = () => { const l = shown[current].labels[inGroup]; dele
 let current = -1, inGroup = 0;
 function openView(i, k = 0) {
   if (i < 0 || i >= shown.length) return;
-  current = i; inGroup = k; const g = shown[i], l = g.labels[k], file = FOLDER + "/" + encodeURIComponent(l.file);
+  current = i; inGroup = k; const g = shown[i], l = g.labels[k], file = FOLDER + "/" + enc(l.file);
   $("vimg").src = file; $("vimg").alt = l.title; $("vtitle").textContent = l.title;
   $("thumbs").innerHTML = "";
   if (g.labels.length > 1) g.labels.forEach((x, j) => {
     const b = document.createElement("button"); b.type = "button"; b.title = x.serial; b.setAttribute("aria-label", x.serial);
     if (j === k) b.setAttribute("aria-current", "true");
-    b.innerHTML = '<img alt="" src="' + FOLDER + "/" + encodeURIComponent(x.file) + '">';
+    b.innerHTML = '<img alt="" src="' + FOLDER + "/" + enc(x.file) + '">';
     b.onclick = () => openView(current, j);
     $("thumbs").append(b);
   });
@@ -333,7 +382,7 @@ function openView(i, k = 0) {
     ["Region", l.region === "other" ? "Not in the serial" : l.region], ["Restored from", l.photos ? l.photos + " photos" : "—"],
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
-  $("vdl-link").href = file; $("vdl-link").download = l.file;
+  $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
   $("rep").hidden = true; $("report").textContent = reports[l.id] ? "Reported (edit)" : "Report a problem";
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
@@ -346,17 +395,40 @@ let timer; $("q").addEventListener("input", e => { clearTimeout(timer); timer = 
 $("region").onchange = e => { state.r = e.target.value; state.p = 1; update(true); };
 $("stack").onchange = e => { state.g = e.target.checked ? "1" : "0"; state.p = 1; update(true); };
 $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true); };
-$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: "title", p: 1}; update(true); };
+$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v}; update(true); };
+for (const v of ["w", "l"]) $("tab-" + v).onclick = () => { if (state.v === v) return; state = {...state, v, s: "", r: "", l: "", o: defaultSort(v), p: 1}; update(true); scrollTo({top: 0}); };
 addEventListener("hashchange", () => { readHash(); update(false); });
 refreshReports();
 readHash(); update(false);
+__LOAD_END__
 </script>
 </body>
 </html>
 """
 
 
-def build(folder=FOLDER, issues=""):
+LOCAL_LOAD = 'const LABELS = JSON.parse(document.getElementById("data").textContent), WANTED_RAW = JSON.parse(document.getElementById("wanted").textContent);'
+REMOTE_LOAD = """const fromIndex = index => Object.entries(index.prints).filter(([, p]) => p.image).map(([id, p]) => ({id, serial: p.serial || p.release || id,
+    release: p.release || p.serial || id, title: p.title || p.serial || p.release || id, system: p.shape, file: p.image, size: p.size,
+    photos: (p.label_photos || []).length}));
+const getJson = (url, fallback) => fetch(url).then(r => { if (!r.ok) throw new Error(url + ": HTTP " + r.status); return r.json(); }).catch(e => { if (fallback) return fallback; throw e; });
+Promise.all([getJson("index.json"), getJson("wanted.json", [])]).then(([index, WANTED_RAW]) => {
+const LABELS = fromIndex(index);"""
+REMOTE_END = """}).catch(e => { document.getElementById("grid").textContent = "Could not load the data (" + e.message + "). Open this page from the site, next to index.json."; });"""
+
+
+def build_remote(out, issues="", upload=UPLOAD):
+    """A copy of the page that reads index.json beside it and the images at prints/<id>.avif: for the published site."""
+    page = (PAGE.replace("__LOAD_START__", REMOTE_LOAD).replace("__LOAD_END__", REMOTE_END).replace("__TITLE__", "Browse the labels")
+            .replace("__CREDIT__", '<a href="index.html">The plain list of all labels</a> · <a href="wanted.html">Wanted photos</a>')
+            .replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', ""))
+            .replace('<script type="application/json" id="data">__DATA__</script>\n<script type="application/json" id="wanted">__WANTED__</script>\n', ""))
+    with open(out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(page)
+    return out
+
+
+def build(folder=FOLDER, issues="", upload=UPLOAD):
     with open(os.path.join(folder, "labels.json"), encoding="utf-8") as f:
         labels = json.load(f)
     for l in labels:  # a release with no title in the database shows under its serial
@@ -365,18 +437,30 @@ def build(folder=FOLDER, issues=""):
         l["release"] = l.get("release") or l["serial"]
     data = json.dumps([{k: l.get(k) for k in ("id", "serial", "release", "title", "system", "file", "size", "photos")}
                        for l in labels], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    wanted = []
+    if os.path.exists(os.path.join(folder, "wanted.json")):
+        with open(os.path.join(folder, "wanted.json"), encoding="utf-8") as f:
+            wanted = json.load(f)
+    wanted_data = json.dumps([{k: w.get(k) for k in ("print", "release", "title", "system", "region", "serials", "needed", "photos", "search")}
+                              for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__CREDIT__", credit).replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__DATA__", data)
+    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", "Cartridge labels").replace("__CREDIT__", credit).replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data)
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
-    return out, len(labels)
+    return out, len(labels), len(wanted)
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if "--remote" in args:  # --remote <output file>: the page for the published site
+        i = args.index("--remote")
+        issues = args[args.index("--issues") + 1] if "--issues" in args else ""
+        print(build_remote(args[i + 1], issues, args[args.index("--upload") + 1] if "--upload" in args else UPLOAD))
+        sys.exit(0)
     issues = args[args.index("--issues") + 1] if "--issues" in args else ""
-    folders = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i - 1] != "--issues")]
-    out, n = build(folders[0] if folders else FOLDER, issues)
-    print(n, "labels:", os.path.abspath(out))
+    upload = args[args.index("--upload") + 1] if "--upload" in args else UPLOAD
+    folders = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i - 1] not in ("--issues", "--upload"))]
+    out, n, w = build(folders[0] if folders else FOLDER, issues, upload)
+    print(n, "labels,", w, "wanted:", os.path.abspath(out))
