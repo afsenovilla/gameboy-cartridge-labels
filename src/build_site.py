@@ -160,7 +160,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="az" id="az" role="group" aria-label="Starts with"></div>
 </div>
 <main>
-  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><button type="button" id="open-reports" class="opt" hidden style="border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:6px 12px;font:600 14px var(--font)"></button><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
+  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><button type="button" id="open-reports" class="opt" hidden style="border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:6px 12px;font:600 14px var(--font)"></button><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
   <div class="grid" id="grid"></div>
   <div class="wlist" id="wlist" hidden></div>
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
@@ -195,7 +195,7 @@ const ISSUES = "__ISSUES__";
 const REASONS = ["Blurry or low resolution", "Glare or reflections", "Dirt, scratches or damage", "Crooked or badly cropped", "Wrong colours", "Wrong title or serial", "Not a label", "Other"];
 const SYSTEMS = [["", "All"], ["dmg", "Game Boy"], ["cgb", "Game Boy Color"], ["agb", "Game Boy Advance"]];
 const SYSTEM_NAME = {dmg: "Game Boy", cgb: "Game Boy Color", agb: "Game Boy Advance"};
-const PER_PAGE = 48;
+const PER_CHOICES = [24, 48, 96, 200];
 const fold = s => (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const regionOf = s => { const m = /-([A-Z]{3})(?:-\d)?$/.exec(s || ""); return m ? m[1] : "other"; };
 const letterOf = t => { const c = fold(t).replace(/[^\p{L}\p{N}]/gu, "")[0] || ""; return /[a-z]/.test(c) ? c.toUpperCase() : /[0-9]/.test(c) ? "#" : "…"; };
@@ -209,17 +209,17 @@ const SORTS = {w: [["rank", "Closest to done first"], ["title", "Title A to Z"],
 const defaultSort = v => SORTS[v][0][0];
 for (const l of LABELS) { l.letter = letterOf(l.title); l.region = regionOf(l.serial); l.hay = fold([l.title, l.serial, l.release].join(" ")); }
 const $ = id => document.getElementById(id);
-let state = {q: "", s: "", r: "", l: "", g: "1", o: "title", p: 1, v: HOME}, shown = [], groups = [];
+let state = {q: "", s: "", r: "", l: "", g: "1", o: "title", p: 1, v: HOME, n: 48}, shown = [], groups = [];
 
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   const v = h.get("v") === "l" || h.get("v") === "w" ? h.get("v") : HOME, o = h.get("o");
-  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v};
+  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v, n: PER_CHOICES.includes(+h.get("n")) ? +h.get("n") : 48};
 }
 function writeHash(push) {
   const h = new URLSearchParams();
   if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l); if (state.g === "0") h.set("g", "0");
-  if (state.v !== HOME) h.set("v", state.v); if (state.o !== defaultSort(state.v)) h.set("o", state.o); if (state.p > 1) h.set("p", state.p);
+  if (state.v !== HOME) h.set("v", state.v); if (state.o !== defaultSort(state.v)) h.set("o", state.o); if (state.p > 1) h.set("p", state.p); if (state.n !== 48) h.set("n", state.n);
   const url = location.pathname + (h.toString() ? "#" + h : "");
   push ? history.pushState(null, "", url) : history.replaceState(null, "", url);
 }
@@ -273,12 +273,12 @@ function build() {
 function update(push) {
   const matched = filtered(false).sort(sorters[state.o]);
   shown = groupUp(matched);
-  const pages = Math.max(1, Math.ceil(shown.length / PER_PAGE));
+  const pages = Math.max(1, Math.ceil(shown.length / state.n));
   state.p = Math.min(Math.max(1, state.p), pages);
   build();
   const wv = state.v === "w";
   $("sort").innerHTML = SORTS[state.v].map(([k, n]) => '<option value="' + k + '">' + n + "</option>").join("");
-  $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1";
+  $("per").value = state.n; $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1";
   $("stack").parentElement.hidden = wv; $("grid").hidden = wv; $("wlist").hidden = !wv; $("send").hidden = !wv || !UPLOAD;
   $("tab-w").innerHTML = "Wanted<small>" + WANTED.length + "</small>"; $("tab-l").innerHTML = "Restored labels<small>" + LABELS.length + "</small>";
   $("tab-w").setAttribute("aria-selected", String(wv)); $("tab-l").setAttribute("aria-selected", String(!wv));
@@ -286,7 +286,7 @@ function update(push) {
     : "Restored labels of Game Boy, Game Boy Color and Game Boy Advance cartridges. Search by title or serial, then open one to see it large.";
   refreshReports();
   $("count").textContent = matched.length + (wv ? " cartridges" : " labels");
-  const from = (state.p - 1) * PER_PAGE, slice = shown.slice(from, from + PER_PAGE);
+  const from = (state.p - 1) * state.n, slice = shown.slice(from, from + state.n);
   $("range").textContent = shown.length ? "Showing " + (from + 1) + " to " + (from + slice.length) + " of " + shown.length + (wv ? " cartridges" : state.g === "1" ? " games" : " labels") : "";
   $("empty").hidden = shown.length > 0;
   $("grid").innerHTML = ""; $("wlist").innerHTML = "";
@@ -394,8 +394,10 @@ $("view").addEventListener("keydown", e => { if (e.key === "ArrowLeft") openView
 let timer; $("q").addEventListener("input", e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.p = 1; update(false); }, 150); });
 $("region").onchange = e => { state.r = e.target.value; state.p = 1; update(true); };
 $("stack").onchange = e => { state.g = e.target.checked ? "1" : "0"; state.p = 1; update(true); };
+$("per").innerHTML = PER_CHOICES.map(n => "<option>" + n + "</option>").join("");
+$("per").onchange = e => { const first = (state.p - 1) * state.n; state.n = +e.target.value; state.p = Math.floor(first / state.n) + 1; update(true); };
 $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true); };
-$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v}; update(true); };
+$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v, n: state.n}; update(true); };
 for (const v of ["w", "l"]) $("tab-" + v).onclick = () => { if (state.v === v) return; state = {...state, v, s: "", r: "", l: "", o: defaultSort(v), p: 1}; update(true); scrollTo({top: 0}); };
 addEventListener("hashchange", () => { readHash(); update(false); });
 refreshReports();
