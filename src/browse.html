@@ -62,7 +62,6 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .item.stack.two:hover .layer.l1,.item.stack.two:focus-visible .layer.l1{transform:rotate(10deg) translateX(4%)}
 .stackwrap .pic{position:relative;z-index:1;box-shadow:0 1px 6px rgba(0,0,0,.28)}
 .badge{position:absolute;z-index:2;right:8px;bottom:8px;white-space:nowrap;background:var(--ink);color:var(--page);border-radius:5px;padding:2px 8px;font:700 12px var(--font)}
-.chip{position:absolute;z-index:2;left:8px;top:8px;background:var(--lcd);color:var(--lcd-ink);border-radius:5px;padding:2px 7px;font:700 12px var(--font);box-shadow:0 0 0 1.5px rgba(15,56,15,.45)}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
 .thumbs button{width:64px;padding:0;border:2px solid transparent;border-radius:4px;background:var(--well);cursor:pointer;overflow:hidden}
 .thumbs button[aria-current=true]{border-color:var(--on)}
@@ -286,8 +285,8 @@ function update(push) {
     const regions = [...new Set(g.labels.map(x => x.region === "other" ? "—" : x.region))].join(", ");
     a.innerHTML = '<span class="stackwrap">' + behind + '<span class="pic" style="aspect-ratio:' + w + "/" + h + '"><img loading="lazy" decoding="async" width="' + w + '" height="' + h +
       '" alt="' + esc(l.title) + '" src="' + FOLDER + "/" + enc(l.file) + '"></span>' +
-      '<span class="chip" title="' + (SYSTEM_NAME[l.system] || "") + '">' + (SYSTEM_SHORT[l.system] || "") + "</span>" + (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
-      '</b><span class="s">' + esc(many ? regions : l.serial) + "</span>";
+      (many ? '<span class="badge">' + g.labels.length + " labels</span>" : "") + "</span><b>" + esc(l.title) +
+      '</b><span class="s" title="' + esc(SYSTEM_NAME[l.system] || "") + '">' + esc((SYSTEM_SHORT[l.system] ? SYSTEM_SHORT[l.system] + " · " : "") + (many ? regions : l.serial)) + "</span>";
     a.onclick = e => { e.preventDefault(); openView(from + i); };
     $("grid").append(a);
   });
