@@ -9,7 +9,7 @@ def test_build_site_embeds_the_labels_and_escapes_script_ends(tmp_path):
     out, n, _ = build_site.build(str(tmp_path))
     page = open(out, encoding="utf-8").read()
     assert n == 1 and "DMG-X-USA" in page and "<\\/script> Tetris" in page
-    assert page.count("</script>") == 3   # the labels block, the wanted block and the page script: none from the title
+    assert page.count("</script>") == 4   # the labels, wanted and cartridge blocks and the page script: none from the title
 
 
 def test_a_label_with_no_title_or_serial_shows_under_what_it_has(tmp_path):
@@ -30,7 +30,7 @@ def test_wanted_json_is_embedded_when_present_and_the_page_still_builds_without_
          "serials": ["DMG-A-USA"], "needed": 1, "photos": 2, "search": [{"label": "eBay", "url": "https://www.ebay.com/x"}]}]), encoding="utf-8")
     out, _, w = build_site.build(str(tmp_path))
     page = open(out, encoding="utf-8").read()
-    assert w == 1 and "DMG-A-USA" in page and "<\\/script> Wanted" in page and page.count("</script>") == 3
+    assert w == 1 and "DMG-A-USA" in page and "<\\/script> Wanted" in page and page.count("</script>") == 4
 
 
 def test_remote_page_reads_the_data_from_the_given_site_and_reports_to_the_given_repository(tmp_path):
@@ -39,3 +39,13 @@ def test_remote_page_reads_the_data_from_the_given_site_and_reports_to_the_given
     assert 'getJson("https://geon.github.io/gameboy-cartridge-labels/index.json")' in page
     assert 'FOLDER = "https://geon.github.io/gameboy-cartridge-labels"' in page
     assert 'ISSUES = "https://github.com/geon/gameboy-cartridge-labels"' in page
+
+
+def test_the_cartridge_mesh_is_embedded_only_when_cartridge_json_exists(tmp_path, monkeypatch):
+    (tmp_path / "labels.json").write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(build_site, "CARTRIDGE", "no-such-cartridge.json")
+    assert build_site.cartridge() == ""
+    mesh = tmp_path / "mesh.json"
+    mesh.write_text('{"v":"AA==","t":"AA=="}', encoding="utf-8")
+    monkeypatch.setattr(build_site, "CARTRIDGE", str(mesh))
+    assert '"v"' in build_site.cartridge()
