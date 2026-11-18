@@ -355,7 +355,10 @@ $("reasons").innerHTML = REASONS.map((r, i) => '<label><input type="checkbox" va
 function issueLink() {  // the new-issue link carries what is ticked and typed now
   const l = shown[current].labels[inGroup], reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
   const img = /^https?:/.test(FOLDER) ? FOLDER + "/" + l.file : l.file;
-  const body = "Label: " + l.title + "\nSerial: " + l.serial + "\nImage: " + img + "\n\nWhat's wrong: " + (reasons.join("; ") || "(not specified)") + (note ? "\n\n" + note : "") + "\n";
+  const info = [["Label", l.title], ["Serial", l.serial], ["Release", l.release], ["System", SYSTEM_NAME[l.system] || l.system],
+    ["Region", l.region === "other" ? "not in the serial" : l.region], ["Restored from", l.photos ? l.photos + " photos" : "unknown"],
+    ["Size", l.size ? l.size[0] + " x " + l.size[1] + " px" : "unknown"], ["Image", img]];
+  const body = info.map(([k, v]) => "**" + k + ":** " + v).join("\n") + "\n\n**What's wrong:** " + (reasons.join("; ") || "not specified") + "\n\n**More info:** " + (note || "none") + "\n";
   $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body);
 }
 $("rep").addEventListener("input", () => { if (ISSUES) issueLink(); });
