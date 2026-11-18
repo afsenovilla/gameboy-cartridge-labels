@@ -349,26 +349,31 @@ let current = -1, inGroup = 0;
 // The label on a cartridge you can turn: the shell is a stack of 1 px slices (CSS 3D, no library), the label on its front.
 // Sizes in mm (the prints are at 20 px per mm); the shapes are close, not exact.
 const SHELL = {
-  dmg: {w: 58, h: 65, color: [172, 171, 162], clip: "polygon(0 0,100% 0,100% 82%,91% 100%,9% 100%,0 82%)", top: 6},
-  cgb: {w: 58, h: 65, color: [62, 62, 68], clip: "polygon(0 0,89% 0,100% 11%,100% 82%,91% 100%,9% 100%,0 82%)", top: 6},
-  agb: {w: 35, h: 65, color: [169, 169, 174], clip: "polygon(0 0,100% 0,100% 90%,86% 100%,14% 100%,0 90%)", top: 5},
+  // pts: the outline as fractions of width and height: wide top, shoulders, narrower connector end
+  dmg: {w: 57, h: 65, color: [198, 196, 188], round: 10, top: 6.5, pts: [[0, 0], [1, 0], [1, .78], [.93, .84], [.93, 1], [.07, 1], [.07, .84], [0, .78]]},
+  cgb: {w: 57, h: 65, color: [58, 58, 64], round: 10, top: 6.5, pts: [[0, 0], [.88, 0], [1, .1], [1, .78], [.93, .84], [.93, 1], [.07, 1], [.07, .84], [0, .78]]},
+  agb: {w: 35, h: 65, color: [165, 165, 171], round: 8, top: 5, pts: [[0, 0], [1, 0], [1, .86], [.9, .92], [.9, 1], [.1, 1], [.1, .92], [0, .86]]},
 };
 const PX_PER_MM = 20, DEPTH_MM = 7.5, SCALE = 5;
 let three = false, spin = {rx: -12, ry: -28, drag: null, raf: 0};
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function buildScene(l) {
-  const sh = SHELL[l.system] || SHELL.dmg, W = Math.round(sh.w * SCALE), H = Math.round(sh.h * SCALE), D = Math.round(DEPTH_MM * SCALE);
+  const sh = SHELL[l.system] || SHELL.dmg, W = Math.round(sh.w * SCALE), H = Math.round(sh.h * SCALE), D = Math.round(DEPTH_MM * SCALE), RECESS = Math.round(2 * SCALE);
   let lw = (l.size ? l.size[0] : 800) / PX_PER_MM, lh = (l.size ? l.size[1] : 700) / PX_PER_MM;
   const fit = Math.min(1, sh.w * 0.94 / lw); lw *= fit; lh *= fit;
-  const slices = [];
+  const lx = (W - lw * SCALE) / 2, ly = sh.top * SCALE, m = 1.5 * SCALE, hole = [lx - m, ly - m, lw * SCALE + 2 * m, lh * SCALE + 2 * m];
+  const outer = sh.pts.map(([x, y], n) => (n ? "L" : "M") + x * W + " " + y * H).join("") + "Z";
+  const withHole = "path(evenodd,'" + outer + "M" + hole[0] + " " + hole[1] + "h" + hole[2] + "v" + hole[3] + "h" + -hole[2] + "Z')", plain = "path('" + outer + "')";
+  const shade = k => "rgb(" + sh.color.map(v => Math.round(v * k)) + ")", slices = [];
   for (let i = 0; i < D; i++) {
-    const edge = Math.min(i, D - 1 - i) / (D / 2), k = 0.72 + 0.2 * edge, c = sh.color.map(v => Math.round(v * k));
-    slices.push('<div class="slice" style="clip-path:' + sh.clip + ";background:rgb(" + c + ");transform:translateZ(" + (i - D / 2) + 'px)"></div>');
+    const edge = Math.min(i, D - 1 - i) / (D / 2), back = i === 0;
+    slices.push('<div class="slice" style="clip-path:' + (i >= D - RECESS ? withHole : plain) + ";border-radius:" + sh.round + "px " + sh.round + "px 0 0;background:" + (back ? "repeating-linear-gradient(to bottom,transparent 0 7px,rgba(0,0,0,.3) 7px 10px) 0 0/100% 38% no-repeat," : "") + shade(i >= D - RECESS ? 1 : 0.84 + 0.12 * edge) +
+      ";transform:translateZ(" + (i - D / 2) + 'px)"></div>');
   }
-  const front = '<div class="slice" style="clip-path:' + sh.clip + ";background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(0,0,0,.14)),rgb(" + sh.color +
-    ");transform:translateZ(" + D / 2 + 'px)"><img class="lab" alt="" src="' + FOLDER + "/" + enc(l.file) + '" style="left:' + (W - lw * SCALE) / 2 + "px;top:" + sh.top * SCALE +
-    "px;width:" + lw * SCALE + "px;height:" + lh * SCALE + 'px"></div>';
-  $("scene").innerHTML = '<div class="cart" id="cart" style="width:' + W + "px;height:" + H + 'px">' + slices.join("") + front + "</div>";
+  const zl = D / 2 - RECESS;  // the label sits at the bottom of its recess
+  const floor = '<div class="slice" style="clip-path:' + plain + ";background:" + shade(0.55) + ";transform:translateZ(" + zl + 'px)"></div>';
+  const lab = '<img class="lab" alt="" src="' + FOLDER + "/" + enc(l.file) + '" style="left:' + lx + "px;top:" + ly + "px;width:" + lw * SCALE + "px;height:" + lh * SCALE + "px;transform:translateZ(" + (zl + 0.5) + 'px)">';
+  $("scene").innerHTML = '<div class="cart" id="cart" style="width:' + W + "px;height:" + H + 'px">' + slices.join("") + floor + lab + "</div>";
   drawCart();
 }
 function drawCart() { const c = $("cart"); if (c) { c.style.setProperty("--rx", spin.rx + "deg"); c.style.setProperty("--ry", spin.ry + "deg"); } }
