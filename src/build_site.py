@@ -24,7 +24,7 @@ PAGE = r"""<!doctype html>
   --on:#4b7a2c; --on-ink:#f2f5e6; --focus:#b7d84a;
 }}
 *{box-sizing:border-box}
-html{scroll-padding-top:150px}
+html{scroll-padding-top:190px}
 body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 var(--font)}
 a{color:inherit}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -32,6 +32,11 @@ header{padding:28px 20px 8px;max-width:1500px;margin:0 auto}
 h1{margin:0;font:800 clamp(30px,5vw,52px)/1 var(--font);letter-spacing:-.03em}
 header p{margin:8px 0 0;color:var(--muted);max-width:60ch}
 .bar{position:sticky;top:0;z-index:5;background:var(--page);border-bottom:1px solid var(--line);padding:14px 20px}
+.az{max-width:1500px;margin:12px auto 0;display:flex;gap:3px;overflow-x:auto;padding-bottom:2px}
+.az button{flex:0 0 auto;min-width:32px;height:34px;border:0;border-radius:6px;background:transparent;color:var(--ink);font:650 14px var(--font);cursor:pointer;padding:0 8px}
+.az button:hover:not(:disabled){background:var(--well)}
+.az button[aria-pressed=true],.az button[aria-pressed=true]:hover:not(:disabled){background:var(--on);color:var(--on-ink)}
+.az button:disabled{opacity:.3;cursor:default}
 .bar-in{max-width:1500px;margin:0 auto;display:grid;gap:12px;grid-template-columns:minmax(240px,1fr) auto auto auto;align-items:center}
 .lcd{display:flex;align-items:center;gap:12px;background:var(--lcd);color:var(--lcd-ink);border-radius:6px 6px 22px 6px;padding:9px 16px;
   box-shadow:inset 0 0 0 3px rgba(15,56,15,.35),inset 3px 3px 0 rgba(15,56,15,.25)}
@@ -93,7 +98,9 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
     <option value="serial">Serial</option>
     <option value="photos">Most photos first</option>
   </select>
-</div></div>
+</div>
+  <div class="az" id="az" role="group" aria-label="Starts with"></div>
+</div>
 <main>
   <div class="meta"><span id="range"></span></div>
   <div class="grid" id="grid"></div>
@@ -118,24 +125,26 @@ const SYSTEM_NAME = {dmg: "Game Boy", cgb: "Game Boy Color", agb: "Game Boy Adva
 const PER_PAGE = 48;
 const fold = s => (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const regionOf = s => { const m = /-([A-Z]{3})(?:-\d)?$/.exec(s || ""); return m ? m[1] : "other"; };
-for (const l of LABELS) { l.region = regionOf(l.serial); l.hay = fold([l.title, l.serial, l.release].join(" ")); }
+const letterOf = t => { const c = fold(t).replace(/[^\p{L}\p{N}]/gu, "")[0] || ""; return /[a-z]/.test(c) ? c.toUpperCase() : /[0-9]/.test(c) ? "#" : "…"; };
+for (const l of LABELS) { l.letter = letterOf(l.title); l.region = regionOf(l.serial); l.hay = fold([l.title, l.serial, l.release].join(" ")); }
 const $ = id => document.getElementById(id);
-let state = {q: "", s: "", r: "", o: "title", p: 1}, shown = [];
+let state = {q: "", s: "", r: "", l: "", o: "title", p: 1}, shown = [];
 
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
-  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", o: h.get("o") || "title", p: parseInt(h.get("p")) || 1};
+  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", o: h.get("o") || "title", p: parseInt(h.get("p")) || 1};
 }
 function writeHash(push) {
   const h = new URLSearchParams();
-  if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r);
+  if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l);
   if (state.o !== "title") h.set("o", state.o); if (state.p > 1) h.set("p", state.p);
   const url = location.pathname + (h.toString() ? "#" + h : "");
   push ? history.pushState(null, "", url) : history.replaceState(null, "", url);
 }
-function filtered(ignoreSystem) {
+function filtered(ignoreSystem, ignoreLetter) {
   const words = fold(state.q).split(/\s+/).filter(Boolean);
-  return LABELS.filter(l => (ignoreSystem || !state.s || l.system === state.s) && (!state.r || l.region === state.r) &&
+  return LABELS.filter(l => (ignoreSystem || !state.s || l.system === state.s) && (ignoreLetter || !state.l || l.letter === state.l) &&
+    (!state.r || l.region === state.r) &&
     words.every(w => l.hay.includes(w)));
 }
 const sorters = {
@@ -153,6 +162,16 @@ function build() {
     b.innerHTML = name + "<small>" + n + "</small>";
     b.onclick = () => { state.s = key; state.p = 1; update(true); };
     $("systems").append(b);
+  }
+  const has = new Set(filtered(false, true).map(l => l.letter));
+  $("az").innerHTML = "";
+  for (const k of ["", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", "#", "…"]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = k || "All"; b.disabled = k !== "" && !has.has(k);
+    b.setAttribute("aria-pressed", String(state.l === k));
+    if (k === "#") b.title = "Starts with a number"; if (k === "…") b.title = "Starts with another script";
+    b.onclick = () => { state.l = k; state.p = 1; update(true); };
+    $("az").append(b);
   }
   const counts = {};
   for (const l of LABELS.filter(l => !state.s || l.system === state.s)) counts[l.region] = (counts[l.region] || 0) + 1;
@@ -223,7 +242,7 @@ $("view").addEventListener("keydown", e => { if (e.key === "ArrowLeft") openView
 let timer; $("q").addEventListener("input", e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.p = 1; update(false); }, 150); });
 $("region").onchange = e => { state.r = e.target.value; state.p = 1; update(true); };
 $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true); };
-$("clear").onclick = () => { state = {q: "", s: "", r: "", o: "title", p: 1}; update(true); };
+$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", o: "title", p: 1}; update(true); };
 addEventListener("hashchange", () => { readHash(); update(false); });
 readHash(); update(false);
 </script>
