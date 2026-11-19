@@ -8,6 +8,10 @@
 # --sweep also searches every two-letter and digit combination, to find games no title of ours led to. It is long.
 # --limit N stops after N requests to ScreenScraper (the daily quota is the real limit: when it answers 429 or 430 the run saves
 # and stops). Progress is in index.json, so running it again carries on; nothing is asked twice.
+# Hacks, translations, homebrew, unlicensed and unreleased games are left out: their labels are fan-made. Each game's verdict
+# is in index.json ("excluded": why); the list is also written to screenscraper-labels/excluded.txt so it can be checked.
+# --recheck asks again about the games found before this filter existed and moves the images of the excluded ones to
+# screenscraper-labels/excluded/ (don't run it while a download is running: both write index.json).
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
 import json
@@ -61,6 +65,41 @@ def textures(game):
     return ss.support_images(game, "support-texture")
 
 
+FAN_PUBLISHER = re.compile(r"romhack|\bhack|homebrew|translat|traduc|\bfan\b|patch", re.I)
+HACK_TEXT = re.compile(r"\b(?:a|this|the)\s+(?:rom)?hack\b(?![-\s]*(?:and|&|'?n'?)[-\s]*slash)|\bhack\s+of\b|\bromhack|\bfan[- ]?(?:made|translation|game)|\bhomebrew\b", re.I)
+FLAGS = ("hack", "trad", "unl", "beta", "demo", "proto")
+NOT_A_REGION = {"ss", "wor", "", None}
+
+
+def text(x):
+    return (x or {}).get("text", "") if isinstance(x, dict) else ""
+
+
+def verdict(game):
+    """None for a game that was sold in shops; otherwise why it is left out."""
+    if str(game.get("notgame", "false")).lower() == "true":
+        return "not a game"
+    publisher = text(game.get("editeur"))
+    if FAN_PUBLISHER.search(publisher):
+        return "published by " + publisher
+    for s in game.get("synopsis", []) or []:
+        if s.get("langue") in ("en", "fr", "es") and HACK_TEXT.search(s.get("text", "")):
+            return "described as a hack or homebrew"
+    roms = game.get("roms", []) or []
+    if roms and all(any(str(r.get(f, "0")) == "1" for f in FLAGS) for r in roms):
+        return "every dump is flagged " + "/".join(sorted({f for r in roms for f in FLAGS if str(r.get(f, "0")) == "1"}))
+    regions = {n.get("region") for n in game.get("noms", []) or []} | {d.get("region") for d in game.get("dates", []) or []}
+    regions |= {x for r in roms for x in (r.get("regions") or {}).get("regions_shortname", [])}
+    if not regions - NOT_A_REGION:
+        return "no release in any country"
+    return None
+
+
+def described(game):
+    """Whether an answer about a game has what verdict() looks at, or only a summary."""
+    return any(k in game for k in ("editeur", "dates", "roms", "synopsis"))
+
+
 class Refused(Exception):
     """ScreenScraper answered with a message that means we must stop (quota, closed API, bad login)."""
 
@@ -97,13 +136,17 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
                 gid = str(g.get("id") or "")
                 if not gid or gid in state["games"]:
                     continue
-                info = g if g.get("medias") else ask("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS[system]).get("response", {}).get("jeu", {})
+                info = g if g.get("medias") and described(g) else ask("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS[system]).get("response", {}).get("jeu", {})
+                why = verdict(info)
+                if why:
+                    state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": [], "excluded": why}
+                    continue
                 files = []
                 for region, url, fmt in textures(info):
                     name = f"{system}/{gid}-{region}.{fmt}"
                     if fetch is None or fetch(url, name) is not False:
                         files.append(name)
-                state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files}
+                state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files, "checked": True}
             state["searched"].append(key)
             save()
     except Out:
@@ -112,6 +155,37 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
         save()
         print("ScreenScraper says:", e, "- saved; check the message, or run it again later.")
     return used
+
+
+def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lambda: None):
+    """Ask about the games kept before the filter existed; exclude the fan-made ones and move their images aside."""
+    used = 0
+    for gid, g in state["games"].items():
+        if g.get("checked") or g.get("excluded"):
+            continue
+        if used >= limit:
+            print("Reached the limit of", limit, "requests; run it again to carry on.")
+            break
+        used += 1
+        info = check(call("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS[g["system"]])).get("response", {}).get("jeu", {})
+        if not info:
+            continue
+        why = verdict(info)
+        if why:
+            for name in g["labels"]:
+                move(name)
+            g["labels"], g["excluded"] = [], why
+        else:
+            g["checked"] = True
+        save()
+    return used
+
+
+def report(state, path):
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        for gid, g in sorted(state["games"].items(), key=lambda kv: (kv[1]["system"], (kv[1]["names"] or [""])[0].lower())):
+            if g.get("excluded"):
+                f.write(f"{g['system']}\t{gid}\t{(g['names'] or ['?'])[0]}\t{g['excluded']}\n")
 
 
 def main(args):
@@ -148,6 +222,23 @@ def main(args):
             f.write(data)
         return True
 
+    if "--recheck" in args:
+        def move(name):
+            src, dst = os.path.join(OUT, name), os.path.join(OUT, "excluded", name)
+            if os.path.exists(src):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                os.replace(src, dst)
+        try:
+            used = recheck(state, creds, limit, move=move, save=save)
+        except Refused as e:
+            used = 0
+            print("ScreenScraper says:", e, "- saved; run it again later.")
+        save()
+        report(state, os.path.join(OUT, "excluded.txt"))
+        out = [g for g in state["games"].values() if g.get("excluded")]
+        print(f"{len(out)} of {len(state['games'])} games left out (see screenscraper-labels/excluded.txt); {used} requests.")
+        return
+
     todo = titles()
     if "--sweep" in args:
         todo += [(s, q) for q in sweep_queries() for s in ("gb", "gbc", "gba")]
@@ -160,8 +251,9 @@ def main(args):
             raise
         used = 0
     save()
+    report(state, os.path.join(OUT, "excluded.txt"))
     n = sum(len(g["labels"]) for g in state["games"].values())
-    print(f"{len(state['games'])} games, {n} label images, {len(state['searched'])} of {len(todo)} searches done ({used} requests this run).")
+    print(f"{len(state['games'])} games ({sum(1 for g in state['games'].values() if g.get('excluded'))} left out), {n} label images, {len(state['searched'])} of {len(todo)} searches done ({used} requests this run).")
 
 
 if __name__ == "__main__":

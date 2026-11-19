@@ -26,11 +26,11 @@ def test_run_keeps_every_game_found_with_every_region_and_never_asks_twice():
               {"type": "support-texture", "region": "us", "url": "http://x/2", "format": "png"},
               {"type": "support-2D", "region": "eu", "url": "http://x/3", "format": "png"}]
     call = fake({("jeuRecherche.php", "Tetris"): {"response": {"jeux": [{"id": "7", "noms": [{"text": "Tetris"}]}]}},
-                 ("jeuInfos.php", 7): {"response": {"jeu": {"medias": medias}}}})
+                 ("jeuInfos.php", 7): {"response": {"jeu": {"medias": medias, "dates": [{"region": "eu"}]}}}})
     state, fetched = {"games": {}, "searched": []}, []
     used = d.run([("gb", "Tetris")], {}, state, 100, call=call, fetch=lambda u, n: fetched.append((u, n)))
     assert used == 2 and fetched == [("http://x/1", "gb/7-eu.png"), ("http://x/2", "gb/7-us.png")]
-    assert state["games"]["7"] == {"system": "gb", "names": ["Tetris"], "labels": ["gb/7-eu.png", "gb/7-us.png"]}
+    assert state["games"]["7"] == {"system": "gb", "names": ["Tetris"], "labels": ["gb/7-eu.png", "gb/7-us.png"], "checked": True}
     assert d.run([("gb", "Tetris")], {}, state, 100, call=call) == 0  # already searched
 
 
@@ -53,7 +53,7 @@ def test_plain_text_answers_mean_not_found_but_quota_messages_stop():
 def test_an_image_that_fails_is_left_out_and_the_run_goes_on():
     medias = [{"type": "support-texture", "region": "eu", "url": "http://x/1", "format": "png"},
               {"type": "support-texture", "region": "us", "url": "http://x/2", "format": "png"}]
-    call = fake({("jeuRecherche.php", "Tetris"): {"response": {"jeux": [{"id": "7", "medias": medias}]}}})
+    call = fake({("jeuRecherche.php", "Tetris"): {"response": {"jeux": [{"id": "7", "medias": medias, "dates": [{"region": "us"}]}]}}})
     state = {"games": {}, "searched": []}
     d.run([("gb", "Tetris")], {}, state, 5, call=call, fetch=lambda u, n: u != "http://x/1" and None)
     assert state["games"]["7"]["labels"] == ["gb/7-us.png"] and state["searched"] == ["gb|tetris"]
@@ -62,3 +62,41 @@ def test_an_image_that_fails_is_left_out_and_the_run_goes_on():
 def test_inspect_leaves_out_medias_and_links():
     import screenscraper_inspect as i
     assert i.strip({"id": "7", "medias": [1], "x": [{"url": "https://a?ssid=me", "k": "v"}]}) == {"id": "7", "x": [{"k": "v"}]}
+
+
+HACK = {"id": "490040", "notgame": "false", "noms": [{"region": "ss", "text": "Castlevania - Revenge"}],
+        "editeur": {"id": "12672", "text": "ROMhacking.net"}, "dates": [{"region": "wor", "text": "2007-10-04"}],
+        "synopsis": [{"langue": "en", "text": "A hack of Harmony of Dissonance by someone"}],
+        "roms": [{"hack": "0", "unl": "0"}]}
+OFFICIAL = {"id": "84714", "notgame": "false", "noms": [{"region": "ss", "text": "Yoshi"}, {"region": "us", "text": "Yoshi"}],
+            "editeur": {"text": "Nintendo"}, "dates": [{"region": "us", "text": "2002-09-24"}],
+            "synopsis": [{"langue": "en", "text": "Yoshi's Island makes us discover the origin of Mario."}],
+            "roms": [{"hack": "0", "regions": {"regions_shortname": ["us"]}}]}
+
+
+def test_verdict_keeps_shop_games_and_leaves_out_fan_made_ones():
+    assert d.verdict(OFFICIAL) is None
+    assert d.verdict(HACK) == "published by ROMhacking.net"
+    assert d.verdict({**HACK, "editeur": {"text": "Someone"}}) == "described as a hack or homebrew"
+    assert d.verdict({**HACK, "editeur": {}, "synopsis": []}) == "no release in any country"
+    assert d.verdict({**OFFICIAL, "synopsis": [{"langue": "en", "text": "A hack and slash game with a hacker."}]}) is None
+    assert d.verdict({**OFFICIAL, "roms": [{"unl": "1"}, {"trad": "1"}]}) == "every dump is flagged trad/unl"
+
+
+def test_run_records_excluded_games_without_downloading_them():
+    call = fake({("jeuRecherche.php", "Castlevania"): {"response": {"jeux": [{**HACK, "medias": [
+        {"type": "support-texture", "region": "wor", "url": "http://x/1", "format": "png"}]}]}}})
+    state, fetched = {"games": {}, "searched": []}, []
+    d.run([("gba", "Castlevania")], {}, state, 5, call=call, fetch=lambda u, n: fetched.append(n))
+    assert fetched == [] and state["games"]["490040"]["excluded"] == "published by ROMhacking.net"
+
+
+def test_recheck_moves_the_images_of_games_found_before_the_filter():
+    state = {"games": {"490040": {"system": "gba", "names": ["C"], "labels": ["gba/490040-wor.png"]},
+                       "84714": {"system": "gba", "names": ["Y"], "labels": ["gba/84714-us.png"]}}, "searched": []}
+    answers = {490040: HACK, 84714: OFFICIAL}
+    moved = []
+    used = d.recheck(state, {}, 10, call=lambda e, c, **p: {"response": {"jeu": answers[p["gameid"]]}}, move=moved.append)
+    assert used == 2 and moved == ["gba/490040-wor.png"]
+    assert state["games"]["490040"]["labels"] == [] and state["games"]["84714"]["checked"]
+    assert d.recheck(state, {}, 10, call=None) == 0
