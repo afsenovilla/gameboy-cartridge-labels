@@ -164,7 +164,7 @@ def test_ignored_images_are_never_downloaded_and_removed_if_there(tmp_path):
     lst = tmp_path / "ignore.txt"
     lst.write_text("# ScreenScraper's mistakes\ngb\\82269-us.png  # a GBA label\n\n", encoding="utf-8")
     ignore = d.ignored(str(lst))
-    assert ignore == {"gb/82269-us.png"}
+    assert ignore == {"82269-us.png"}  # by file name: --fix-systems may move it to gbc/
     medias = [{"type": "support-texture", "region": r, "url": "http://x/" + r, "format": "png", "md5": r} for r in ("us", "jp")]
     got = []
     assert d.save_textures("gb", "82269", {"medias": medias}, lambda u, n: got.append(n), {}, ignore)[0] == ["gb/82269-jp.png"]
@@ -210,3 +210,12 @@ def test_fix_systems_moves_gbc_games_out_of_gb():
     assert g["system"] == "gbc" and g["labels"] == ["gbc/82269-jp.png"] and g["same"] == {"gbc/82269-us.png": "gbc/82269-jp.png"}
     assert state["md5"] == {"a": "gbc/82269-jp.png", "b": "gb/1-us.png"} and state["games"]["1"]["system_checked"]
     assert d.fix_systems(state, {}, 10, call=None) == (0, 0)
+
+
+def test_dedupe_survives_an_image_listed_twice(tmp_path):
+    (tmp_path / "gba").mkdir()
+    for n in ("3820-jp", "3820-tw"):
+        (tmp_path / "gba" / f"{n}.png").write_bytes(b"x")
+    state = {"games": {"3820": {"system": "gba", "labels": ["gba/3820-jp.png", "gba/3820-tw.png", "gba/3820-tw.png"]}}}
+    assert d.dedupe(state, out=str(tmp_path)) == 1
+    assert state["games"]["3820"]["labels"] == ["gba/3820-jp.png"] and state["games"]["3820"]["same"] == {"gba/3820-tw.png": "gba/3820-jp.png"}

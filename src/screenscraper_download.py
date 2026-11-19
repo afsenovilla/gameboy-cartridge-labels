@@ -111,7 +111,7 @@ def ignored(path=IGNORE):
     if not os.path.exists(path):
         return set()
     with open(path, encoding="utf-8") as f:
-        return {l.split("#")[0].strip().replace("\\", "/") for l in f} - {""}
+        return {os.path.basename(l.split("#")[0].strip().replace("\\", "/")) for l in f} - {""}
 
 
 def drop_ignored(state, ignore, out=OUT, remove=os.remove):
@@ -122,12 +122,13 @@ def drop_ignored(state, ignore, out=OUT, remove=os.remove):
         if gid in ignore:
             g["excluded"] = "listed in ignore.txt"
             g.pop("checked", None)
-        for name in [x for x in g.get("labels", []) if x in ignore or gid in ignore]:
+        for name in [x for x in g.get("labels", []) if os.path.basename(x) in ignore or gid in ignore]:
             if os.path.exists(os.path.join(out, name)):
                 remove(os.path.join(out, name))
             g["labels"].remove(name)
             n += 1
-        for name in [x for x, kept in g.get("same", {}).items() if x in ignore or kept in ignore or gid in ignore]:
+        for name in [x for x, kept in g.get("same", {}).items()
+                     if {os.path.basename(x), os.path.basename(kept), gid} & ignore]:
             del g["same"][name]
     return n
 
@@ -139,7 +140,7 @@ def save_textures(system, gid, info, fetch, seen=None, ignore=frozenset()):
     groups = {}
     for region, url, fmt, md5 in textures(info):
         name = f"{system}/{gid}-{region}.{fmt}"
-        if name not in ignore:
+        if os.path.basename(name) not in ignore and name not in [n for grp in groups.values() for n, _ in grp]:
             groups.setdefault(md5 or url, []).append((name, url))
     files, same = [], {}
     seen = {} if seen is None else seen  # md5 -> file kept, over every game: ScreenScraper has some games twice
@@ -303,7 +304,8 @@ def dedupe(state, out=OUT, remove=os.remove):
     import hashlib
     groups, owner = {}, {}
     for gid, g in sorted(state["games"].items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else 0):
-        for name in g.get("labels", []):
+        g["labels"] = list(dict.fromkeys(g.get("labels", [])))  # ScreenScraper can list a region's image twice
+        for name in g["labels"]:
             path = os.path.join(out, name)
             if os.path.exists(path):
                 with open(path, "rb") as f:
@@ -314,7 +316,10 @@ def dedupe(state, out=OUT, remove=os.remove):
         kept = keeper(group)
         for name in group:
             if name != kept:
-                remove(os.path.join(out, name))
+                try:
+                    remove(os.path.join(out, name))
+                except FileNotFoundError:
+                    pass
                 g = owner[name]
                 g["labels"] = [x for x in g["labels"] if x != name]
                 g.setdefault("same", {})[name] = kept
