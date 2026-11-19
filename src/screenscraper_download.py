@@ -16,7 +16,8 @@
 # where that label was sold (keeper: eu and fr is the French label; de, fr and it, the European one); index.json notes
 # the others in the game's "same" ({that region's file: the file kept}). The same goes across games, as ScreenScraper
 # has some twice (Bomberman GB and Wario Blast share the Japanese label): "md5" in index.json remembers what's saved. --dedupe does the same for the
-# images downloaded before this, removing the identical copies (don't run it while a download is running).
+# images downloaded before this, removing the identical copies (don't run it while a download is running); with
+# --dry-run it only lists what it would remove.
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
 import json
@@ -310,6 +311,11 @@ def main(args):
         return True
 
     if "--dedupe" in args:
+        if "--dry-run" in args:  # only say what would go: nothing removed, index.json untouched
+            import copy
+            n = dedupe(copy.deepcopy(state), remove=lambda path: print("  would remove", path))
+            print(n, "identical images would be removed (run without --dry-run to remove them).")
+            return
         n = dedupe(state)
         save()
         print(n, "identical images removed; index.json notes which image each region shares.")
