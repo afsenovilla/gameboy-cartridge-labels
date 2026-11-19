@@ -19,7 +19,8 @@
 # images downloaded before this, removing the identical copies (don't run it while a download is running); with
 # --dry-run it only lists what it would remove.
 # screenscraper-labels/ignore.txt lists images that are ScreenScraper's mistakes (a GBA label filed under a GB game),
-# one per line, e.g. gb/82269-us.png: never downloaded, and --dedupe removes those already there.
+# one per line, e.g. gb/82269-us.png, or a game id for a whole game the filter let through (82188, a fan game): never
+# downloaded, and --dedupe removes those already there.
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
 import json
@@ -103,7 +104,8 @@ IGNORE = os.path.join(OUT, "ignore.txt")
 
 
 def ignored(path=IGNORE):
-    """The images never to keep, one per line ("gb/82269-us.png"; # starts a comment): ScreenScraper's mistakes."""
+    """What never to keep, one per line (# starts a comment): an image ("gb/82269-us.png", a mistaken one) or a game id
+    ("82188", a fan game the filter didn't catch: all its images)."""
     if not os.path.exists(path):
         return set()
     with open(path, encoding="utf-8") as f:
@@ -111,15 +113,19 @@ def ignored(path=IGNORE):
 
 
 def drop_ignored(state, ignore, out=OUT, remove=os.remove):
-    """Remove the ignored images already downloaded, and forget them. Returns how many."""
+    """Remove the ignored images (and every image of the ignored games) already downloaded, and forget them; an
+    ignored game is marked excluded. Returns how many images."""
     n = 0
-    for g in state["games"].values():
-        for name in [x for x in g.get("labels", []) if x in ignore]:
+    for gid, g in state["games"].items():
+        if gid in ignore:
+            g["excluded"] = "listed in ignore.txt"
+            g.pop("checked", None)
+        for name in [x for x in g.get("labels", []) if x in ignore or gid in ignore]:
             if os.path.exists(os.path.join(out, name)):
                 remove(os.path.join(out, name))
             g["labels"].remove(name)
             n += 1
-        for name in [x for x, kept in g.get("same", {}).items() if x in ignore or kept in ignore]:
+        for name in [x for x, kept in g.get("same", {}).items() if x in ignore or kept in ignore or gid in ignore]:
             del g["same"][name]
     return n
 
@@ -228,6 +234,9 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None, 
             for g in found:
                 gid = str(g.get("id") or "")
                 if not gid or gid in state["games"]:
+                    continue
+                if gid in ignore:
+                    state["games"][gid] = {"system": system, "names": names_of(g), "labels": [], "excluded": "listed in ignore.txt"}
                     continue
                 own = system_of_game(g)
                 if own is False:  # another system's game altogether

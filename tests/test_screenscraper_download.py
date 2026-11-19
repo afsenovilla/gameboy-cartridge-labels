@@ -183,3 +183,15 @@ def test_a_game_is_filed_under_its_own_system():
     state, got = {"games": {}, "searched": []}, []
     d.run([("gb", "Hole In One Golf")], {}, state, 5, call=call, fetch=lambda u, n: got.append(n))
     assert got == ["gbc/82269-jp.png"] and state["games"]["82269"]["system"] == "gbc" and "5" not in state["games"]
+
+
+def test_an_ignored_game_loses_all_its_images(tmp_path):
+    (tmp_path / "gb").mkdir()
+    for n in ("82189-eu", "82189-c"):
+        (tmp_path / "gb" / f"{n}.png").write_bytes(n.encode())
+    state = {"games": {"82189": {"system": "gb", "labels": ["gb/82189-eu.png", "gb/82189-c.png"], "checked": True}}}
+    assert d.drop_ignored(state, {"82189"}, out=str(tmp_path)) == 2
+    assert state["games"]["82189"] == {"system": "gb", "labels": [], "excluded": "listed in ignore.txt"}
+    call = fake({("jeuRecherche.php", "X"): {"response": {"jeux": [{"id": "82188", "noms": [{"text": "X"}]}]}}})
+    s2 = {"games": {}, "searched": []}
+    assert d.run([("gb", "X")], {}, s2, 5, call=call, ignore={"82188"}) == 1 and s2["games"]["82188"]["excluded"] == "listed in ignore.txt"
