@@ -219,3 +219,14 @@ def test_dedupe_survives_an_image_listed_twice(tmp_path):
     state = {"games": {"3820": {"system": "gba", "labels": ["gba/3820-jp.png", "gba/3820-tw.png", "gba/3820-tw.png"]}}}
     assert d.dedupe(state, out=str(tmp_path)) == 1
     assert state["games"]["3820"]["labels"] == ["gba/3820-jp.png"] and state["games"]["3820"]["same"] == {"gba/3820-tw.png": "gba/3820-jp.png"}
+
+
+def test_e_reader_cards_are_not_cartridges(tmp_path):
+    assert d.e_reader(["Super Mario Advance 4 Card-e"]) and d.e_reader(["Ice Climber-e"]) and d.e_reader(["Rockman EXE 4 Card-e+"])
+    assert not d.e_reader(["Super Mario Advance 4", "Pokemon - Edition Rouge", "Tetris"])
+    assert d.verdict({**OFFICIAL, "noms": [{"region": "us", "text": "Ice Climber-e"}]}) == "e-Reader cards, not a cartridge"
+    (tmp_path / "gba").mkdir()
+    (tmp_path / "gba" / "140755-us.png").write_bytes(b"x")
+    state = {"games": {"140755": {"system": "gba", "names": ["Ice Climber-e"], "labels": ["gba/140755-us.png"], "checked": True}}}
+    assert d.drop_cards(state, out=str(tmp_path)) == 1 and not (tmp_path / "gba" / "140755-us.png").exists()
+    assert state["games"]["140755"]["excluded"] == "e-Reader cards, not a cartridge"

@@ -114,6 +114,21 @@ def ignored(path=IGNORE):
         return {os.path.basename(l.split("#")[0].strip().replace("\\", "/")) for l in f} - {""}
 
 
+def drop_cards(state, out=OUT, remove=os.remove):
+    """The e-Reader card games downloaded before verdict knew them: remove their images, mark them excluded."""
+    n = 0
+    for g in state["games"].values():
+        if not g.get("excluded") and e_reader(g.get("names", [])):
+            for name in g.get("labels", []):
+                if os.path.exists(os.path.join(out, name)):
+                    remove(os.path.join(out, name))
+                n += 1
+            g.update(labels=[], excluded="e-Reader cards, not a cartridge")
+            g.pop("checked", None)
+            g.pop("same", None)
+    return n
+
+
 def drop_ignored(state, ignore, out=OUT, remove=os.remove):
     """Remove the ignored images (and every image of the ignored games) already downloaded, and forget them; an
     ignored game is marked excluded. Returns how many images."""
@@ -168,10 +183,20 @@ def text(x):
     return (x or {}).get("text", "") if isinstance(x, dict) else ""
 
 
+E_READER = re.compile(r"\bcard[- ]?e\b|-e\s*\+?\s*$|\be-?reader\b", re.I)
+
+
+def e_reader(names):
+    """Whether a game is e-Reader cards ("Super Mario Advance 4 Card-e", "Ice Climber-e"): cards, not a cartridge."""
+    return any(E_READER.search(n or "") for n in names)
+
+
 def verdict(game):
-    """None for a game that was sold in shops; otherwise why it is left out."""
+    """None for a game that was sold in shops on a cartridge; otherwise why it is left out."""
     if str(game.get("notgame", "false")).lower() == "true":
         return "not a game"
+    if e_reader(names_of(game)):
+        return "e-Reader cards, not a cartridge"
     publisher = text(game.get("editeur"))
     if FAN_PUBLISHER.search(publisher):
         return "published by " + publisher
@@ -406,12 +431,12 @@ def main(args):
             n = dedupe(copy.deepcopy(state), remove=lambda path: print("  would remove", path))
             print(n, "identical images would be removed (run without --dry-run to remove them).")
             return
-        gone = drop_ignored(state, ignored())
+        gone = drop_ignored(state, ignored()) + drop_cards(state)
         n = dedupe(state)
         save()
         print(n, "identical images removed; index.json notes which image each region shares.")
         if gone:
-            print(gone, "images listed in screenscraper-labels/ignore.txt removed.")
+            print(gone, "images of ignore.txt and of e-Reader cards removed.")
         return
 
     if "--fix-systems" in args:
