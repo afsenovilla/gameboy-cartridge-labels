@@ -26,7 +26,11 @@ def call(endpoint, creds, **params):
     with urllib.request.urlopen(API + endpoint + "?" + urllib.parse.urlencode(query), timeout=60) as r:
         data = r.read()
     time.sleep(PAUSE)
-    return json.loads(data.decode("utf-8"))
+    text = data.decode("utf-8", "replace").strip()
+    try:
+        return json.loads(text)
+    except ValueError:  # ScreenScraper answers errors and "not found" as plain text (or nothing) with a 200
+        return {"error": text}
 
 
 def support_images(game, kind="support-2D"):

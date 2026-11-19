@@ -61,6 +61,17 @@ def textures(game):
     return ss.support_images(game, "support-texture")
 
 
+class Refused(Exception):
+    """ScreenScraper answered with a message that means we must stop (quota, closed API, bad login)."""
+
+
+def check(answer):
+    text = str(answer.get("error", "")).lower() if isinstance(answer, dict) else ""
+    if any(w in text for w in ("quota", "closed", "limit", "maximum", "identifiants", "login", "password", "blacklist", "trop")):
+        raise Refused(answer["error"])
+    return answer
+
+
 class Out(Exception):
     """The request limit was reached."""
 
@@ -74,7 +85,7 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
         if used >= limit:
             raise Out()
         used += 1
-        return call(*a, **k)
+        return check(call(*a, **k))
 
     try:
         for system, q in todo:
@@ -98,6 +109,9 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
             save()
     except Out:
         print("Reached the limit of", limit, "requests; run it again to carry on.")
+    except Refused as e:
+        save()
+        print("ScreenScraper says:", e, "- saved; check the message, or run it again later.")
     return used
 
 

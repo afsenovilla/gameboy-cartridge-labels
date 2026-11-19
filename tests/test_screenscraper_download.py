@@ -39,3 +39,12 @@ def test_run_stops_at_the_limit_and_resumes():
     state = {"games": {}, "searched": []}
     assert d.run([("gb", "A"), ("gb", "B")], {}, state, 1, call=call) == 1 and state["searched"] == ["gb|a"]
     assert d.run([("gb", "A"), ("gb", "B")], {}, state, 1, call=call) == 1 and state["searched"] == ["gb|a", "gb|b"]
+
+
+def test_plain_text_answers_mean_not_found_but_quota_messages_stop():
+    state = {"games": {}, "searched": []}
+    d.run([("gb", "A")], {}, state, 5, call=lambda *a, **k: {"error": "Erreur : Jeu non trouvée !"})
+    assert state["searched"] == ["gb|a"]
+    state = {"games": {}, "searched": []}
+    d.run([("gb", "A")], {}, state, 5, call=lambda *a, **k: {"error": "API closed for non-members: quota exceeded"})
+    assert state["searched"] == []
