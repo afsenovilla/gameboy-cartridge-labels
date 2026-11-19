@@ -48,6 +48,8 @@ h1{margin:0;font:800 26px/1.05 var(--font);letter-spacing:-.02em}
 .lcd:focus-within{outline:3px solid var(--focus);outline-offset:2px}
 .lcd output{font:600 13px ui-monospace,"Cascadia Mono",Consolas,monospace;white-space:nowrap}
 .seg{display:flex;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden}
+.hud .seg{background:var(--shell)}
+.hud .seg button{flex:0 0 auto;padding:7px 12px}
 .seg button{flex:1;border:0;border-radius:0;background:transparent;padding:8px 6px;white-space:nowrap}
 .seg button+button{border-left:1.5px solid var(--ink)}
 .seg button[aria-pressed=true]{background:var(--on);color:var(--on-ink)}
@@ -86,7 +88,8 @@ summary{cursor:pointer;font-weight:650}
 <div id="stage">
   <canvas id="c" aria-label="3D view of the cartridges"></canvas>
   <div class="hud top">
-    <button id="viewAll" type="button" aria-pressed="true">All three</button>
+    <span class="seg" id="which" role="group" aria-label="Cartridges to show"></span>
+    <button id="viewAll" type="button" aria-pressed="true">Fit all</button>
     <button id="flip" type="button">Show the back</button>
     <button id="spin" type="button" aria-pressed="true">Auto-rotate</button>
   </div>
@@ -127,13 +130,13 @@ if(!window.THREE){$('err').style.display='grid';return;}
 /* ---------- The three cartridges. Sizes in mm; label = the sticker's rectangle on the front of each model. ---------- */
 var CARTS=[
  {id:'gb', sys:'dmg', name:'Game Boy', W:57.1, H:65, labelZ:3.34, pcb:52,
-  label:{w:42,h:37,cy:-5.06,r:1.5}, x:-70, tint:['#7a1f4f','#c44a87'],
+  label:{w:42,h:37,cy:-5.06,r:1.5}, tint:['#7a1f4f','#c44a87'],
   colors:[['Classic grey','#8d8b90',1],['Black','#26272b',1],['Red','#b3262b',1],['Yellow','#e3b81f',1],['Blue','#2456a6',1],['Green','#2f8a4c',1]]},
  {id:'gbc', sys:'cgb', name:'Game Boy Color', W:56.7, H:64.8, labelZ:3.67, pcb:52,
-  label:{w:42,h:37,cy:-6.6,r:1.5}, x:0, tint:['#3b2a7a','#1f9aa8'],
+  label:{w:42,h:37,cy:-6.6,r:1.5}, tint:['#3b2a7a','#1f9aa8'],
   colors:[['Smoke clear','#5d636b',.6],['Clear purple','#7a55c7',.6],['Black','#26272b',1],['Gold','#c9a13a',1],['Silver','#c4c7cc',1],['Clear blue','#3f7fe0',.6]]},
  {id:'gba', sys:'agb', name:'Game Boy Advance', W:60, H:35, labelZ:3.34, pcb:0,          // solid model: nothing inside
-  label:{w:45.8,h:23.2,cy:-2.2,r:2.4,nom:[43,22]}, x:70, tint:['#1d3f8f','#6a3fb8'],
+  label:{w:45.8,h:23.2,cy:-2.2,r:2.4,nom:[43,22]}, tint:['#1d3f8f','#6a3fb8'],
   colors:[['Dark grey','#565960',1],['Black','#1d1e22',1],['Red','#a8242a',1],['Green','#2c7d55',1],['Clear orange','#f08a2c',.65],['White','#e6e6e2',1]]}
 ];
 var BY_SYS={};CARTS.forEach(function(c){BY_SYS[c.sys]=c;});
@@ -194,7 +197,7 @@ function build(c){
     var gold=new THREE.MeshStandardMaterial({color:0xd9b24a,metalness:.9,roughness:.3});
     for(var q=0;q<32;q++){var pin=new THREE.BoxGeometry(.9,4,.06);pin.translate((q-15.5)*1.5,-H+3,-.63);g.add(new THREE.Mesh(pin,gold));}
   }
-  g.position.x=c.x;c.group=g;return g;
+  c.group=g;return g;
 }
 function setColor(c,i){
   var k=c.colors[i];c.mat.color.set(k[1]);c.mat.color.convertSRGBToLinear();
@@ -211,15 +214,25 @@ var scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(32,1,1,2000);
 scene.add(new THREE.HemisphereLight(0xffffff,0x50525c,.95));
 var key=new THREE.DirectionalLight(0xffffff,.9);key.position.set(80,120,160);scene.add(key);
 var rim=new THREE.DirectionalLight(0xffffff,.5);rim.position.set(-100,40,-160);scene.add(rim);
-CARTS.forEach(function(c){scene.add(build(c));setColor(c,0);});
+CARTS.forEach(function(c){c.on=true;scene.add(build(c));setColor(c,0);});
 
 var view={th:.35,ph:.12,d:300,tx:0},goal={th:.35,ph:.12,d:300,tx:0};
+CARTS.forEach(function(c,i){c.x=(i-1)*88;c.group.position.x=c.x;});
 var selected=null,reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 var spinning=!reduce,flipped=false;
 function fit(w,h){var t=Math.tan(cam.fov*Math.PI/360);return Math.max(h/2/t,w/2/(t*cam.aspect))*1.25;}
+var GAP=88;   // centre-to-centre distance between cartridges, mm
+function layout(){   // the cartridges switched on, side by side and centred
+  var vis=CARTS.filter(function(c){return c.on;});
+  vis.forEach(function(c,i){c.x=(i-(vis.length-1)/2)*GAP;});
+  CARTS.forEach(function(c){c.group.visible=c.on;if(c.btn)c.btn.setAttribute('aria-pressed',String(c.on));});
+  if(selected&&!selected.on)selected=null;
+  return vis.length;
+}
 function frame(){
+  var n=layout();
   if(selected){goal.tx=selected.x;goal.d=fit(selected.W+14,selected.H+14);}
-  else{goal.tx=0;goal.d=fit(212,80);}
+  else{goal.tx=0;goal.d=fit((n-1)*GAP+74,80);}
 }
 function resize(){
   var w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
@@ -249,6 +262,7 @@ function tick(t){
   var dt=Math.min(.05,(t-last)/1000||0);last=t;
   ['th','ph','d','tx'].forEach(function(k){view[k]+=(goal[k]-view[k])*Math.min(1,dt*8);});
   CARTS.forEach(function(c){
+    c.group.position.x+=(c.x-c.group.position.x)*Math.min(1,dt*8);
     if(spinning)c.group.rotation.y+=dt*.5;
     else{var target=flipped?Math.PI:0,r=c.group.rotation.y%(2*Math.PI);if(r<0)r+=2*Math.PI;
       var diff=target-r;if(diff>Math.PI)diff-=2*Math.PI;if(diff<-Math.PI)diff+=2*Math.PI;
@@ -262,9 +276,19 @@ function tick(t){
 
 /* ---------- Stage buttons ---------- */
 function select(c){
-  selected=c;$('viewAll').setAttribute('aria-pressed',String(!c));
-  CARTS.forEach(function(k){k.row.classList.toggle('sel',k===c);});frame();
+  if(c)c.on=true;   // zooming in on a hidden cartridge brings it back
+  selected=c;frame();
+  $('viewAll').setAttribute('aria-pressed',String(!selected));
+  CARTS.forEach(function(k){k.row.classList.toggle('sel',k===selected);});
 }
+CARTS.forEach(function(c){   // one switch per cartridge: show one, two or all three
+  var b=document.createElement('button');b.type='button';b.textContent=c.name.replace('Game Boy ','')||c.name;b.title='Show or hide the '+c.name+' cartridge';c.btn=b;
+  b.onclick=function(){
+    if(c.on&&CARTS.filter(function(k){return k.on;}).length===1)return;   // always keep one on screen
+    c.on=!c.on;select(selected&&selected.on?selected:null);
+  };
+  $('which').appendChild(b);
+});
 function setSpin(on){spinning=on;$('spin').setAttribute('aria-pressed',String(on));}
 function setFlip(on){flipped=on;$('flip').textContent=on?'Show the front':'Show the back';}
 $('viewAll').onclick=function(){select(null);};
