@@ -205,9 +205,10 @@ def main(args):
         with open(index_path, encoding="utf-8") as f:
             state = json.load(f)
 
-    def save():
-        with open(index_path, "w", encoding="utf-8", newline="\n") as f:
+    def save():  # written beside it and swapped in, so whoever reads it meanwhile (screenscraper_match) never sees half
+        with open(index_path + ".tmp", "w", encoding="utf-8", newline="\n") as f:
             json.dump(state, f, indent=1, ensure_ascii=False)
+        os.replace(index_path + ".tmp", index_path)
 
     def fetch(url, name):
         path = os.path.join(OUT, name)
