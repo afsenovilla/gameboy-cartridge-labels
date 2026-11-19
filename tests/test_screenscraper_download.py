@@ -57,3 +57,8 @@ def test_an_image_that_fails_is_left_out_and_the_run_goes_on():
     state = {"games": {}, "searched": []}
     d.run([("gb", "Tetris")], {}, state, 5, call=call, fetch=lambda u, n: u != "http://x/1" and None)
     assert state["games"]["7"]["labels"] == ["gb/7-us.png"] and state["searched"] == ["gb|tetris"]
+
+
+def test_inspect_leaves_out_medias_and_links():
+    import screenscraper_inspect as i
+    assert i.strip({"id": "7", "medias": [1], "x": [{"url": "https://a?ssid=me", "k": "v"}]}) == {"id": "7", "x": [{"k": "v"}]}
