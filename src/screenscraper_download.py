@@ -90,8 +90,8 @@ def verdict(game):
         return "every dump is flagged " + "/".join(sorted({f for r in roms for f in FLAGS if str(r.get(f, "0")) == "1"}))
     regions = {n.get("region") for n in game.get("noms", []) or []} | {d.get("region") for d in game.get("dates", []) or []}
     regions |= {x for r in roms for x in (r.get("regions") or {}).get("regions_shortname", [])}
-    if not regions - NOT_A_REGION:
-        return "no release in any country"
+    if not regions - NOT_A_REGION and not publisher:  # a known publisher with no countries is a gap in ScreenScraper, not a hack
+        return "no release in any country and no publisher"
     return None
 
 
@@ -157,11 +157,14 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
     return used
 
 
-def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lambda: None):
+AGAIN = {"no release in any country"}  # verdicts of an earlier, stricter filter, asked about again
+
+
+def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lambda: None, fetch=None):
     """Ask about the games kept before the filter existed; exclude the fan-made ones and move their images aside."""
     used = 0
     for gid, g in state["games"].items():
-        if g.get("checked") or g.get("excluded"):
+        if g.get("checked") or (g.get("excluded") and g["excluded"] not in AGAIN):
             continue
         if used >= limit:
             print("Reached the limit of", limit, "requests; run it again to carry on.")
@@ -176,7 +179,11 @@ def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lamb
                 move(name)
             g["labels"], g["excluded"] = [], why
         else:
+            g.pop("excluded", None)
             g["checked"] = True
+            if not g["labels"] and fetch:  # left out before, kept now: its images were never downloaded
+                g["labels"] = [n for region, url, fmt in textures(info)
+                               for n in [f"{g['system']}/{gid}-{region}.{fmt}"] if fetch(url, n) is not False]
         save()
     return used
 
@@ -229,7 +236,7 @@ def main(args):
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 os.replace(src, dst)
         try:
-            used = recheck(state, creds, limit, move=move, save=save)
+            used = recheck(state, creds, limit, move=move, save=save, fetch=fetch)
         except Refused as e:
             used = 0
             print("ScreenScraper says:", e, "- saved; run it again later.")

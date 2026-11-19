@@ -78,7 +78,8 @@ def test_verdict_keeps_shop_games_and_leaves_out_fan_made_ones():
     assert d.verdict(OFFICIAL) is None
     assert d.verdict(HACK) == "published by ROMhacking.net"
     assert d.verdict({**HACK, "editeur": {"text": "Someone"}}) == "described as a hack or homebrew"
-    assert d.verdict({**HACK, "editeur": {}, "synopsis": []}) == "no release in any country"
+    assert d.verdict({**HACK, "editeur": {}, "synopsis": []}) == "no release in any country and no publisher"
+    assert d.verdict({**HACK, "editeur": {"text": "Vivendi Universal Games"}, "synopsis": []}) is None
     assert d.verdict({**OFFICIAL, "synopsis": [{"langue": "en", "text": "A hack and slash game with a hacker."}]}) is None
     assert d.verdict({**OFFICIAL, "roms": [{"unl": "1"}, {"trad": "1"}]}) == "every dump is flagged trad/unl"
 
@@ -100,3 +101,12 @@ def test_recheck_moves_the_images_of_games_found_before_the_filter():
     assert used == 2 and moved == ["gba/490040-wor.png"]
     assert state["games"]["490040"]["labels"] == [] and state["games"]["84714"]["checked"]
     assert d.recheck(state, {}, 10, call=None) == 0
+
+
+def test_recheck_asks_again_about_games_the_old_country_rule_left_out_and_downloads_them():
+    state = {"games": {"562293": {"system": "gba", "names": ["2 in 1"], "labels": [], "excluded": "no release in any country"}}, "searched": []}
+    game = {**HACK, "editeur": {"text": "Vivendi Universal Games"}, "synopsis": [],
+            "medias": [{"type": "support-texture", "region": "eu", "url": "http://x/1", "format": "png"}]}
+    got = []
+    d.recheck(state, {}, 5, call=lambda e, c, **p: {"response": {"jeu": game}}, fetch=lambda u, n: got.append(n))
+    assert got == ["gba/562293-eu.png"] and state["games"]["562293"] == {"system": "gba", "names": ["2 in 1"], "labels": ["gba/562293-eu.png"], "checked": True}
