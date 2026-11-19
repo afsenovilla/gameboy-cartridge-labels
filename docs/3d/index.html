@@ -270,6 +270,7 @@ function tick(t){
   ['th','ph','d','tx'].forEach(function(k){view[k]+=(goal[k]-view[k])*Math.min(1,dt*8);});
   CARTS.forEach(function(c){
     c.group.position.x+=(c.x-c.group.position.x)*Math.min(1,dt*8);
+    c.group.position.y+=(0-c.group.position.y)*Math.min(1,dt*6);
     if(spinning)c.group.rotation.y+=dt*.5;
     else{var target=flipped?Math.PI:0,r=c.group.rotation.y%(2*Math.PI);if(r<0)r+=2*Math.PI;
       var diff=target-r;if(diff>Math.PI)diff-=2*Math.PI;if(diff<-Math.PI)diff+=2*Math.PI;
@@ -396,8 +397,10 @@ function embed(){   // what the frame was asked to show; runs again when the lab
   var h=new URLSearchParams(location.hash.slice(1)),c=BY_SYS[h.get('sys')],url=h.get('img');
   if(!c)return;
   CARTS.forEach(function(k){k.on=k===c;});
-  if(selected!==c){drawBlank(c);c.group.rotation.y=-.5;}
+  var fresh=selected!==c;
+  if(fresh){drawBlank(c);c.group.rotation.y=-.5;}
   select(c);setFlip(false);setSpin(!reduce);
+  if(fresh){c.group.position.x=c.x;view.tx=goal.tx;view.d=goal.d;if(!reduce)c.group.position.y=-90;}   // it rises into place from below
   if(!/^https?:\/\//.test(url||''))return;
   var img=new Image();img.crossOrigin='anonymous';
   img.onload=function(){if(new URLSearchParams(location.hash.slice(1)).get('img')===url)try{drawImage(c,img);}catch(e){}};

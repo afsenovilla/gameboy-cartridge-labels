@@ -113,7 +113,10 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 .view .big{background:var(--well);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .view .big img{max-width:100%;max-height:78vh;height:auto;display:block}
 .view .big img[hidden]{display:none}
-.tdbtn{margin-top:14px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:7px 14px;font:600 14px var(--font);cursor:pointer}
+.vsw{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.view .big.both #vimg{max-height:24vh;margin-top:14px}
+.view .big.both .scene{height:min(46vh,380px)}
+.tdbtn{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:7px 14px;font:600 14px var(--font);cursor:pointer}
 .tdbtn[aria-pressed=true]{background:var(--ink);color:var(--page)}
 .scene{position:relative;width:100%;height:min(70vh,520px);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;overflow:hidden}
 .scene[hidden]{display:none}
@@ -178,7 +181,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 </main>
 <footer>__CREDIT__</footer>
 <dialog id="view"><div class="view">
-  <div class="big"><img id="vimg" alt=""><div class="scene" id="scene" hidden></div><button type="button" class="tdbtn" id="v3d" aria-pressed="false">View on a cartridge</button><div class="thumbs" id="thumbs"></div></div>
+  <div class="big"><div class="scene" id="scene" hidden></div><img id="vimg" alt=""><div class="vsw" role="group" aria-label="What to show"><button type="button" class="tdbtn" id="vflat" aria-pressed="true">Label</button><button type="button" class="tdbtn" id="v3d" aria-pressed="false">On a cartridge</button></div><div class="thumbs" id="thumbs"></div></div>
   <div class="info">
     <h2 id="vtitle"></h2>
     <dl id="vdl"></dl>
@@ -446,8 +449,9 @@ function showThree(on) {
   $("v3d").hidden = !can;
   let fr = $("scene").querySelector("iframe");
   if (fr && !(on && ext)) { fr.remove(); fr = null; }
-  three = on && !ext ? l.system : false; $("vimg").hidden = on; $("scene").hidden = !on; $("v3d").setAttribute("aria-pressed", String(on));
-  $("v3d").textContent = on ? "View flat" : "View on a cartridge";
+  three = on && !ext ? l.system : false; $("scene").hidden = !on; $("v3d").setAttribute("aria-pressed", String(on));
+  $("vimg").hidden = on && !wantFlat; $("vflat").hidden = !can; $("vflat").setAttribute("aria-pressed", String(!on || wantFlat));  // the flat label stays under the cartridge unless switched off
+  $("vimg").parentElement.classList.toggle("both", on && wantFlat);
   if (on && ext) {  // the viewer page in a frame, told which cartridge and which image; a new label only changes the part after #
     if (G && G.cv.parentNode) G.cv.remove(); $("scene").querySelectorAll("img").forEach(i => i.remove()); lab = null;
     if (!fr) { fr = document.createElement("iframe"); fr.title = "The label on a 3D cartridge"; $("scene").append(fr); }
@@ -455,10 +459,11 @@ function showThree(on) {
     if (fr.getAttribute("src") !== src) fr.src = src;
     return;
   }
-  if (on) { if (!buildScene(l)) { three = false; $("vimg").hidden = false; $("scene").hidden = true; $("v3d").hidden = true; return; } if (!still && !spin.raf) spin.raf = requestAnimationFrame(sway); }
+  if (on) { if (!buildScene(l)) { three = false; $("vimg").hidden = false; $("scene").hidden = true; $("v3d").hidden = true; $("vflat").hidden = true; $("vimg").parentElement.classList.remove("both"); return; } if (!still && !spin.raf) spin.raf = requestAnimationFrame(sway); }
 }
-let want3d = false;
-$("v3d").onclick = () => { spin.touched = false; want3d = !want3d; showThree(want3d); };
+let want3d = false, wantFlat = true;  // two switches side by side; one of them is always on
+$("v3d").onclick = () => { spin.touched = false; want3d = !want3d; if (!want3d) wantFlat = true; showThree(want3d); };
+$("vflat").onclick = () => { wantFlat = !wantFlat; if (!wantFlat) want3d = true; showThree(want3d); };
 $("scene").addEventListener("pointerdown", e => { spin.drag = {x: e.clientX, y: e.clientY}; spin.touched = true; $("scene").setPointerCapture(e.pointerId); });
 $("scene").addEventListener("pointermove", e => { const d = spin.drag; if (!d) return; spin.ry += (e.clientX - d.x) * 0.6; spin.rx = Math.max(-80, Math.min(80, spin.rx - (e.clientY - d.y) * 0.6)); d.x = e.clientX; d.y = e.clientY; draw(); });
 $("scene").addEventListener("pointerup", () => { spin.drag = null; });
