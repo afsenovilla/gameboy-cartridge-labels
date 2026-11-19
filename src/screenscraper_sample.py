@@ -6,13 +6,14 @@
 # Free accounts have daily request limits, so this is slow on purpose (one request every 2 s). Images go to
 # screenscraper-sample/<game id>-<region>[-texture].<ext>, with the list of what each game had, and every media type it
 # offers, in screenscraper-sample/index.json.
-import json, os, sys, time, urllib.parse, urllib.request
+import json, os, sys, time, urllib.error, urllib.parse, urllib.request
 
 API = "https://api.screenscraper.fr/api2/"
 SYSTEMS = {"gb": 9, "gbc": 10, "gba": 12}
 OUT = "screenscraper-sample"
 CREDENTIALS = "screenscraper.json"
 PAUSE = 2.0
+RETRIES = 5
 
 
 def credentials():
@@ -23,8 +24,18 @@ def credentials():
 def call(endpoint, creds, **params):
     query = {"output": "json", **{k: creds[k] for k in ("devid", "devpassword", "softname", "ssid", "sspassword")},
              **params}
-    with urllib.request.urlopen(API + endpoint + "?" + urllib.parse.urlencode(query), timeout=60) as r:
-        data = r.read()
+    for attempt in range(RETRIES + 1):  # a dropped connection (a laptop waking up, wifi) is tried again
+        try:
+            with urllib.request.urlopen(API + endpoint + "?" + urllib.parse.urlencode(query), timeout=60) as r:
+                data = r.read()
+            break
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            if attempt == RETRIES:
+                raise
+            print("  connection failed (", e, "); trying again in", 30 * (attempt + 1), "s", flush=True)
+            time.sleep(30 * (attempt + 1))
     time.sleep(PAUSE)
     text = data.decode("utf-8", "replace").strip()
     try:
