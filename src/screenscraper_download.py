@@ -18,6 +18,8 @@
 # has some twice (Bomberman GB and Wario Blast share the Japanese label): "md5" in index.json remembers what's saved. --dedupe does the same for the
 # images downloaded before this, removing the identical copies (don't run it while a download is running); with
 # --dry-run it only lists what it would remove.
+# screenscraper-labels/ignore.txt lists images that are ScreenScraper's mistakes (a GBA label filed under a GB game),
+# one per line, e.g. gb/82269-us.png: never downloaded, and --dedupe removes those already there.
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
 import json
@@ -97,13 +99,40 @@ def keeper(names):
     return max(names, key=lambda n: GENERAL.get(region_of(n), 0))
 
 
-def save_textures(system, gid, info, fetch, seen=None):
+IGNORE = os.path.join(OUT, "ignore.txt")
+
+
+def ignored(path=IGNORE):
+    """The images never to keep, one per line ("gb/82269-us.png"; # starts a comment): ScreenScraper's mistakes."""
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        return {l.split("#")[0].strip().replace("\\", "/") for l in f} - {""}
+
+
+def drop_ignored(state, ignore, out=OUT, remove=os.remove):
+    """Remove the ignored images already downloaded, and forget them. Returns how many."""
+    n = 0
+    for g in state["games"].values():
+        for name in [x for x in g.get("labels", []) if x in ignore]:
+            if os.path.exists(os.path.join(out, name)):
+                remove(os.path.join(out, name))
+            g["labels"].remove(name)
+            n += 1
+        for name in [x for x, kept in g.get("same", {}).items() if x in ignore or kept in ignore]:
+            del g["same"][name]
+    return n
+
+
+def save_textures(system, gid, info, fetch, seen=None, ignore=frozenset()):
     """Download a game's label images, one file per distinct image: (files, same), same = {region's file: the file of
     the identical image that was kept (keeper)}. ScreenScraper often gives several regions the same image (eu and fr,
     us and wor)."""
     groups = {}
     for region, url, fmt, md5 in textures(info):
-        groups.setdefault(md5 or url, []).append((f"{system}/{gid}-{region}.{fmt}", url))
+        name = f"{system}/{gid}-{region}.{fmt}"
+        if name not in ignore:
+            groups.setdefault(md5 or url, []).append((name, url))
     files, same = [], {}
     seen = {} if seen is None else seen  # md5 -> file kept, over every game: ScreenScraper has some games twice
     for md5, group in groups.items():
@@ -170,7 +199,7 @@ class Out(Exception):
     """The request limit was reached."""
 
 
-def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
+def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None, ignore=frozenset()):
     """Search each (system, query) not searched yet; keep the games found and every region's label of each. Returns requests made."""
     used = 0
 
@@ -196,7 +225,7 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
                 if why:
                     state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": [], "excluded": why}
                     continue
-                files, same = save_textures(system, gid, info, fetch, state.setdefault("md5", {}))
+                files, same = save_textures(system, gid, info, fetch, state.setdefault("md5", {}), ignore)
                 state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files, "checked": True}
                 if same:
                     state["games"][gid]["same"] = same
@@ -235,7 +264,7 @@ def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lamb
             g.pop("excluded", None)
             g["checked"] = True
             if not g["labels"] and fetch:  # left out before, kept now: its images were never downloaded
-                g["labels"], same = save_textures(g["system"], gid, info, fetch, state.setdefault("md5", {}))
+                g["labels"], same = save_textures(g["system"], gid, info, fetch, state.setdefault("md5", {}), ignored())
                 if same:
                     g["same"] = same
         save()
@@ -316,9 +345,12 @@ def main(args):
             n = dedupe(copy.deepcopy(state), remove=lambda path: print("  would remove", path))
             print(n, "identical images would be removed (run without --dry-run to remove them).")
             return
+        gone = drop_ignored(state, ignored())
         n = dedupe(state)
         save()
         print(n, "identical images removed; index.json notes which image each region shares.")
+        if gone:
+            print(gone, "images listed in screenscraper-labels/ignore.txt removed.")
         return
 
     if "--recheck" in args:
@@ -342,7 +374,7 @@ def main(args):
     if "--sweep" in args:
         todo += [(s, q) for q in sweep_queries() for s in ("gb", "gbc", "gba")]
     try:
-        used = run(todo, creds, state, limit, fetch=fetch, save=save)
+        used = run(todo, creds, state, limit, fetch=fetch, save=save, ignore=ignored())
     except urllib.error.HTTPError as e:  # 429 and 430: over the quota; anything else is worth seeing
         save()
         print("ScreenScraper answered", e.code, e.reason, "- saved; run it again later to carry on.")

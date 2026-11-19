@@ -158,3 +158,18 @@ def test_dedupe_works_across_games(tmp_path):
     assert d.dedupe(state, out=str(tmp_path)) == 1
     assert state["games"]["170167"]["labels"] == ["gb/170167-jp.png"]
     assert state["games"]["170168"] == {"system": "gb", "labels": [], "same": {"gb/170168-jp.png": "gb/170167-jp.png"}}
+
+
+def test_ignored_images_are_never_downloaded_and_removed_if_there(tmp_path):
+    lst = tmp_path / "ignore.txt"
+    lst.write_text("# ScreenScraper's mistakes\ngb\\82269-us.png  # a GBA label\n\n", encoding="utf-8")
+    ignore = d.ignored(str(lst))
+    assert ignore == {"gb/82269-us.png"}
+    medias = [{"type": "support-texture", "region": r, "url": "http://x/" + r, "format": "png", "md5": r} for r in ("us", "jp")]
+    got = []
+    assert d.save_textures("gb", "82269", {"medias": medias}, lambda u, n: got.append(n), {}, ignore)[0] == ["gb/82269-jp.png"]
+    (tmp_path / "gb").mkdir()
+    (tmp_path / "gb" / "82269-us.png").write_bytes(b"x")
+    state = {"games": {"82269": {"system": "gb", "labels": ["gb/82269-jp.png", "gb/82269-us.png"]}}}
+    assert d.drop_ignored(state, ignore, out=str(tmp_path)) == 1
+    assert state["games"]["82269"]["labels"] == ["gb/82269-jp.png"] and not (tmp_path / "gb" / "82269-us.png").exists()
