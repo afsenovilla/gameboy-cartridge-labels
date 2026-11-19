@@ -253,11 +253,15 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None, 
         used += 1
         return check(call(*a, **k))
 
+    searched = set(state["searched"])
+    left = [t for t in todo if f"{t[0]}|{t[1].lower()}" not in searched]
+    start = len(todo) - len(left)
     try:
-        for system, q in todo:
+        for i, (system, q) in enumerate(left, start + 1):
             key = f"{system}|{q.lower()}"
             if key in state["searched"]:
                 continue
+            before = len(state["games"])
             found = ask("jeuRecherche.php", creds, recherche=q, systemeid=ss.SYSTEMS[system]).get("response", {}).get("jeux", [])
             for g in found:
                 gid = str(g.get("id") or "")
@@ -282,6 +286,10 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None, 
                     state["games"][gid]["same"] = same
             state["searched"].append(key)
             save()
+            new = list(state["games"].values())[before:]
+            kept = [g for g in new if not g.get("excluded")]
+            print(f"[{i}/{len(todo)}] {system} {q}: {len(found)} found, {len(kept)} new kept "
+                  f"({sum(len(g['labels']) for g in kept)} images), {len(new) - len(kept)} left out", flush=True)
     except Out:
         print("Reached the limit of", limit, "requests; run it again to carry on.")
     except Refused as e:
@@ -303,6 +311,7 @@ def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lamb
             print("Reached the limit of", limit, "requests; run it again to carry on.")
             break
         used += 1
+        print(f"[{used}] {gid} {(g.get('names') or ['?'])[0]}", flush=True)
         info = check(call("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS[g["system"]])).get("response", {}).get("jeu", {})
         if not info:
             continue
@@ -356,9 +365,9 @@ def fix_systems(state, creds, limit, call=ss.call, move=lambda a, b: None, save=
     """Games filed as gb before each game went under its own system: ask ScreenScraper each one's system and move
     those of another (Game Boy Color, mostly) to their folder. Returns (requests, games moved)."""
     used = moved = 0
-    for gid, g in state["games"].items():
-        if g["system"] != "gb" or g.get("system_checked"):
-            continue
+    todo = [gid for gid, g in state["games"].items() if g["system"] == "gb" and not g.get("system_checked")]
+    for i, gid in enumerate(todo, 1):
+        g = state["games"][gid]
         if used >= limit:
             print("Reached the limit of", limit, "requests; run it again to carry on.")
             break
@@ -380,6 +389,7 @@ def fix_systems(state, creds, limit, call=ss.call, move=lambda a, b: None, save=
         if info:
             g["system_checked"] = True
         save()
+        print(f"[{i}/{len(todo)}] {gid} {(g.get('names') or ['?'])[0]}: {g['system']}" + (" (moved)" if own and own != "gb" else ""), flush=True)
     return used, moved
 
 
