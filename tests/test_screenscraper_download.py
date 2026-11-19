@@ -48,3 +48,12 @@ def test_plain_text_answers_mean_not_found_but_quota_messages_stop():
     state = {"games": {}, "searched": []}
     d.run([("gb", "A")], {}, state, 5, call=lambda *a, **k: {"error": "API closed for non-members: quota exceeded"})
     assert state["searched"] == []
+
+
+def test_an_image_that_fails_is_left_out_and_the_run_goes_on():
+    medias = [{"type": "support-texture", "region": "eu", "url": "http://x/1", "format": "png"},
+              {"type": "support-texture", "region": "us", "url": "http://x/2", "format": "png"}]
+    call = fake({("jeuRecherche.php", "Tetris"): {"response": {"jeux": [{"id": "7", "medias": medias}]}}})
+    state = {"games": {}, "searched": []}
+    d.run([("gb", "Tetris")], {}, state, 5, call=call, fetch=lambda u, n: u != "http://x/1" and None)
+    assert state["games"]["7"]["labels"] == ["gb/7-us.png"] and state["searched"] == ["gb|tetris"]

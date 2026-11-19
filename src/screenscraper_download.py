@@ -101,9 +101,8 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
                 files = []
                 for region, url, fmt in textures(info):
                     name = f"{system}/{gid}-{region}.{fmt}"
-                    if fetch:
-                        fetch(url, name)
-                    files.append(name)
+                    if fetch is None or fetch(url, name) is not False:
+                        files.append(name)
                 state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files}
             state["searched"].append(key)
             save()
@@ -132,9 +131,22 @@ def main(args):
     def fetch(url, name):
         path = os.path.join(OUT, name)
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        if not os.path.exists(path):
-            with urllib.request.urlopen(url, timeout=60) as r, open(path, "wb") as f:
-                f.write(r.read())
+        if os.path.exists(path):
+            return True
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                data = r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 430):
+                raise
+            print("  skipped", name, "-", e.code, e.reason)
+            return False
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            print("  skipped", name, "-", e)
+            return False
+        with open(path, "wb") as f:  # written only once complete, so a cut never leaves half an image behind
+            f.write(data)
+        return True
 
     todo = titles()
     if "--sweep" in args:
