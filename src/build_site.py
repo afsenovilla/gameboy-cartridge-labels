@@ -2,8 +2,9 @@
 # its data inside, opened from the folder in a browser: search, system and region filters, sorting, pages, a viewer.
 #
 #   python run.py py src/build_site.py [folder] [--issues https://github.com/owner/repo] [--upload URL]
-#   python run.py py src/build_site.py --remote out.html [--base https://geon.github.io/gameboy-cartridge-labels/] [--issues URL]
+#   python run.py py src/build_site.py --remote out.html [--base https://geon.github.io/gameboy-cartridge-labels/] [--issues URL] [--viewer 3d/]
 # --remote makes the page published sites use: it reads index.json, wanted.json and prints/ from --base (beside the page if none).
+# --viewer links each label to a separate 3D viewer page (docs/3d/ in this repository), which opens it on its cartridge.
 #
 # With --issues, each label has a "Report a problem" button: a form that opens a prefilled new issue of that repository.
 import html, json, os, sys
@@ -186,7 +187,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
       <textarea id="note" placeholder="Anything else? (optional)" aria-label="Details"></textarea>
       <div class="row"><a id="rep-issue" class="main" target="_blank" rel="noopener">Open as GitHub issue</a><button type="button" id="rep-cancel">Cancel</button></div>
     </form>
-    <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
+    <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="v3dpage" hidden>Open in the 3D viewer</a><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
   </div>
 </div></dialog>
 <script type="application/json" id="data">__DATA__</script>
@@ -197,6 +198,7 @@ __LOAD_START__
 const FOLDER = "__FOLDER__";
 const enc = f => f.split("/").map(encodeURIComponent).join("/");
 const ISSUES = "__ISSUES__";
+const VIEWER = "__VIEWER__";  // the separate 3D viewer page (--viewer), which takes #print=<id>; empty = no link
 const REASONS = ["Blurry or low resolution", "Glare or reflections", "Dirt, scratches or damage", "Crooked or badly cropped", "Wrong colours", "Wrong title or serial", "Not a label", "Other"];
 const SYSTEMS = [["", "All"], ["dmg", "Game Boy"], ["cgb", "Game Boy Color"], ["agb", "Game Boy Advance"]];
 const SYSTEM_NAME = {dmg: "Game Boy", cgb: "Game Boy Color", agb: "Game Boy Advance"}, SYSTEM_SHORT = {dmg: "GB", cgb: "GBC", agb: "GBA"};
@@ -466,6 +468,7 @@ function openView(i, k = 0) {
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
+  $("v3dpage").hidden = !VIEWER || !["dmg", "cgb", "agb"].includes(l.system); $("v3dpage").href = VIEWER + "#print=" + encodeURIComponent(l.id);
   $("rep").hidden = true; $("report").hidden = !ISSUES;
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
@@ -511,12 +514,13 @@ def cartridge():
         return f.read().replace("</", "<\\/")
 
 
-def build_remote(out, issues="", upload=UPLOAD, base=""):
+def build_remote(out, issues="", upload=UPLOAD, base="", viewer=""):
     """A copy of the page that reads index.json beside it and the images at prints/<id>.avif: for the published site."""
     base = base.replace('"', "")
     base = base + "/" if base and not base.endswith("/") else base  # "" = beside the page; else the site's URL
     page = (PAGE.replace("__LOAD_START__", REMOTE_LOAD.replace("__BASE__", base)).replace("__LOAD_END__", REMOTE_END).replace("__TITLE__", "Browse the labels")
-            .replace("__CREDIT__", f'<a href="{base}index.html">The plain list of all labels</a> · <a href="{base}wanted.html">Wanted photos</a>')
+            .replace("__CREDIT__", f'<a href="{base}index.html">The plain list of all labels</a> · <a href="{base}wanted.html">Wanted photos</a>'
+                     + (f' · <a href="{html.escape(viewer)}">Labels on 3D cartridges</a>' if viewer else "")).replace("__VIEWER__", viewer.replace('"', ""))
             .replace("__FOLDER__", base.rstrip("/") or ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', ""))
             .replace('<script type="application/json" id="data">__DATA__</script>\n<script type="application/json" id="wanted">__WANTED__</script>\n', "").replace("__CART__", cartridge()))
     with open(out, "w", encoding="utf-8", newline="\n") as f:
@@ -541,7 +545,7 @@ def build(folder=FOLDER, issues="", upload=UPLOAD):
                               for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", "Cartridge labels").replace("__CREDIT__", credit).replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
+    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", "Cartridge labels").replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
@@ -554,7 +558,8 @@ if __name__ == "__main__":
         i = args.index("--remote")
         issues = args[args.index("--issues") + 1] if "--issues" in args else ""
         print(build_remote(args[i + 1], issues, args[args.index("--upload") + 1] if "--upload" in args else UPLOAD,
-                           args[args.index("--base") + 1] if "--base" in args else ""))
+                           args[args.index("--base") + 1] if "--base" in args else "",
+                           args[args.index("--viewer") + 1] if "--viewer" in args else ""))
         sys.exit(0)
     issues = args[args.index("--issues") + 1] if "--issues" in args else ""
     upload = args[args.index("--upload") + 1] if "--upload" in args else UPLOAD
