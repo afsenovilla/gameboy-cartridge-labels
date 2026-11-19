@@ -14,7 +14,8 @@
 #   none: nothing.
 # Into screenscraper-labels/matches.json: {image: {"game", "system", "region", "how", "serial", "release", "title",
 #   "labels" (restored prints of that serial or release), "wanted" (wanted prints), "text", "guesses" (title only)}},
-# and the page screenscraper-labels/matches.html: each image beside our restored label, unmatched ones first.
+# the page screenscraper-labels/matches.html: each image beside our restored label, unmatched ones first; and
+# screenscraper-labels/unknown-serials.txt: the serials read that the database lacks (serial, title, images).
 # The text read is cached by the image's content in screenscraper-labels/ocr/<sha1>.json (several regions often share
 # one image), so running it again only reads new images.
 import hashlib
@@ -158,6 +159,18 @@ def match(state, prints, release_of, read, out=OUT):
     return result
 
 
+def unknown_serials(result):
+    """Serials read on a label that neither the catalogue nor the database has: {serial: (ScreenScraper's names, images)},
+    sorted. Releases missing from the database, mostly."""
+    out = {}
+    for name, e in result.items():
+        if e["how"] == "unknown":
+            names, images = out.setdefault(e["serial"], ([], []))
+            names += [n for n in e["names"] if n not in names]
+            images.append(name)
+    return dict(sorted(out.items()))
+
+
 ORDER = {"none": 0, "unknown": 1, "title": 2, "near": 3, "serial": 4}
 
 
@@ -204,9 +217,14 @@ def main(args):
     with open(os.path.join(OUT, "matches.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(result, f, indent=1, ensure_ascii=False)
     page(result, prints, os.path.join(OUT, "matches.html"))
+    unknown = unknown_serials(result)
+    with open(os.path.join(OUT, "unknown-serials.txt"), "w", encoding="utf-8", newline="\n") as f:
+        for serial, (names, images) in unknown.items():
+            f.write(f"{serial}\t{names[0] if names else '?'}\t{' '.join(images)}\n")
     counts = {k: sum(1 for e in result.values() if e["how"] == k) for k in ORDER}
     print(f"{len(result)} images: {counts['serial']} by serial, {counts['near']} near, {counts['title']} by title, {counts['unknown']} unknown serial, "
           f"{counts['none']} unmatched. See screenscraper-labels/matches.html")
+    print(f"{len(unknown)} serials the database doesn't have: screenscraper-labels/unknown-serials.txt")
 
 
 if __name__ == "__main__":

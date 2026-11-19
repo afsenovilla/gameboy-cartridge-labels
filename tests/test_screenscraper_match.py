@@ -56,3 +56,10 @@ def test_catalogue_reads_both_files(tmp_path):
     b.write_text(json.dumps([{"print": "X-2", "serials": ["DMG-B-JPN"], "release": "DMG-B", "title": "B", "system": "dmg"}]))
     got = m.catalogue(str(a), str(b))
     assert [(p["print"], p["kind"], p["serials"]) for p in got] == [("X-1", "labels", ["DMG-A-USA"]), ("X-2", "wanted", ["DMG-B-JPN"])]
+
+
+def test_unknown_serials_are_listed_once_with_their_images():
+    result = {"gb/1-us.png": {"how": "unknown", "serial": "DMG-AAUE-USA", "names": ["Pokemon Gold"]},
+              "gb/1-wor.png": {"how": "unknown", "serial": "DMG-AAUE-USA", "names": ["Pokemon Gold", "Pokémon Or"]},
+              "gb/2-us.png": {"how": "serial", "serial": "DMG-X-USA", "names": []}}
+    assert m.unknown_serials(result) == {"DMG-AAUE-USA": (["Pokemon Gold", "Pokémon Or"], ["gb/1-us.png", "gb/1-wor.png"])}
