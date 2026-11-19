@@ -110,3 +110,23 @@ def test_recheck_asks_again_about_games_the_old_country_rule_left_out_and_downlo
     got = []
     d.recheck(state, {}, 5, call=lambda e, c, **p: {"response": {"jeu": game}}, fetch=lambda u, n: got.append(n))
     assert got == ["gba/562293-eu.png"] and state["games"]["562293"] == {"system": "gba", "names": ["2 in 1"], "labels": ["gba/562293-eu.png"], "checked": True}
+
+
+def test_identical_images_of_two_regions_are_downloaded_once():
+    medias = [{"type": "support-texture", "region": "eu", "url": "http://x/1", "format": "png", "md5": "aa"},
+              {"type": "support-texture", "region": "fr", "url": "http://x/2", "format": "png", "md5": "aa"},
+              {"type": "support-texture", "region": "us", "url": "http://x/3", "format": "png", "md5": "bb"}]
+    got = []
+    files, same = d.save_textures("gb", "37225", {"medias": medias}, lambda u, n: got.append(u))
+    assert got == ["http://x/1", "http://x/3"] and files == ["gb/37225-eu.png", "gb/37225-us.png"]
+    assert same == {"gb/37225-fr.png": "gb/37225-eu.png"}
+
+
+def test_dedupe_removes_identical_copies_already_downloaded(tmp_path):
+    (tmp_path / "gb").mkdir()
+    for name, data in (("1-eu", b"x"), ("1-fr", b"x"), ("1-us", b"y")):
+        (tmp_path / "gb" / f"{name}.png").write_bytes(data)
+    state = {"games": {"1": {"system": "gb", "labels": ["gb/1-eu.png", "gb/1-fr.png", "gb/1-us.png"]}}}
+    assert d.dedupe(state, out=str(tmp_path)) == 1
+    assert state["games"]["1"]["labels"] == ["gb/1-eu.png", "gb/1-us.png"]
+    assert state["games"]["1"]["same"] == {"gb/1-fr.png": "gb/1-eu.png"} and not (tmp_path / "gb" / "1-fr.png").exists()

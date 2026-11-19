@@ -63,3 +63,16 @@ def test_unknown_serials_are_listed_once_with_their_images():
               "gb/1-wor.png": {"how": "unknown", "serial": "DMG-AAUE-USA", "names": ["Pokemon Gold", "Pokémon Or"]},
               "gb/2-us.png": {"how": "serial", "serial": "DMG-X-USA", "names": []}}
     assert m.unknown_serials(result) == {"DMG-AAUE-USA": (["Pokemon Gold", "Pokémon Or"], ["gb/1-us.png", "gb/1-wor.png"])}
+
+
+def test_a_region_sharing_an_image_gets_its_answer():
+    state = {"games": {"1": {"system": "gba", "names": ["Yoshi"], "labels": ["gba/1-us.png"], "same": {"gba/1-wor.png": "gba/1-us.png"}}}}
+    import os
+    real = os.path.exists
+    os.path.exists = lambda p: True
+    try:
+        r = m.match(state, PRINTS, m.release_index(PRINTS, database=None), lambda p: ["AGB-A3AE-USA"])
+    finally:
+        os.path.exists = real
+    assert r["gba/1-wor.png"]["serial"] == "AGB-A3AE-USA" and r["gba/1-wor.png"]["same_as"] == "gba/1-us.png"
+    assert r["gba/1-wor.png"]["region"] == "wor"

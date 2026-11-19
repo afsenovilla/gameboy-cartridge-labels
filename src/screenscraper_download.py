@@ -12,6 +12,9 @@
 # is in index.json ("excluded": why); the list is also written to screenscraper-labels/excluded.txt so it can be checked.
 # --recheck asks again about the games found before this filter existed and moves the images of the excluded ones to
 # screenscraper-labels/excluded/ (don't run it while a download is running: both write index.json).
+# A region whose image is identical to another region's of the same game (ScreenScraper's md5) isn't downloaded again:
+# index.json notes it in the game's "same" ({that region's file: the file it shares}). --dedupe does the same for the
+# images downloaded before this, removing the identical copies (don't run it while a download is running).
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
 import json
@@ -62,7 +65,25 @@ def names_of(game):
 
 
 def textures(game):
-    return ss.support_images(game, "support-texture")
+    """[(region, url, format, md5)] of a game's flat label images."""
+    return [(m.get("region") or "xx", m["url"], m.get("format") or "png", m.get("md5"))
+            for m in game.get("medias", []) if m.get("type") == "support-texture" and m.get("url")]
+
+
+def save_textures(system, gid, info, fetch):
+    """Download a game's label images, one file per distinct image: (files, same), same = {region's file: the identical
+    one already saved}. ScreenScraper often gives several regions the same image (eu and fr, us and wor)."""
+    files, same, saved = [], {}, {}
+    for region, url, fmt, md5 in textures(info):
+        name = f"{system}/{gid}-{region}.{fmt}"
+        if md5 and md5 in saved:
+            same[name] = saved[md5]
+            continue
+        if fetch is None or fetch(url, name) is not False:
+            files.append(name)
+            if md5:
+                saved[md5] = name
+    return files, same
 
 
 FAN_PUBLISHER = re.compile(r"romhack|\bhack|homebrew|translat|traduc|\bfan\b|patch", re.I)
@@ -141,12 +162,10 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
                 if why:
                     state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": [], "excluded": why}
                     continue
-                files = []
-                for region, url, fmt in textures(info):
-                    name = f"{system}/{gid}-{region}.{fmt}"
-                    if fetch is None or fetch(url, name) is not False:
-                        files.append(name)
+                files, same = save_textures(system, gid, info, fetch)
                 state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files, "checked": True}
+                if same:
+                    state["games"][gid]["same"] = same
             state["searched"].append(key)
             save()
     except Out:
@@ -182,10 +201,36 @@ def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lamb
             g.pop("excluded", None)
             g["checked"] = True
             if not g["labels"] and fetch:  # left out before, kept now: its images were never downloaded
-                g["labels"] = [n for region, url, fmt in textures(info)
-                               for n in [f"{g['system']}/{gid}-{region}.{fmt}"] if fetch(url, n) is not False]
+                g["labels"], same = save_textures(g["system"], gid, info, fetch)
+                if same:
+                    g["same"] = same
         save()
     return used
+
+
+def dedupe(state, out=OUT, remove=os.remove):
+    """The label images downloaded before duplicates were skipped: of a game's identical files, keep the first, remove
+    the others and note them in "same". Returns how many were removed."""
+    import hashlib
+    n = 0
+    for g in state["games"].values():
+        first, keep = {}, []
+        for name in g.get("labels", []):
+            path = os.path.join(out, name)
+            if not os.path.exists(path):
+                keep.append(name)
+                continue
+            with open(path, "rb") as f:
+                h = hashlib.sha1(f.read()).hexdigest()
+            if h in first:
+                remove(path)
+                g.setdefault("same", {})[name] = first[h]
+                n += 1
+            else:
+                first[h] = name
+                keep.append(name)
+        g["labels"] = keep
+    return n
 
 
 def report(state, path):
@@ -229,6 +274,12 @@ def main(args):
         with open(path, "wb") as f:  # written only once complete, so a cut never leaves half an image behind
             f.write(data)
         return True
+
+    if "--dedupe" in args:
+        n = dedupe(state)
+        save()
+        print(n, "identical images removed; index.json notes which image each region shares.")
+        return
 
     if "--recheck" in args:
         def move(name):

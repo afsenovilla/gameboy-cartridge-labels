@@ -16,6 +16,8 @@
 #   "labels" (restored prints of that serial or release), "wanted" (wanted prints), "text", "guesses" (title only)}},
 # the page screenscraper-labels/matches.html: each image beside our restored label, unmatched ones first; and
 # screenscraper-labels/unknown-serials.txt: the serials read that the database lacks (serial, title, images).
+# A region whose image is the same as another's (index.json's "same") gets that image's answer, with "same_as"; the
+# page shows such images once, with every region's name.
 # The text read is cached by the image's content in screenscraper-labels/ocr/<sha1>.json (several regions often share
 # one image), so running it again only reads new images.
 import hashlib
@@ -156,6 +158,9 @@ def match(state, prints, release_of, read, out=OUT):
             entry["labels"] = [p["print"] for p in ps if p["kind"] == "labels"]
             entry["wanted"] = [p["print"] for p in ps if p["kind"] == "wanted"]
             result[name] = entry
+        for name, shared in g.get("same", {}).items():  # regions with the very same image: the same answer
+            if shared in result:
+                result[name] = {**result[shared], "region": os.path.splitext(name)[0].rsplit("-", 1)[-1], "same_as": shared}
     return result
 
 
@@ -177,12 +182,18 @@ ORDER = {"none": 0, "unknown": 1, "title": 2, "near": 3, "serial": 4}
 def page(result, prints, path):
     files = {p["print"]: p["file"] for p in prints if p["file"]}
     rows = []
+    shared = {}
+    for name, e in result.items():
+        if e.get("same_as"):
+            shared.setdefault(e["same_as"], []).append(name)
     for name, e in sorted(result.items(), key=lambda kv: (ORDER[kv[1]["how"]], kv[1]["system"], kv[0])):
+        if e.get("same_as"):
+            continue
         ours = "".join(f'<figure><img loading="lazy" src="../published-labels/{html.escape(files[p])}"><figcaption>{html.escape(p)}</figcaption></figure>'
                        for p in e["labels"][:2] if p in files)
         guessed = ", ".join(f'{g["release"]} {g["title"]} ({g["score"]})' for g in e.get("guesses", []))
         what = " — ".join(x for x in (e["serial"], guessed) if x) or "—"
-        rows.append(f'<tr class="{e["how"]}"><td><img loading="lazy" src="{html.escape(name)}"><br>{html.escape(name)}<br>'
+        rows.append(f'<tr class="{e["how"]}"><td><img loading="lazy" src="{html.escape(name)}"><br>{html.escape(", ".join([name] + shared.get(name, [])))}<br>'
                     f'{html.escape((e["names"] or [""])[0])}</td><td><b>{e["how"]}</b><br>{html.escape(what)}<br>'
                     f'{html.escape(e["title"] or "")}<br>wanted: {html.escape(", ".join(e["wanted"]) or "—")}'
                     f'<details><summary>text read</summary>{html.escape(" | ".join(e["text"]))}</details></td><td>{ours}</td></tr>')
