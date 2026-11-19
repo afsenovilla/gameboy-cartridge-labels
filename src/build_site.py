@@ -4,7 +4,7 @@
 #   python run.py py src/build_site.py [folder] [--issues https://github.com/owner/repo] [--upload URL]
 #   python run.py py src/build_site.py --remote out.html [--base https://geon.github.io/gameboy-cartridge-labels/] [--issues URL] [--viewer 3d/]
 # --remote makes the page published sites use: it reads index.json, wanted.json and prints/ from --base (beside the page if none).
-# --viewer links each label to a separate 3D viewer page (docs/3d/ in this repository), which opens it on its cartridge.
+# --viewer names the 3D viewer page (docs/3d/ in this repository): "View on a cartridge" then shows that page's models inside the dialog.
 #
 # With --issues, each label has a "Report a problem" button: a form that opens a prefilled new issue of that repository.
 import html, json, os, sys
@@ -120,6 +120,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 .scene:active{cursor:grabbing}
 .scene canvas{position:absolute;inset:0;width:100%;height:100%}
 .scene img{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;display:block}
+.scene iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
 .view .info{padding:22px;display:flex;flex-direction:column;gap:14px}
 .view h2{margin:0;font:750 22px/1.15 var(--font);letter-spacing:-.01em}
 .view dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
@@ -187,7 +188,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
       <textarea id="note" placeholder="Anything else? (optional)" aria-label="Details"></textarea>
       <div class="row"><a id="rep-issue" class="main" target="_blank" rel="noopener">Open as GitHub issue</a><button type="button" id="rep-cancel">Cancel</button></div>
     </form>
-    <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="v3dpage" hidden>Open in the 3D viewer</a><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
+    <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
   </div>
 </div></dialog>
 <script type="application/json" id="data">__DATA__</script>
@@ -198,7 +199,7 @@ __LOAD_START__
 const FOLDER = "__FOLDER__";
 const enc = f => f.split("/").map(encodeURIComponent).join("/");
 const ISSUES = "__ISSUES__";
-const VIEWER = "__VIEWER__";  // the separate 3D viewer page (--viewer), which takes #print=<id>; empty = no link
+const VIEWER = "__VIEWER__";  // the 3D viewer page (--viewer): "View on a cartridge" shows it here, in a frame, turning by itself; empty = the built-in mesh
 const REASONS = ["Blurry or low resolution", "Glare or reflections", "Dirt, scratches or damage", "Crooked or badly cropped", "Wrong colours", "Wrong title or serial", "Not a label", "Other"];
 const SYSTEMS = [["", "All"], ["dmg", "Game Boy"], ["cgb", "Game Boy Color"], ["agb", "Game Boy Advance"]];
 const SYSTEM_NAME = {dmg: "Game Boy", cgb: "Game Boy Color", agb: "Game Boy Advance"}, SYSTEM_SHORT = {dmg: "GB", cgb: "GBC", agb: "GBA"};
@@ -439,11 +440,21 @@ function buildScene(l) {
 }
 function sway(t) { if (!three || !$("view").open) { spin.raf = 0; return; } if (!spin.drag && !spin.touched) { spin.ry = -28 + Math.sin(t / 1400) * 24; spin.rx = -12 + Math.sin(t / 2100) * 4; } draw(); spin.raf = requestAnimationFrame(sway); }
 const hasCart = l => !!CART && (l.system === "dmg" || l.system === "cgb");  // the Game Boy Advance has no model yet
+const inViewer = l => !!VIEWER && ["dmg", "cgb", "agb"].includes(l.system);  // the viewer page has a model of this cartridge
 function showThree(on) {
-  const l = shown[current].labels[inGroup]; on = on && hasCart(l);
-  $("v3d").hidden = !hasCart(l);
-  three = on ? l.system : false; $("vimg").hidden = on; $("scene").hidden = !on; $("v3d").setAttribute("aria-pressed", String(on));
+  const l = shown[current].labels[inGroup], ext = inViewer(l), can = ext || hasCart(l); on = on && can;
+  $("v3d").hidden = !can;
+  let fr = $("scene").querySelector("iframe");
+  if (fr && !(on && ext)) { fr.remove(); fr = null; }
+  three = on && !ext ? l.system : false; $("vimg").hidden = on; $("scene").hidden = !on; $("v3d").setAttribute("aria-pressed", String(on));
   $("v3d").textContent = on ? "View flat" : "View on a cartridge";
+  if (on && ext) {  // the viewer page in a frame, told which cartridge and which image; a new label only changes the part after #
+    if (G && G.cv.parentNode) G.cv.remove(); $("scene").querySelectorAll("img").forEach(i => i.remove()); lab = null;
+    if (!fr) { fr = document.createElement("iframe"); fr.title = "The label on a 3D cartridge"; $("scene").append(fr); }
+    const src = VIEWER + "#embed&sys=" + l.system + "&img=" + encodeURIComponent(new URL(FOLDER + "/" + enc(l.file), location.href).href);
+    if (fr.getAttribute("src") !== src) fr.src = src;
+    return;
+  }
   if (on) { if (!buildScene(l)) { three = false; $("vimg").hidden = false; $("scene").hidden = true; $("v3d").hidden = true; return; } if (!still && !spin.raf) spin.raf = requestAnimationFrame(sway); }
 }
 let want3d = false;
@@ -468,7 +479,6 @@ function openView(i, k = 0) {
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
-  $("v3dpage").hidden = !VIEWER || !["dmg", "cgb", "agb"].includes(l.system); $("v3dpage").href = VIEWER + "#print=" + encodeURIComponent(l.id);
   $("rep").hidden = true; $("report").hidden = !ISSUES;
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
@@ -477,6 +487,7 @@ function openView(i, k = 0) {
 $("prev").onclick = () => openView(current - 1); $("next").onclick = () => openView(current + 1);
 $("close").onclick = () => $("view").close();
 $("view").addEventListener("click", e => { if (e.target === $("view")) $("view").close(); });
+$("view").addEventListener("close", () => { const fr = $("scene").querySelector("iframe"); if (fr) fr.remove(); });
 $("view").addEventListener("keydown", e => { if (e.target.closest("textarea,input,select")) return; if (e.key === "ArrowLeft") openView(current - 1); if (e.key === "ArrowRight") openView(current + 1); });
 let timer; $("q").addEventListener("input", e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.p = 1; update(false); }, 150); });
 $("region").onchange = e => { state.r = e.target.value; state.p = 1; update(true); };

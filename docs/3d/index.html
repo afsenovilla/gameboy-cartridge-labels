@@ -76,6 +76,10 @@ summary{cursor:pointer;font-weight:650}
 .filebtn{position:relative;display:inline-block}
 .filebtn:focus-within{outline:3px solid var(--focus);outline-offset:2px}
 .filebtn input{position:absolute;opacity:0;width:1px;height:1px}
+/* embed mode (#embed&sys=dmg&img=<url>): only the stage, one cartridge, turning by itself; the label browser frames it */
+body.embed{grid-template-columns:1fr;grid-template-rows:100%;background:transparent}
+body.embed aside,body.embed .hud{display:none}
+body.embed #stage{background:none}
 #err{position:absolute;inset:0;display:none;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 @media (max-width:860px){
   body{grid-template-columns:1fr;grid-template-rows:46% 54%}
@@ -125,6 +129,8 @@ summary{cursor:pointer;font-weight:650}
 (function(){
 "use strict";
 var $=function(id){return document.getElementById(id);};
+var EMBED=new URLSearchParams(location.hash.slice(1)).has('embed');
+if(EMBED)document.body.classList.add('embed');
 if(!window.THREE){$('err').style.display='grid';return;}
 
 /* ---------- The three cartridges. Sizes in mm; label = the sticker's rectangle on the front of each model. ---------- */
@@ -165,6 +171,7 @@ function drawPlaceholder(c){
   k.font='500 '+(w*.055)+'px "Segoe UI",system-ui,sans-serif';k.fillText(nm[0]+' × '+nm[1]+' mm',w/2,h*.44+w*.12);
   c.tex.needsUpdate=true;c.has=false;
 }
+function drawBlank(c){var k=c.canvas.getContext('2d');k.fillStyle='#d9d7cf';k.fillRect(0,0,c.canvas.width,c.canvas.height);c.tex.needsUpdate=true;c.has=false;}
 function drawImage(c,img){
   var cv=c.canvas,k=cv.getContext('2d'),w=cv.width,h=cv.height;
   var s=Math.max(w/img.naturalWidth,h/img.naturalHeight),iw=img.naturalWidth*s,ih=img.naturalHeight*s;
@@ -385,14 +392,26 @@ function update(){
 var timer;$('q').addEventListener('input',function(e){clearTimeout(timer);timer=setTimeout(function(){state.q=e.target.value;update();},150);});
 $('more').onclick=addThumbs;
 
-fetch(FOLDER+'/index.json').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(index){
+function embed(){   // what the frame was asked to show; runs again when the label browser changes the part after #
+  var h=new URLSearchParams(location.hash.slice(1)),c=BY_SYS[h.get('sys')],url=h.get('img');
+  if(!c)return;
+  CARTS.forEach(function(k){k.on=k===c;});
+  if(selected!==c){drawBlank(c);c.group.rotation.y=-.5;}
+  select(c);setFlip(false);setSpin(!reduce);
+  if(!/^https?:\/\//.test(url||''))return;
+  var img=new Image();img.crossOrigin='anonymous';
+  img.onload=function(){if(new URLSearchParams(location.hash.slice(1)).get('img')===url)try{drawImage(c,img);}catch(e){}};
+  img.src=url;
+}
+if(EMBED){embed();addEventListener('hashchange',embed);}
+else fetch(FOLDER+'/index.json').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(index){
   LABELS=Object.keys(index.prints||{}).map(function(id){var p=index.prints[id];return p.image&&{id:id,serial:p.serial||p.release||id,
     title:p.title||p.serial||p.release||id,system:p.shape,file:p.image,size:p.size};}).filter(Boolean);
   LABELS.forEach(function(l){l.hay=fold([l.title,l.serial,l.id].join(' '));});
   LABELS.sort(function(a,b){return a.title.localeCompare(b.title,undefined,{sensitivity:'base',numeric:true})||a.serial.localeCompare(b.serial);});
   update();
-  var m=/^#print=(.+)$/.exec(location.hash);   // a link from the label browser: ../3d/#print=<id>
-  if(m){var id=decodeURIComponent(m[1]),l=LABELS.filter(function(x){return x.id===id;})[0];if(l)pick(l);else $('status').textContent='That label is not in the database any more.';}
+  var id=new URLSearchParams(location.hash.slice(1)).get('print');   // a link to one label: 3d/#print=<id>
+  if(id){var l=LABELS.filter(function(x){return x.id===id;})[0];if(l)pick(l);else $('status').textContent='That label is not in the database any more.';}
 }).catch(function(e){$('status').textContent='Could not load the label database ('+e.message+'). You can still load your own image below.';update();});
 
 resize();view.d=goal.d;requestAnimationFrame(tick);
