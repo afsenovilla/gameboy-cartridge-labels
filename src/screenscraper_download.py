@@ -18,6 +18,8 @@
 # has some twice (Bomberman GB and Wario Blast share the Japanese label): "md5" in index.json remembers what's saved. --dedupe does the same for the
 # images downloaded before this, removing the identical copies (don't run it while a download is running); with
 # --dry-run it only lists what it would remove.
+# --fix-systems asks the system of each game filed under gb before games went under their own system, and moves the
+# Game Boy Color ones to gbc/ (one request per game; don't run it while a download is running; it carries on if cut).
 # screenscraper-labels/ignore.txt lists images that are ScreenScraper's mistakes (a GBA label filed under a GB game),
 # one per line, e.g. gb/82269-us.png, or a game id for a whole game the filter let through (82188, a fan game): never
 # downloaded, and --dedupe removes those already there.
@@ -320,6 +322,37 @@ def dedupe(state, out=OUT, remove=os.remove):
     return n
 
 
+def fix_systems(state, creds, limit, call=ss.call, move=lambda a, b: None, save=lambda: None):
+    """Games filed as gb before each game went under its own system: ask ScreenScraper each one's system and move
+    those of another (Game Boy Color, mostly) to their folder. Returns (requests, games moved)."""
+    used = moved = 0
+    for gid, g in state["games"].items():
+        if g["system"] != "gb" or g.get("system_checked"):
+            continue
+        if used >= limit:
+            print("Reached the limit of", limit, "requests; run it again to carry on.")
+            break
+        used += 1
+        info = check(call("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS["gb"])).get("response", {}).get("jeu", {})
+        own = system_of_game(info) if info else None
+        if own and own != "gb":
+            mine = set(g.get("labels", [])) | set(g.get("same", {}))
+            rename = lambda name: own + name[len("gb"):] if name in mine else name
+            for name in g.get("labels", []):
+                move(name, rename(name))
+            g["labels"] = [rename(x) for x in g.get("labels", [])]
+            if g.get("same"):  # a region sharing another game's image keeps pointing at that game's file
+                g["same"] = {rename(k): rename(v) for k, v in g["same"].items()}
+            for md5, name in list(state.get("md5", {}).items()):
+                state["md5"][md5] = rename(name)
+            g["system"] = own
+            moved += 1
+        if info:
+            g["system_checked"] = True
+        save()
+    return used, moved
+
+
 def report(state, path):
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         for gid, g in sorted(state["games"].items(), key=lambda kv: (kv[1]["system"], (kv[1]["names"] or [""])[0].lower())):
@@ -374,6 +407,21 @@ def main(args):
         print(n, "identical images removed; index.json notes which image each region shares.")
         if gone:
             print(gone, "images listed in screenscraper-labels/ignore.txt removed.")
+        return
+
+    if "--fix-systems" in args:
+        def move(a, b):
+            src, dst = os.path.join(OUT, a), os.path.join(OUT, b)
+            if os.path.exists(src):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                os.replace(src, dst)
+        try:
+            used, moved = fix_systems(state, creds, limit, move=move, save=save)
+        except Refused as e:
+            used, moved = 0, 0
+            print("ScreenScraper says:", e, "- saved; run it again later.")
+        save()
+        print(f"{moved} games moved out of gb/ to their own system's folder; {used} requests.")
         return
 
     if "--recheck" in args:

@@ -195,3 +195,18 @@ def test_an_ignored_game_loses_all_its_images(tmp_path):
     call = fake({("jeuRecherche.php", "X"): {"response": {"jeux": [{"id": "82188", "noms": [{"text": "X"}]}]}}})
     s2 = {"games": {}, "searched": []}
     assert d.run([("gb", "X")], {}, s2, 5, call=call, ignore={"82188"}) == 1 and s2["games"]["82188"]["excluded"] == "listed in ignore.txt"
+
+
+def test_fix_systems_moves_gbc_games_out_of_gb():
+    state = {"games": {"82269": {"system": "gb", "labels": ["gb/82269-jp.png"], "same": {"gb/82269-us.png": "gb/82269-jp.png"}},
+                       "1": {"system": "gb", "labels": ["gb/1-us.png"]}, "2": {"system": "gba", "labels": ["gba/2-us.png"]}},
+             "md5": {"a": "gb/82269-jp.png", "b": "gb/1-us.png"}}
+    answers = {82269: {"systeme": {"id": "10"}}, 1: {"systeme": {"id": "9"}}}
+    moves = []
+    used, moved = d.fix_systems(state, {}, 10, call=lambda e, c, **p: {"response": {"jeu": answers[p["gameid"]]}},
+                                move=lambda a, b: moves.append((a, b)))
+    assert (used, moved) == (2, 1) and moves == [("gb/82269-jp.png", "gbc/82269-jp.png")]
+    g = state["games"]["82269"]
+    assert g["system"] == "gbc" and g["labels"] == ["gbc/82269-jp.png"] and g["same"] == {"gbc/82269-us.png": "gbc/82269-jp.png"}
+    assert state["md5"] == {"a": "gbc/82269-jp.png", "b": "gb/1-us.png"} and state["games"]["1"]["system_checked"]
+    assert d.fix_systems(state, {}, 10, call=None) == (0, 0)
