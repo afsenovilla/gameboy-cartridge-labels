@@ -118,8 +118,16 @@ def test_identical_images_of_two_regions_are_downloaded_once():
               {"type": "support-texture", "region": "us", "url": "http://x/3", "format": "png", "md5": "bb"}]
     got = []
     files, same = d.save_textures("gb", "37225", {"medias": medias}, lambda u, n: got.append(u))
-    assert got == ["http://x/1", "http://x/3"] and files == ["gb/37225-eu.png", "gb/37225-us.png"]
-    assert same == {"gb/37225-fr.png": "gb/37225-eu.png"}
+    assert got == ["http://x/2", "http://x/3"] and files == ["gb/37225-fr.png", "gb/37225-us.png"]
+    assert same == {"gb/37225-eu.png": "gb/37225-fr.png"}
+
+
+def test_the_kept_region_is_where_the_label_was_sold():
+    k = lambda *r: d.region_of(d.keeper([f"gb/1-{x}.png" for x in r]))
+    assert k("eu", "fr") == "fr"            # only France: a French label
+    assert k("eu", "de", "fr", "it") == "eu"  # several European countries: the European one
+    assert k("wor", "us", "ca") == "us"
+    assert k("wor", "eu") == "eu" and k("wor", "jp") == "jp" and k("ss", "wor") in ("ss", "wor")
 
 
 def test_dedupe_removes_identical_copies_already_downloaded(tmp_path):
@@ -128,5 +136,5 @@ def test_dedupe_removes_identical_copies_already_downloaded(tmp_path):
         (tmp_path / "gb" / f"{name}.png").write_bytes(data)
     state = {"games": {"1": {"system": "gb", "labels": ["gb/1-eu.png", "gb/1-fr.png", "gb/1-us.png"]}}}
     assert d.dedupe(state, out=str(tmp_path)) == 1
-    assert state["games"]["1"]["labels"] == ["gb/1-eu.png", "gb/1-us.png"]
-    assert state["games"]["1"]["same"] == {"gb/1-fr.png": "gb/1-eu.png"} and not (tmp_path / "gb" / "1-fr.png").exists()
+    assert state["games"]["1"]["labels"] == ["gb/1-fr.png", "gb/1-us.png"]
+    assert state["games"]["1"]["same"] == {"gb/1-eu.png": "gb/1-fr.png"} and not (tmp_path / "gb" / "1-eu.png").exists()

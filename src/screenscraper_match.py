@@ -12,7 +12,8 @@
 #   title: no serial at all, the releases whose titles best match ScreenScraper's names for the game on its system,
 #     those of the image's region first. Only a guess, for checking by hand;
 #   none: nothing.
-# Into screenscraper-labels/matches.json: {image: {"game", "system", "region", "how", "serial", "release", "title",
+# Into screenscraper-labels/matches.json: {image: {"game", "system", "region" (ScreenScraper's), "how", "serial",
+#   "printed_region" (the serial's: where the label was really sold, FRA on a label ScreenScraper files as eu), "release", "title",
 #   "labels" (restored prints of that serial or release), "wanted" (wanted prints), "text", "guesses" (title only)}},
 # the page screenscraper-labels/matches.html: each image beside our restored label, unmatched ones first; and
 # screenscraper-labels/unknown-serials.txt: the serials read that the database lacks (serial, title, images).
@@ -145,7 +146,7 @@ def match(state, prints, release_of, read, out=OUT):
             if release and system_of(release) not in (system, ""):  # a GB serial on a GBA label is a misread
                 how, serial, release = "none", None, None
             entry = {"game": gid, "system": g["system"], "region": region, "names": g.get("names", []), "how": how,
-                     "serial": serial, "release": release and release.get("id"), "title": release and release.get("title"),
+                     "serial": serial, "printed_region": serials.region_of(serial), "release": release and release.get("id"), "title": release and release.get("title"),
                      "text": lines}
             if release:
                 ps = prints_of(serial, release, prints, region)

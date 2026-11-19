@@ -12,8 +12,9 @@
 # is in index.json ("excluded": why); the list is also written to screenscraper-labels/excluded.txt so it can be checked.
 # --recheck asks again about the games found before this filter existed and moves the images of the excluded ones to
 # screenscraper-labels/excluded/ (don't run it while a download is running: both write index.json).
-# A region whose image is identical to another region's of the same game (ScreenScraper's md5) isn't downloaded again:
-# index.json notes it in the game's "same" ({that region's file: the file it shares}). --dedupe does the same for the
+# Regions of a game with the identical image (ScreenScraper's md5) are downloaded once, under the region that says best
+# where that label was sold (keeper: eu and fr is the French label; de, fr and it, the European one); index.json notes
+# the others in the game's "same" ({that region's file: the file kept}). --dedupe does the same for the
 # images downloaded before this, removing the identical copies (don't run it while a download is running).
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
@@ -70,19 +71,44 @@ def textures(game):
             for m in game.get("medias", []) if m.get("type") == "support-texture" and m.get("url")]
 
 
+GENERAL = {"wor": 0, "ss": 0, "xx": 0, "eu": 1, "asi": 1}  # regions that aren't one country: the rest are
+EUROPE = {"de", "fr", "sp", "it", "nl", "uk", "se", "dk", "fi", "no", "pt", "gr", "pl", "be", "ch", "at", "au"}
+FIRST = ["us", "jp", "uk", "de", "fr", "sp", "it", "nl", "se", "dk", "fi", "no", "au", "ca", "br", "kr", "cn", "tw"]
+
+
+def region_of(name):
+    return os.path.splitext(name)[0].rsplit("-", 1)[-1]
+
+
+def keeper(names):
+    """Of files holding the same image, the one whose region says best where that label was sold: the only country
+    among them (eu and fr: a French label), Europe when several European countries share it (de, fr, it: a European
+    one), else the first country (us before ca, which mostly copies it), else Europe before the world."""
+    countries = [n for n in names if region_of(n) not in GENERAL]
+    if len(countries) == 1:
+        return countries[0]
+    if countries:
+        eu = [n for n in names if region_of(n) == "eu"]
+        if eu and all(region_of(n) in EUROPE for n in countries):
+            return eu[0]
+        return min(countries, key=lambda n: FIRST.index(region_of(n)) if region_of(n) in FIRST else len(FIRST))
+    return max(names, key=lambda n: GENERAL.get(region_of(n), 0))
+
+
 def save_textures(system, gid, info, fetch):
-    """Download a game's label images, one file per distinct image: (files, same), same = {region's file: the identical
-    one already saved}. ScreenScraper often gives several regions the same image (eu and fr, us and wor)."""
-    files, same, saved = [], {}, {}
+    """Download a game's label images, one file per distinct image: (files, same), same = {region's file: the file of
+    the identical image that was kept (keeper)}. ScreenScraper often gives several regions the same image (eu and fr,
+    us and wor)."""
+    groups = {}
     for region, url, fmt, md5 in textures(info):
-        name = f"{system}/{gid}-{region}.{fmt}"
-        if md5 and md5 in saved:
-            same[name] = saved[md5]
-            continue
+        groups.setdefault(md5 or url, []).append((f"{system}/{gid}-{region}.{fmt}", url))
+    files, same = [], {}
+    for group in groups.values():
+        name = keeper([n for n, _ in group])
+        url = dict(group)[name]
         if fetch is None or fetch(url, name) is not False:
             files.append(name)
-            if md5:
-                saved[md5] = name
+            same.update({n: name for n, _ in group if n != name})
     return files, same
 
 
@@ -214,22 +240,23 @@ def dedupe(state, out=OUT, remove=os.remove):
     import hashlib
     n = 0
     for g in state["games"].values():
-        first, keep = {}, []
+        groups, keep = {}, []
         for name in g.get("labels", []):
             path = os.path.join(out, name)
             if not os.path.exists(path):
                 keep.append(name)
                 continue
             with open(path, "rb") as f:
-                h = hashlib.sha1(f.read()).hexdigest()
-            if h in first:
-                remove(path)
-                g.setdefault("same", {})[name] = first[h]
-                n += 1
-            else:
-                first[h] = name
-                keep.append(name)
-        g["labels"] = keep
+                groups.setdefault(hashlib.sha1(f.read()).hexdigest(), []).append(name)
+        for group in groups.values():
+            kept = keeper(group)
+            keep.append(kept)
+            for name in group:
+                if name != kept:
+                    remove(os.path.join(out, name))
+                    g.setdefault("same", {})[name] = kept
+                    n += 1
+        g["labels"] = [x for x in g.get("labels", []) if x in keep]
     return n
 
 
