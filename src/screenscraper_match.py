@@ -143,7 +143,9 @@ def match(state, prints, release_of, read, out=OUT):
             system = SYSTEMS.get(g["system"], g["system"])
             lines = read(path)
             how, serial, release = found_serials(lines, release_of, regions)
-            if release and system_of(release) not in (system, ""):  # a GB serial on a GBA label is a misread
+            if release and (system_of(release) == "agb") != (system == "agb") and system_of(release):
+                # a GB serial on a GBA label is a misread (GB and GBC mix: dual-mode cartridges have DMG serials, and
+                # games found before the download filed GBC games by ScreenScraper's own system went to gb)
                 how, serial, release = "none", None, None
             entry = {"game": gid, "system": g["system"], "region": region, "names": g.get("names", []), "how": how,
                      "serial": serial, "printed_region": serials.region_of(serial), "release": release and release.get("id"), "title": release and release.get("title"),

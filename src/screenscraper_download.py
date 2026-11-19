@@ -199,6 +199,15 @@ class Out(Exception):
     """The request limit was reached."""
 
 
+SYSTEM_OF_ID = {str(v): k for k, v in ss.SYSTEMS.items()}
+
+
+def system_of_game(game):
+    """The game's own system as ScreenScraper says (gb, gbc, gba), False for another system's, None if it doesn't say."""
+    sid = str((game.get("systeme") or {}).get("id") or "")
+    return SYSTEM_OF_ID.get(sid, False) if sid else None
+
+
 def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None, ignore=frozenset()):
     """Search each (system, query) not searched yet; keep the games found and every region's label of each. Returns requests made."""
     used = 0
@@ -220,13 +229,18 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None, 
                 gid = str(g.get("id") or "")
                 if not gid or gid in state["games"]:
                     continue
-                info = g if g.get("medias") and described(g) else ask("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS[system]).get("response", {}).get("jeu", {})
+                own = system_of_game(g)
+                if own is False:  # another system's game altogether
+                    continue
+                system_here = own or system  # a Game Boy search also finds Game Boy Color games: file them as theirs
+                info = g if g.get("medias") and described(g) else ask("jeuInfos.php", creds, gameid=int(gid), systemeid=ss.SYSTEMS[system_here]).get("response", {}).get("jeu", {})
+                system_here = system_of_game(info) or system_here
                 why = verdict(info)
                 if why:
-                    state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": [], "excluded": why}
+                    state["games"][gid] = {"system": system_here, "names": names_of(g) or names_of(info), "labels": [], "excluded": why}
                     continue
-                files, same = save_textures(system, gid, info, fetch, state.setdefault("md5", {}), ignore)
-                state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files, "checked": True}
+                files, same = save_textures(system_here, gid, info, fetch, state.setdefault("md5", {}), ignore)
+                state["games"][gid] = {"system": system_here, "names": names_of(g) or names_of(info), "labels": files, "checked": True}
                 if same:
                     state["games"][gid]["same"] = same
             state["searched"].append(key)

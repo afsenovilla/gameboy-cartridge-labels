@@ -173,3 +173,13 @@ def test_ignored_images_are_never_downloaded_and_removed_if_there(tmp_path):
     state = {"games": {"82269": {"system": "gb", "labels": ["gb/82269-jp.png", "gb/82269-us.png"]}}}
     assert d.drop_ignored(state, ignore, out=str(tmp_path)) == 1
     assert state["games"]["82269"]["labels"] == ["gb/82269-jp.png"] and not (tmp_path / "gb" / "82269-us.png").exists()
+
+
+def test_a_game_is_filed_under_its_own_system():
+    medias = [{"type": "support-texture", "region": "jp", "url": "http://x/1", "format": "png", "md5": "a"}]
+    call = fake({("jeuRecherche.php", "Hole In One Golf"): {"response": {"jeux": [
+        {"id": "82269", "systeme": {"id": "10"}, "medias": medias, "dates": [{"region": "jp"}]},
+        {"id": "5", "systeme": {"id": "46"}, "medias": medias, "dates": [{"region": "jp"}]}]}}})
+    state, got = {"games": {}, "searched": []}, []
+    d.run([("gb", "Hole In One Golf")], {}, state, 5, call=call, fetch=lambda u, n: got.append(n))
+    assert got == ["gbc/82269-jp.png"] and state["games"]["82269"]["system"] == "gbc" and "5" not in state["games"]
