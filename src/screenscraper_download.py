@@ -14,7 +14,8 @@
 # screenscraper-labels/excluded/ (don't run it while a download is running: both write index.json).
 # Regions of a game with the identical image (ScreenScraper's md5) are downloaded once, under the region that says best
 # where that label was sold (keeper: eu and fr is the French label; de, fr and it, the European one); index.json notes
-# the others in the game's "same" ({that region's file: the file kept}). --dedupe does the same for the
+# the others in the game's "same" ({that region's file: the file kept}). The same goes across games, as ScreenScraper
+# has some twice (Bomberman GB and Wario Blast share the Japanese label): "md5" in index.json remembers what's saved. --dedupe does the same for the
 # images downloaded before this, removing the identical copies (don't run it while a download is running).
 # These are other people's images, usually 600 px wide where our restorations are 800+: they stay apart from the restored labels.
 import itertools
@@ -95,7 +96,7 @@ def keeper(names):
     return max(names, key=lambda n: GENERAL.get(region_of(n), 0))
 
 
-def save_textures(system, gid, info, fetch):
+def save_textures(system, gid, info, fetch, seen=None):
     """Download a game's label images, one file per distinct image: (files, same), same = {region's file: the file of
     the identical image that was kept (keeper)}. ScreenScraper often gives several regions the same image (eu and fr,
     us and wor)."""
@@ -103,12 +104,18 @@ def save_textures(system, gid, info, fetch):
     for region, url, fmt, md5 in textures(info):
         groups.setdefault(md5 or url, []).append((f"{system}/{gid}-{region}.{fmt}", url))
     files, same = [], {}
-    for group in groups.values():
+    seen = {} if seen is None else seen  # md5 -> file kept, over every game: ScreenScraper has some games twice
+    for md5, group in groups.items():
+        if md5 in seen:  # another game's (Bomberman GB and Wario Blast carry the same Japanese label)
+            same.update({n: seen[md5] for n, _ in group})
+            continue
         name = keeper([n for n, _ in group])
         url = dict(group)[name]
         if fetch is None or fetch(url, name) is not False:
             files.append(name)
             same.update({n: name for n, _ in group if n != name})
+            if md5 and not md5.startswith("http"):
+                seen[md5] = name
     return files, same
 
 
@@ -188,7 +195,7 @@ def run(todo, creds, state, limit, call=ss.call, fetch=None, save=lambda: None):
                 if why:
                     state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": [], "excluded": why}
                     continue
-                files, same = save_textures(system, gid, info, fetch)
+                files, same = save_textures(system, gid, info, fetch, state.setdefault("md5", {}))
                 state["games"][gid] = {"system": system, "names": names_of(g) or names_of(info), "labels": files, "checked": True}
                 if same:
                     state["games"][gid]["same"] = same
@@ -227,7 +234,7 @@ def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lamb
             g.pop("excluded", None)
             g["checked"] = True
             if not g["labels"] and fetch:  # left out before, kept now: its images were never downloaded
-                g["labels"], same = save_textures(g["system"], gid, info, fetch)
+                g["labels"], same = save_textures(g["system"], gid, info, fetch, state.setdefault("md5", {}))
                 if same:
                     g["same"] = same
         save()
@@ -235,28 +242,28 @@ def recheck(state, creds, limit, call=ss.call, move=lambda name: None, save=lamb
 
 
 def dedupe(state, out=OUT, remove=os.remove):
-    """The label images downloaded before duplicates were skipped: of a game's identical files, keep the first, remove
-    the others and note them in "same". Returns how many were removed."""
+    """The label images downloaded before duplicates were skipped: of identical files (of one game or of several, as
+    ScreenScraper has some games twice), keep one (keeper; the lowest game id on a tie), remove the others and note
+    them in their game's "same". Returns how many were removed."""
     import hashlib
-    n = 0
-    for g in state["games"].values():
-        groups, keep = {}, []
+    groups, owner = {}, {}
+    for gid, g in sorted(state["games"].items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else 0):
         for name in g.get("labels", []):
             path = os.path.join(out, name)
-            if not os.path.exists(path):
-                keep.append(name)
-                continue
-            with open(path, "rb") as f:
-                groups.setdefault(hashlib.sha1(f.read()).hexdigest(), []).append(name)
-        for group in groups.values():
-            kept = keeper(group)
-            keep.append(kept)
-            for name in group:
-                if name != kept:
-                    remove(os.path.join(out, name))
-                    g.setdefault("same", {})[name] = kept
-                    n += 1
-        g["labels"] = [x for x in g.get("labels", []) if x in keep]
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    groups.setdefault(hashlib.sha1(f.read()).hexdigest(), []).append(name)
+                owner[name] = g
+    n = 0
+    for group in groups.values():
+        kept = keeper(group)
+        for name in group:
+            if name != kept:
+                remove(os.path.join(out, name))
+                g = owner[name]
+                g["labels"] = [x for x in g["labels"] if x != name]
+                g.setdefault("same", {})[name] = kept
+                n += 1
     return n
 
 

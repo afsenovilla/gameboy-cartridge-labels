@@ -138,3 +138,23 @@ def test_dedupe_removes_identical_copies_already_downloaded(tmp_path):
     assert d.dedupe(state, out=str(tmp_path)) == 1
     assert state["games"]["1"]["labels"] == ["gb/1-fr.png", "gb/1-us.png"]
     assert state["games"]["1"]["same"] == {"gb/1-eu.png": "gb/1-fr.png"} and not (tmp_path / "gb" / "1-eu.png").exists()
+
+
+def test_an_image_another_game_already_has_is_not_downloaded_again():
+    seen = {}
+    jp = [{"type": "support-texture", "region": "jp", "url": "http://x/a", "format": "png", "md5": "same"}]
+    assert d.save_textures("gb", "170167", {"medias": jp}, lambda u, n: None, seen) == (["gb/170167-jp.png"], {})
+    got = []
+    files, same = d.save_textures("gb", "170168", {"medias": jp}, lambda u, n: got.append(u), seen)
+    assert got == [] and files == [] and same == {"gb/170168-jp.png": "gb/170167-jp.png"}
+
+
+def test_dedupe_works_across_games(tmp_path):
+    (tmp_path / "gb").mkdir()
+    for name in ("170167-jp", "170168-jp"):
+        (tmp_path / "gb" / f"{name}.png").write_bytes(b"x")
+    state = {"games": {"170168": {"system": "gb", "labels": ["gb/170168-jp.png"]},
+                       "170167": {"system": "gb", "labels": ["gb/170167-jp.png"]}}}
+    assert d.dedupe(state, out=str(tmp_path)) == 1
+    assert state["games"]["170167"]["labels"] == ["gb/170167-jp.png"]
+    assert state["games"]["170168"] == {"system": "gb", "labels": [], "same": {"gb/170168-jp.png": "gb/170167-jp.png"}}

@@ -159,9 +159,11 @@ def match(state, prints, release_of, read, out=OUT):
             entry["labels"] = [p["print"] for p in ps if p["kind"] == "labels"]
             entry["wanted"] = [p["print"] for p in ps if p["kind"] == "wanted"]
             result[name] = entry
-        for name, shared in g.get("same", {}).items():  # regions with the very same image: the same answer
+    for gid, g in state["games"].items():  # the very same image (another region's, or another game's): its answer
+        for name, shared in g.get("same", {}).items():
             if shared in result:
-                result[name] = {**result[shared], "region": os.path.splitext(name)[0].rsplit("-", 1)[-1], "same_as": shared}
+                result[name] = {**result[shared], "game": gid, "names": g.get("names", []),
+                                "region": os.path.splitext(name)[0].rsplit("-", 1)[-1], "same_as": shared}
     return result
 
 
