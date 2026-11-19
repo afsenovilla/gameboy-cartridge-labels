@@ -1,9 +1,11 @@
-# A test, not a step: downloads the cartridge images ("support-2D") ScreenScraper has for a few Game Boy games, to see
-# whether their labels are readable. python src/screenscraper_sample.py "Tetris" "Pokemon Red" ...
+# A test, not a step: downloads the cartridge images ScreenScraper has for a few Game Boy games, to see whether their
+# labels are readable. Two kinds: "support-2D" (a render of the whole cartridge) and "support-texture" (the media's flat
+# texture, which should be just the label). python src/screenscraper_sample.py "Tetris" "Pokemon Red" ...
 # Needs a ScreenScraper account and the developer credentials its API asks for, in screenscraper.json (not in git):
 #   {"devid": "...", "devpassword": "...", "softname": "gameboy-cartridge-labels", "ssid": "<your user>", "sspassword": "..."}
 # Free accounts have daily request limits, so this is slow on purpose (one request every 2 s). Images go to
-# screenscraper-sample/<game id>-<region>.<ext>, with the list of what each game had in screenscraper-sample/index.json.
+# screenscraper-sample/<game id>-<region>[-texture].<ext>, with the list of what each game had, and every media type it
+# offers, in screenscraper-sample/index.json.
 import json, os, sys, time, urllib.parse, urllib.request
 
 API = "https://api.screenscraper.fr/api2/"
@@ -27,10 +29,10 @@ def call(endpoint, creds, **params):
     return json.loads(data.decode("utf-8"))
 
 
-def support_images(game):
-    """[(region, url, format)] of the game's support-2D images (the cartridge) in the response of jeuInfos."""
+def support_images(game, kind="support-2D"):
+    """[(region, url, format)] of the game's images of one media type in the response of jeuInfos."""
     return [(m.get("region") or "xx", m["url"], m.get("format") or "png")
-            for m in game.get("medias", []) if m.get("type") == "support-2D" and m.get("url")]
+            for m in game.get("medias", []) if m.get("type") == kind and m.get("url")]
 
 
 def search(name, system, creds):
@@ -46,15 +48,19 @@ def main(names, system="gb"):
     for name in names:
         for game_id in search(name, system, creds)[:3]:
             game = call("jeuInfos.php", creds, gameid=game_id, systemeid=SYSTEMS[system]).get("response", {}).get("jeu", {})
-            images = support_images(game)
-            index[str(game_id)] = {"name": name, "images": [(r, u.split("?")[0]) for r, u, _ in images]}
-            for region, url, fmt in images:
-                path = os.path.join(OUT, f"{game_id}-{region}.{fmt}")
-                if not os.path.exists(path):
-                    with urllib.request.urlopen(url, timeout=60) as r, open(path, "wb") as f:
-                        f.write(r.read())
-                    time.sleep(PAUSE)
-            print(name, game_id, len(images), "support image(s)")
+            entry = index[str(game_id)] = {"name": name, "media types": sorted({m.get("type") for m in game.get("medias", []) if m.get("type")})}
+            count = 0
+            for kind, suffix in (("support-2D", ""), ("support-texture", "-texture")):
+                images = support_images(game, kind)
+                entry[kind] = [(r, u.split("?")[0]) for r, u, _ in images]
+                count += len(images)
+                for region, url, fmt in images:
+                    path = os.path.join(OUT, f"{game_id}-{region}{suffix}.{fmt}")
+                    if not os.path.exists(path):
+                        with urllib.request.urlopen(url, timeout=60) as r, open(path, "wb") as f:
+                            f.write(r.read())
+                        time.sleep(PAUSE)
+            print(name, game_id, count, "support image(s)")
     with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(index, f, indent=1, ensure_ascii=False)
 
