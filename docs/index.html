@@ -442,7 +442,7 @@ function showThree(on) {
   if (on && ext) {  // the viewer page in a frame, told which cartridge and which image; a new label only changes the part after #
     if (G && G.cv.parentNode) G.cv.remove(); $("scene").querySelectorAll("img").forEach(i => i.remove()); lab = null;
     if (!fr) { fr = document.createElement("iframe"); fr.title = "The label on a 3D cartridge"; $("scene").append(fr); }
-    const src = VIEWER + "#embed&sys=" + l.system + "&img=" + encodeURIComponent(new URL(FOLDER + "/" + enc(l.file), location.href).href);
+    const src = VIEWER + "?v=1795100129#embed&sys=" + l.system + "&img=" + encodeURIComponent(new URL(FOLDER + "/" + enc(l.file), location.href).href);
     if (fr.getAttribute("src") !== src) fr.src = src;
     return;
   }

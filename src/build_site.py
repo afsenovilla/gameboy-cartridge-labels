@@ -7,7 +7,7 @@
 # --viewer names the 3D viewer page (docs/3d/ in this repository): "View on a cartridge" then shows that page's models inside the dialog.
 #
 # With --issues, each label has a "Report a problem" button: a form that opens a prefilled new issue of that repository.
-import html, json, os, sys
+import html, json, os, sys, time
 
 FOLDER = "published-labels"
 SOURCE = "https://geon.github.io/gameboy-cartridge-labels/"
@@ -455,7 +455,7 @@ function showThree(on) {
   if (on && ext) {  // the viewer page in a frame, told which cartridge and which image; a new label only changes the part after #
     if (G && G.cv.parentNode) G.cv.remove(); $("scene").querySelectorAll("img").forEach(i => i.remove()); lab = null;
     if (!fr) { fr = document.createElement("iframe"); fr.title = "The label on a 3D cartridge"; $("scene").append(fr); }
-    const src = VIEWER + "#embed&sys=" + l.system + "&img=" + encodeURIComponent(new URL(FOLDER + "/" + enc(l.file), location.href).href);
+    const src = VIEWER + "?v=__STAMP__#embed&sys=" + l.system + "&img=" + encodeURIComponent(new URL(FOLDER + "/" + enc(l.file), location.href).href);
     if (fr.getAttribute("src") !== src) fr.src = src;
     return;
   }
@@ -536,7 +536,7 @@ def build_remote(out, issues="", upload=UPLOAD, base="", viewer=""):
     base = base + "/" if base and not base.endswith("/") else base  # "" = beside the page; else the site's URL
     page = (PAGE.replace("__LOAD_START__", REMOTE_LOAD.replace("__BASE__", base)).replace("__LOAD_END__", REMOTE_END).replace("__TITLE__", "Browse the labels")
             .replace("__CREDIT__", f'<a href="{base}index.html">The plain list of all labels</a> · <a href="{base}wanted.html">Wanted photos</a>'
-                     + (f' · <a href="{html.escape(viewer)}">Labels on 3D cartridges</a>' if viewer else "")).replace("__VIEWER__", viewer.replace('"', ""))
+                     + (f' · <a href="{html.escape(viewer)}">Labels on 3D cartridges</a>' if viewer else "")).replace("__VIEWER__", viewer.replace('"', "")).replace("__STAMP__", str(int(time.time())))  # the stamp makes browsers fetch the viewer page again after each build
             .replace("__FOLDER__", base.rstrip("/") or ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', ""))
             .replace('<script type="application/json" id="data">__DATA__</script>\n<script type="application/json" id="wanted">__WANTED__</script>\n', "").replace("__CART__", cartridge()))
     with open(out, "w", encoding="utf-8", newline="\n") as f:
@@ -561,7 +561,7 @@ def build(folder=FOLDER, issues="", upload=UPLOAD):
                               for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", "Cartridge labels").replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
+    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", "Cartridge labels").replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__STAMP__", "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
