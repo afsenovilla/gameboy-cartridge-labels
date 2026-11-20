@@ -114,6 +114,16 @@ def test_missing_lists_the_releases_no_label_is_of():
     assert [(w["print"], w["region"], w["serials"]) for w in got] == [("AGB-ACHJ", "JPN", ["AGB-ACHJ"])]
 
 
+def test_missing_is_one_per_serial():
+    import screenscraper_site as s
+    releases = {"DMG-XA": {"id": "DMG-XA", "title": "Asterix", "system": "dmg", "cartridgeSerials": ["DMG-XA-NOE", "DMG-XA-SCN"]},
+                "AGB-A2CE": {"id": "AGB-A2CE", "title": "Castlevania", "system": "agb", "cartridgeSerials": ["AGB-A2CE-USA"]},
+                "AGB-A2CP": {"id": "AGB-A2CP", "title": "Castlevania", "system": "agb", "cartridgeSerials": ["AGB-A2CP-EUR", "AGB-A2CP-NOE"]}}
+    entries = [{"serial": "DMG-XA-FAH", "release": "DMG-XA"}, {"serial": "AGB-A2CE", "release": "AGB-A2CE"}, {"serial": "AGB-A2CP", "release": "AGB-A2CP"}]
+    got = [w["print"] for w in s.missing(entries, releases)]
+    assert got == ["DMG-XA-NOE", "DMG-XA-SCN", "AGB-A2CP-EUR", "AGB-A2CP-NOE"]  # by title
+
+
 def test_serve_catalogue_writes_reports_into_ignore_once(tmp_path):
     import serve_catalogue as s
     ign = tmp_path / "ignore.txt"

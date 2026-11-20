@@ -105,24 +105,32 @@ def region_of(release):
 
 
 def missing(entries, releases):
-    """The database's releases no label of this page is of: the page's Missing list, by title."""
-    have = {e["release"] for e in entries if e.get("release")} | {e["serial"] for e in entries if e.get("serial")}
-    have |= {e["serial"].rsplit("-", 1)[0] for e in entries if e.get("serial", "").count("-") >= 2}
+    """The cartridges of the database no label of this page is of: the page's Missing list, one per serial (a German
+    and a French label of one release are two cartridges), by title. A release the database knows no serial of is one
+    entry, covered by any label of that release. A label whose serial was read without its region (AGB-A2CE, cut
+    off) covers its release's serial only if the release has just one."""
+    serials_have = {e["serial"] for e in entries if e.get("serial")}
+    releases_have = {e["release"] for e in entries if e.get("release")} | {s.rsplit("-", 1)[0] for s in serials_have if s.count("-") >= 2}
+    cut = {s for s in serials_have if s.count("-") == 1}  # read without the region
     out = []
     for r in releases.values():
-        if r["id"] in have or any(s in have for s in r.get("cartridgeSerials") or []):
-            continue
-        region = region_of(r)
-        serial_list = list(r.get("cartridgeSerials") or []) or [r["id"]]
+        known = list(r.get("cartridgeSerials") or [])
+        if not known:
+            todo = [] if r["id"] in releases_have else [r["id"]]
+        elif len(known) == 1 and (known[0].rsplit("-", 1)[0] in cut or r["id"] in cut):
+            todo = []
+        else:
+            todo = [s for s in known if s not in serials_have]
         system = (r.get("system") or "")[:3].lower()
-        query = " ".join(w for w in (r.get("title") or "", {"dmg": "Game Boy", "cgb": "Game Boy Color", "agb": "Game Boy Advance"}.get(system, ""),
-                                     "Japan" if region == "JPN" else "", "cartridge") if w)
-        out.append({"print": r["id"], "release": r["id"], "title": r.get("title") or r["id"], "system": system,
-                    "region": GROUP.get(region, "USA/EUR" if region not in ("other",) else "other"),
-                    "serials": serial_list, "needed": 1, "photos": 0,
-                    "search": [{"label": "eBay", "url": "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_nkw": query})}]
-                              + [{"label": f"Google Images: {s}", "url": "https://www.google.com/search?" + urllib.parse.urlencode({"tbm": "isch", "q": f'"{s}"'})}
-                                 for s in serial_list]})
+        for serial in todo:
+            region = serial.rsplit("-", 1)[-1] if serial.count("-") >= 2 else region_of(r)
+            query = " ".join(w for w in (r.get("title") or "", {"dmg": "Game Boy", "cgb": "Game Boy Color", "agb": "Game Boy Advance"}.get(system, ""),
+                                         "Japan" if region == "JPN" else "", "cartridge") if w)
+            out.append({"print": serial, "release": r["id"], "title": r.get("title") or r["id"], "system": system,
+                        "region": GROUP.get(region, "USA/EUR" if region != "other" else "other"),
+                        "serials": [serial], "needed": 1, "photos": 0,
+                        "search": [{"label": "eBay", "url": "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_nkw": query})},
+                                   {"label": f"Google Images: {serial}", "url": "https://www.google.com/search?" + urllib.parse.urlencode({"tbm": "isch", "q": f'"{serial}"'})}]})
     return sorted(out, key=lambda w: (w["title"].casefold(), w["print"]))
 
 
