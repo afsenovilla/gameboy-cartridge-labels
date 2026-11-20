@@ -230,3 +230,16 @@ def test_e_reader_cards_are_not_cartridges(tmp_path):
     state = {"games": {"140755": {"system": "gba", "names": ["Ice Climber-e"], "labels": ["gba/140755-us.png"], "checked": True}}}
     assert d.drop_cards(state, out=str(tmp_path)) == 1 and not (tmp_path / "gba" / "140755-us.png").exists()
     assert state["games"]["140755"]["excluded"] == "e-Reader cards, not a cartridge"
+
+
+def test_variants_keep_the_title_as_written():
+    assert d.variants("10-Pin Bowling") == ["10-Pin Bowling", "10 Pin Bowling"]
+    assert d.variants("Legend of Zelda, The - Oracle of Ages") == ["Legend of Zelda - Oracle of Ages", "Legend of Zelda", "Legend of Zelda Oracle of Ages"]
+    assert d.variants("お茶犬の大冒険") == []
+
+
+def test_missing_titles_try_gb_and_gbc_both(tmp_path):
+    w = tmp_path / "wanted.json"
+    w.write_text(json.dumps([{"system": "cgb", "title": "10-Pin Bowling"}, {"system": "agb", "title": "Yoshi"}]), encoding="utf-8")
+    assert d.missing_titles(str(w)) == [("gbc", "10-Pin Bowling"), ("gb", "10-Pin Bowling"), ("gbc", "10 Pin Bowling"),
+                                         ("gb", "10 Pin Bowling"), ("gba", "Yoshi")]

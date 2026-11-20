@@ -5,6 +5,9 @@
 # published-labels/labels.json (restored labels) and published-labels/wanted.json (cartridges still short of photos). Each title is
 # searched on its system; every game the search returns is kept, with every region's label image:
 #   screenscraper-labels/<system>/<game id>-<region>.<ext>   and   screenscraper-labels/index.json
+# --missing searches again for the catalogue's Missing cartridges (screenscraper-labels/wanted.json, made by
+# screenscraper_site.py), with the title as written and other variants, on GB and GBC both for those two: the first
+# searches dropped punctuation ScreenScraper needs. Then run screenscraper_match.py and screenscraper_site.py again.
 # --sweep also searches every two-letter and digit combination, to find games no title of ours led to. It is long.
 # --limit N stops after N requests to ScreenScraper (the daily quota is the real limit: when it answers 429 or 430 the run saves
 # and stops). Progress is in index.json, so running it again carries on; nothing is asked twice.
@@ -42,10 +45,42 @@ SYSTEM = {"dmg": "gb", "cgb": "gbc", "agb": "gba", "gb": "gb", "gbc": "gbc", "gb
 
 
 def query_of(title):
-    """What to search for a title: no trailing ", The", no punctuation ScreenScraper's search might trip on."""
+    """The first search for a title (the one the first downloads made): no trailing ", The", letters, digits and
+    apostrophes only. ScreenScraper's search turned out to want the punctuation ("10 pin bowling" finds nothing,
+    "10-Pin Bowling" does): variants() has the title as written too."""
     t = re.sub(r",\s*(the|a|an)\s*$", "", (title or "").strip(), flags=re.I)
     t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode()
     return re.sub(r"\s+", " ", re.sub(r"[^A-Za-z0-9' ]+", " ", t)).strip()
+
+
+def variants(title):
+    """Searches worth trying for a title ScreenScraper didn't find: as written (punctuation and all, without a trailing
+    ", The"), the part before a subtitle (" - ", ":"), and query_of's. Titles in Japanese script alone give none."""
+    t = re.sub(r",\s*(the|a|an)\s*(?=\s-\s|:|$)", "", (title or "").strip(), flags=re.I)  # "Zelda, The - Oracle"
+    t = re.sub(r"\s+", " ", t)
+    out = [t, re.split(r"\s+-\s+|:\s*", t)[0].strip(), query_of(title)]
+    seen, keep = set(), []
+    for v in out:
+        if v and len(v) >= 3 and re.search(r"[A-Za-z0-9]", v) and v.lower() not in seen:
+            seen.add(v.lower())
+            keep.append(v)
+    return keep
+
+
+def missing_titles(path=os.path.join("screenscraper-labels", "wanted.json")):
+    """[(system, query)] for the catalogue's Missing cartridges (screenscraper_site's wanted.json): every variant, on
+    the cartridge's system and, for Game Boy and Game Boy Color, on the other one too (10-Pin Bowling is GBC on one
+    ScreenScraper entry and GB on another)."""
+    if not os.path.exists(path):
+        return []
+    out = []
+    for w in json.load(open(path, encoding="utf-8")):
+        system = SYSTEM.get(w.get("system"))
+        if not system:
+            continue
+        systems = [system] + ({"gb": ["gbc"], "gbc": ["gb"]}.get(system, []))
+        out += [(s, v) for v in variants(w.get("title")) for s in systems]
+    return list(dict.fromkeys(out))
 
 
 def titles(paths=SOURCES):
@@ -481,7 +516,9 @@ def main(args):
         print(f"{len(out)} of {len(state['games'])} games left out (see screenscraper-labels/excluded.txt); {used} requests.")
         return
 
-    todo = titles()
+    todo = missing_titles() if "--missing" in args else titles()
+    if "--missing" in args and not todo:
+        sys.exit("No screenscraper-labels/wanted.json: run src/screenscraper_site.py first.")
     if "--sweep" in args:
         todo += [(s, q) for q in sweep_queries() for s in ("gb", "gbc", "gba")]
     try:
