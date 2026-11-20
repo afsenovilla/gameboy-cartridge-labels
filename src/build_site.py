@@ -7,6 +7,8 @@
 # --viewer names the 3D viewer page (docs/3d/ in this repository): "View on a cartridge" then shows that page's models inside the dialog.
 #
 # With --issues, each label has a "Report a problem" button: a form that opens a prefilled new issue of that repository.
+# --issues local keeps the reports in the browser instead, for a local copy: a bar lists them and copies them as lines
+# for screenscraper-labels/ignore.txt.
 import html, json, os, sys, time
 
 FOLDER = "published-labels"
@@ -92,6 +94,9 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .rep input[type=checkbox]{width:16px;height:16px;accent-color:var(--on)}
 .rep textarea{width:100%;min-height:64px;resize:none;overflow:hidden;border:1.5px solid var(--ink);border-radius:6px;background:var(--page);color:var(--ink);font:14px var(--font);padding:8px}
 .rep .row{display:flex;gap:8px;flex-wrap:wrap}
+.reported{margin:0;padding:8px 10px;border-radius:6px;background:var(--well);font-size:14px}
+.repbar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 20px;background:var(--shell);border-top:1.5px solid var(--line)}
+.repbar button{font:14px var(--font)}
 .rep button,.rep a{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:8px 12px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
 .rep button.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
 
@@ -179,6 +184,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
   <nav class="pages" id="pages" aria-label="Pages"></nav>
 </main>
+<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button></div>
 <footer>__CREDIT__</footer>
 <dialog id="view"><div class="view">
   <div class="big"><div class="scene" id="scene" hidden></div><img id="vimg" alt=""><div class="vsw" role="group" aria-label="What to show"><button type="button" class="tdbtn" id="vflat" aria-pressed="true">Label</button><button type="button" class="tdbtn" id="v3d" aria-pressed="false">On a cartridge</button></div><div class="thumbs" id="thumbs"></div></div>
@@ -189,8 +195,9 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
       <strong>What's wrong with this label?</strong>
       <div id="reasons"></div>
       <textarea id="note" placeholder="Anything else? (optional)" aria-label="Details"></textarea>
-      <div class="row"><a id="rep-issue" class="main" target="_blank" rel="noopener">Open as GitHub issue</a><button type="button" id="rep-cancel">Cancel</button></div>
+      <div class="row"><a id="rep-issue" class="main" target="_blank" rel="noopener">Open as GitHub issue</a><button type="button" id="rep-save" class="main" hidden>Save report</button><button type="button" id="rep-drop" hidden>Remove report</button><button type="button" id="rep-cancel">Cancel</button></div>
     </form>
+    <p class="reported" id="reported" hidden></p>
     <div class="acts"><button id="report">Report a problem</button><button id="prev">Previous game</button><button id="next">Next game</button><a id="vdl-link" class="main" download>Download</a><button id="close">Close</button></div>
   </div>
 </div></dialog>
@@ -355,12 +362,36 @@ function issueLink() {  // the new-issue link carries what is ticked and typed n
 }
 const grow = () => { $("note").style.height = "auto"; $("note").style.height = $("note").scrollHeight + 2 + "px"; };
 $("rep").addEventListener("input", () => { grow(); issueLink(); });
-function openReportForm() {
+var openReportForm = function () {
   $("reasons").querySelectorAll("input").forEach(c => c.checked = false);
   $("note").value = ""; $("rep").hidden = false; grow(); issueLink();
   $("reasons").querySelector("input").focus();
-}
+};
 $("report").onclick = openReportForm; $("rep-cancel").onclick = () => { $("rep").hidden = true; };
+// ISSUES = "local": reports stay in this browser, for the person keeping these labels: "Copy for ignore.txt" gives one
+// line per reported image (its path and what's wrong), to paste into the list of images to leave out.
+const LOCAL = ISSUES === "local";
+let REPORTS = {}; try { REPORTS = JSON.parse(localStorage.getItem("label-reports") || "{}"); } catch (e) {}
+const saveReports = () => { try { localStorage.setItem("label-reports", JSON.stringify(REPORTS)); } catch (e) {} repBar(); };
+function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || !n; $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported"; }
+const reportLines = () => Object.entries(REPORTS).map(([file, r]) => file + "  # " + r.title + " (" + r.serial + "): " + (r.reasons.join("; ") || "") + (r.note ? " - " + r.note.replace(/\s+/g, " ") : ""));
+function showReported(l) { const r = LOCAL && REPORTS[l.file]; $("reported").hidden = !r; if (r) $("reported").textContent = "Reported: " + (r.reasons.join("; ") || "") + (r.note ? " - " + r.note : ""); }
+if (LOCAL) {
+  $("rep-issue").hidden = true; $("rep-save").hidden = false;
+  $("rep-save").onclick = () => {
+    const l = shown[current].labels[inGroup], reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
+    if (!reasons.length && !note) { $("reasons").querySelector("input").focus(); return; }
+    REPORTS[l.file] = {id: l.id, title: l.title, serial: l.serial, reasons, note}; saveReports(); $("rep").hidden = true; showReported(l);
+  };
+  $("rep-drop").onclick = () => { const l = shown[current].labels[inGroup]; delete REPORTS[l.file]; saveReports(); $("rep").hidden = true; showReported(l); };
+  $("rep-copy").onclick = async () => { const t = reportLines().join("\n"); try { await navigator.clipboard.writeText(t); $("rep-copy").textContent = "Copied"; setTimeout(() => $("rep-copy").textContent = "Copy for ignore.txt", 1500); } catch (e) { prompt("Copy these lines:", t); } };
+  $("rep-list").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([reportLines().join("\n") + "\n"], {type: "text/plain"})); a.download = "reports.txt"; a.click(); };
+  const open0 = openReportForm;
+  openReportForm = function () { open0(); const l = shown[current].labels[inGroup], r = REPORTS[l.file]; $("rep-drop").hidden = !r;
+    if (r) { $("reasons").querySelectorAll("input").forEach(c => c.checked = r.reasons.includes(c.value)); $("note").value = r.note; grow(); } };
+  $("report").onclick = () => openReportForm();
+}
+repBar();
 $("rep-issue").onclick = e => { if (!$("reasons").querySelector("input:checked") && !$("note").value.trim()) { e.preventDefault(); $("reasons").querySelector("input").focus(); } };
 let current = -1, inGroup = 0;
 // A label on a cartridge you can turn. The cartridge is a mesh (cartridge.json, made by make_cartridge.py) drawn with WebGL;
@@ -484,7 +515,7 @@ function openView(i, k = 0) {
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
-  $("rep").hidden = true; $("report").hidden = !ISSUES;
+  $("rep").hidden = true; $("report").hidden = !ISSUES; showReported(l);
   $("prev").disabled = i === 0; $("next").disabled = i === shown.length - 1;
   if (!$("view").open) $("view").showModal();
   showThree(want3d);

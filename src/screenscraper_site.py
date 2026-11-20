@@ -6,7 +6,9 @@
 # title if the serial is known, else ScreenScraper's name for the game, its system. Regions come from the serial, as on
 # the main page; an image with no serial read shows as region "other". Images in ignore.txt, or of games left out, are
 # not there (screenscraper_match never matched them). Writes screenscraper-labels/labels.json and wanted.json (Missing),
-# which build_site reads.
+# which build_site reads. Each label can be reported as wrong ("Report a problem"): the reports stay in the browser and
+# "Copy for ignore.txt" gives the lines for screenscraper-labels/ignore.txt; run this again (after --dedupe for
+# ScreenScraper's images) and they're gone. A restored label is left out by its file name the same way.
 # ScreenScraper's images, for local use: don't publish this page.
 import json
 import os
@@ -79,14 +81,14 @@ TEXT = {"heading": "Game Boy cartridge labels", "labelsTab": "Labels", "wantedTa
                       "the label would complete them."}
 
 
-def restored(ss_labels, path=RESTORED, folder="published-labels"):
+def restored(ss_labels, path=RESTORED, folder="published-labels", ignore=frozenset()):
     """geon's restored labels of the serials (and releases) ScreenScraper has no image of, as entries of this page."""
     if not os.path.exists(path):
         return []
     have = {l["serial"] for l in ss_labels if l["serial"]} | {l["release"] for l in ss_labels if l["release"]}
     out = []
     for e in json.load(open(path, encoding="utf-8")):
-        if e.get("serial") in have or (e.get("release") and e["release"] in have and not e.get("serial")):
+        if e.get("serial") in have or (e.get("release") and e["release"] in have and not e.get("serial")) or e["file"] in ignore:
             continue
         out.append({**{k: e.get(k) for k in ("id", "serial", "release", "title", "system", "size", "photos")},
                     "file": os.path.relpath(os.path.join(folder, e["file"]), OUT).replace("\\", "/"),
@@ -127,11 +129,12 @@ def missing(entries, releases):
 def main(args):
     with open(os.path.join(OUT, "matches.json"), encoding="utf-8") as f:
         matches = json.load(f)
-    entries = labels(matches, dl.ignored())
+    ignore = dl.ignored()
+    entries = labels(matches, ignore)
     for e in entries:
         e["source"] = f"ScreenScraper (game {e.pop('screenscraper')})"
     if "--only-screenscraper" not in args:
-        entries += restored(entries)
+        entries += restored(entries, ignore=ignore)
     releases = {}
     if os.path.exists(serials.DATABASE):
         for r in json.load(open(serials.DATABASE, encoding="utf-8")):
@@ -141,7 +144,7 @@ def main(args):
         json.dump(entries, f, indent=1, ensure_ascii=False)
     with open(os.path.join(OUT, "wanted.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(wanted, f, indent=1, ensure_ascii=False)
-    out, n, w = build_site.build(OUT, upload="", credit=CREDIT, title="Game Boy cartridge labels", text=TEXT)
+    out, n, w = build_site.build(OUT, issues="local", upload="", credit=CREDIT, title="Game Boy cartridge labels", text=TEXT)
     print(f"{n} labels, {w} missing: open {out}")
 
 
