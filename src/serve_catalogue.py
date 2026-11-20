@@ -117,6 +117,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(302)
             self.send_header("Location", PAGE)
             self.end_headers()
+        elif self.path == "/favicon.ico":  # the browser asks for one; there is none
+            self.send_response(204)
+            self.end_headers()
         elif self.path == "/api/reports":
             with LOCK:
                 self._json(200, load())
@@ -156,8 +159,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, {"added": added, "rebuilt": done})
         self._json(404, {"error": "no such thing"})
 
-    def log_message(self, fmt, *args):  # only the saves, not every image
-        if "/api/" in (args[0] if args else ""):
+    def log_message(self, fmt, *args):  # only the saves and the errors, not every image
+        first = str(args[0]) if args else ""
+        if "/api/" in first or (fmt.startswith("code") and "favicon" not in self.path):
             sys.stderr.write("  " + fmt % args + "\n")
 
 
