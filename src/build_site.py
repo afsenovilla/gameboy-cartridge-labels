@@ -544,7 +544,7 @@ def build_remote(out, issues="", upload=UPLOAD, base="", viewer=""):
     return out
 
 
-def build(folder=FOLDER, issues="", upload=UPLOAD):
+def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge labels"):
     with open(os.path.join(folder, "labels.json"), encoding="utf-8") as f:
         labels = json.load(f)
     for l in labels:  # a release with no title in the database shows under its serial
@@ -559,9 +559,9 @@ def build(folder=FOLDER, issues="", upload=UPLOAD):
             wanted = json.load(f)
     wanted_data = json.dumps([{k: w.get(k) for k in ("print", "release", "title", "system", "region", "serials", "needed", "photos", "search")}
                               for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    credit = (f'Images restored by geon from photos found online and sent in by contributors: '
+    credit = credit or (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", "Cartridge labels").replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__STAMP__", "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
+    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", html.escape(title)).replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__STAMP__", "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)

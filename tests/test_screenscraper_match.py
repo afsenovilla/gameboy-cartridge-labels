@@ -87,3 +87,18 @@ def test_review_shows_a_shared_image_once_with_its_regions():
     got = r.items(matches, [{"id": "DMG-A-FRA-x", "file": "DMG-A-FRA-x.avif"}])
     assert [x["img"] for x in got] == ["gb/2-us.png", "gb/1-fr.png"]
     assert got[1]["also"] == ["gb/1-eu.png"] and got[1]["ours"] == "../published-labels/DMG-A-FRA-x.avif"
+
+
+def test_site_labels_one_per_distinct_image_with_serial_or_screenscraper_name():
+    import screenscraper_site as s
+    matches = {"gba/1-us.png": {"how": "serial", "system": "gba", "game": "1", "region": "us", "names": ["Yoshi"],
+                                "serial": "AGB-A3AE-USA", "release": "AGB-A3AE", "title": "Yoshi's Island"},
+               "gba/1-wor.png": {"how": "serial", "system": "gba", "game": "1", "region": "wor", "same_as": "gba/1-us.png"},
+               "gb/2-jp.png": {"how": "title", "system": "gb", "game": "2", "region": "jp", "names": ["Qix"], "serial": None},
+               "gbc/3-us.png": {"how": "serial", "system": "gbc", "game": "3", "region": "us", "names": ["X"], "serial": "AGB-A3AE-USA"},
+               "gb/4-us.png": {"how": "none", "system": "gb", "game": "4", "region": "us", "names": ["Fan"]}}
+    s.size_of = lambda p: [600, 528]
+    got = s.labels(matches, ignore={"4"}, exists=lambda p: True)
+    assert [(l["id"], l["serial"], l["system"], l["title"]) for l in got] == [
+        ("SS-2-jp", "", "dmg", "Qix"), ("AGB-A3AE-USA", "AGB-A3AE-USA", "agb", "Yoshi's Island"),
+        ("AGB-A3AE-USA-2", "AGB-A3AE-USA", "agb", "X")]
