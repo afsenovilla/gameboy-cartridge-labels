@@ -6,7 +6,8 @@
 # title if the serial is known, else ScreenScraper's name for the game, its system. Regions come from the serial, as on
 # the main page; an image with no serial read shows as region "other". Images in ignore.txt, or of games left out, are
 # not there (screenscraper_match never matched them). Writes screenscraper-labels/labels.json and wanted.json (Missing),
-# which build_site reads. Labels added on the page (serve_catalogue's "Add label") come from added.json. Each label can be reported as wrong ("Report a problem"): the reports stay in the browser and
+# which build_site reads. A label under 450 px wide in its source (added.json's "source_width", else the image's
+# width) is marked low resolution: the page can show those alone, for a second pass. Labels added on the page (serve_catalogue's "Add label") come from added.json. Each label can be reported as wrong ("Report a problem"): the reports stay in the browser and
 # "Copy for ignore.txt" gives the lines for screenscraper-labels/ignore.txt; run this again (after --dedupe for
 # ScreenScraper's images) and they're gone. A restored label is left out by its file name the same way.
 # ScreenScraper's images, for local use: don't publish this page.
@@ -70,6 +71,7 @@ def labels(matches, ignore=frozenset(), out=OUT, exists=os.path.exists):
     return result
 
 
+LOW_WIDTH = 450  # a label narrower than this in its source image is low resolution (ScreenScraper's are mostly 600)
 RESTORED = os.path.join("published-labels", "labels.json")
 GROUP = {"USA": "USA", "CAN": "USA", "JPN": "JPN", "KOR": "KOR", "CHN": "CHN"}
 LETTER = {"J": "JPN", "E": "USA", "P": "EUR", "D": "NOE", "F": "FRA", "S": "ESP", "I": "ITA", "K": "KOR", "X": "EUR",
@@ -146,6 +148,9 @@ def main(args):
         for e in json.load(open(added_path, encoding="utf-8")):
             if os.path.basename(e["file"]) not in ignore and os.path.exists(os.path.join(OUT, e["file"])):
                 entries.append({**e, "size": size_of(os.path.join(OUT, e["file"])), "photos": 0})
+    for e in entries:  # small in the photo or scan it came from: worth a better one
+        width = e.get("source_width") or (e.get("size") or [LOW_WIDTH])[0]
+        e["lowres"] = width < LOW_WIDTH
     if "--only-screenscraper" not in args:
         entries += restored(entries, ignore=ignore)
     releases = {}

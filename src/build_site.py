@@ -179,7 +179,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="az" id="az" role="group" aria-label="Starts with"></div>
 </div>
 <main>
-  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label></span></div>
+  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label><label class="opt" id="lowopt" hidden><input type="checkbox" id="low"> Only low resolution <span id="lowcount"></span></label></span></div>
   <div class="grid" id="grid"></div>
   <div class="wlist" id="wlist" hidden></div>
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
@@ -234,11 +234,11 @@ let state = {q: "", s: "", r: "", l: "", g: "1", o: "title", p: 1, v: HOME, n: 4
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   const v = h.get("v") === "l" || h.get("v") === "w" ? h.get("v") : HOME, o = h.get("o");
-  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v, n: PER_CHOICES.includes(+h.get("n")) ? +h.get("n") : 48};
+  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v, n: PER_CHOICES.includes(+h.get("n")) ? +h.get("n") : 48, z: h.get("z") === "1" ? "1" : ""};
 }
 function writeHash(push) {
   const h = new URLSearchParams();
-  if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l); if (state.g === "0") h.set("g", "0");
+  if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l); if (state.g === "0") h.set("g", "0"); if (state.z) h.set("z", "1");
   if (state.v !== HOME) h.set("v", state.v); if (state.o !== defaultSort(state.v)) h.set("o", state.o); if (state.p > 1) h.set("p", state.p); if (state.n !== 48) h.set("n", state.n);
   const url = location.pathname + (h.toString() ? "#" + h : "");
   push ? history.pushState(null, "", url) : history.replaceState(null, "", url);
@@ -246,7 +246,7 @@ function writeHash(push) {
 function filtered(ignoreSystem, ignoreLetter) {
   const words = fold(state.q).split(/\s+/).filter(Boolean);
   return (state.v === "w" ? WANTED : LABELS).filter(l => (ignoreSystem || !state.s || l.system === state.s) && (ignoreLetter || !state.l || l.letter === state.l) &&
-    (!state.r || l.region === state.r) &&
+    (!state.r || l.region === state.r) && (!state.z || state.v === "w" || l.lowres) &&
     words.every(w => l.hay.includes(w)));
 }
 const sorters = {
@@ -298,7 +298,7 @@ function update(push) {
   build();
   const wv = state.v === "w";
   $("sort").innerHTML = SORTS[state.v].map(([k, n]) => '<option value="' + k + '">' + n + "</option>").join("");
-  $("per").value = state.n; $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1";
+  $("per").value = state.n; $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1"; $("low").checked = !!state.z; $("lowopt").hidden = !LABELS.some(l => l.lowres) || state.v === "w";
   $("stack").parentElement.hidden = wv; $("grid").hidden = wv; $("wlist").hidden = !wv; $("send").hidden = !wv || !UPLOAD;
   $("tab-w").innerHTML = esc(TEXT.wantedTab) + "<small>" + WANTED.length + "</small>"; $("tab-l").innerHTML = esc(TEXT.labelsTab) + "<small>" + LABELS.length + "</small>";
   $("tab-w").setAttribute("aria-selected", String(wv)); $("tab-l").setAttribute("aria-selected", String(!wv));
@@ -358,7 +358,7 @@ function issueLink() {  // the new-issue link carries what is ticked and typed n
   const l = shown[current].labels[inGroup], reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
   const img = /^https?:/.test(FOLDER) ? FOLDER + "/" + l.file : l.file;
   const info = [["Label", l.title], ["Serial", l.serial], ["Release", l.release], ["System", SYSTEM_NAME[l.system] || l.system],
-    ["Region", l.region === "other" ? "not in the serial" : l.region], l.source ? ["Source", l.source] : ["Restored from", l.photos ? l.photos + " photos" : "unknown"],
+    ["Region", l.region === "other" ? "not in the serial" : l.region], l.source ? ["Source", l.source + (l.lowres ? " · low resolution" : "")] : ["Restored from", l.photos ? l.photos + " photos" : "unknown"],
     ["Size", l.size ? l.size[0] + " x " + l.size[1] + " px" : "unknown"], ["Image", img]];
   const body = info.map(([k, v]) => "**" + k + ":** " + v).join("\n") + "\n\n**What's wrong:** " + (reasons.join("; ") || "not specified") + "\n\n**More info:** " + (note || "none") + "\n";
   $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body);
@@ -549,7 +549,7 @@ function openView(i, k = 0) {
     $("thumbs").append(b);
   });
   $("vdl").innerHTML = [["Serial", l.serial], ["Release", l.release], ["System", SYSTEM_NAME[l.system] || l.system],
-    ["Region", l.region === "other" ? "Not in the serial" : l.region], l.source ? ["Source", l.source] : ["Restored from", l.photos ? l.photos + " photos" : "—"],
+    ["Region", l.region === "other" ? "Not in the serial" : l.region], l.source ? ["Source", l.source + (l.lowres ? " · low resolution" : "")] : ["Restored from", l.photos ? l.photos + " photos" : "—"],
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
@@ -565,11 +565,15 @@ $("view").addEventListener("close", () => { const fr = $("scene").querySelector(
 $("view").addEventListener("keydown", e => { if (e.target.closest("textarea,input,select")) return; if (e.key === "ArrowLeft") openView(current - 1); if (e.key === "ArrowRight") openView(current + 1); });
 let timer; $("q").addEventListener("input", e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.p = 1; update(false); }, 150); });
 $("region").onchange = e => { state.r = e.target.value; state.p = 1; update(true); };
+// Labels marked lowres (a small source image: worth replacing with a better one) can be shown alone, for a second pass.
+const NLOW = LABELS.filter(l => l.lowres).length;
+$("lowopt").hidden = !NLOW; $("lowcount").textContent = "(" + NLOW + ")";
+$("low").onchange = e => { state.z = e.target.checked ? "1" : ""; state.p = 1; update(true); };
 $("stack").onchange = e => { state.g = e.target.checked ? "1" : "0"; state.p = 1; update(true); };
 $("per").innerHTML = PER_CHOICES.map(n => "<option>" + n + "</option>").join("");
 $("per").onchange = e => { const first = (state.p - 1) * state.n; state.n = +e.target.value; state.p = Math.floor(first / state.n) + 1; update(true); };
 $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true); };
-$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v, n: state.n}; update(true); };
+$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v, n: state.n, z: ""}; update(true); };
 for (const v of ["w", "l"]) $("tab-" + v).onclick = () => { if (state.v === v) return; state = {...state, v, s: "", r: "", l: "", o: defaultSort(v), p: 1}; update(true); scrollTo({top: 0}); };
 addEventListener("hashchange", () => { readHash(); update(false); });
 readHash(); update(false);
@@ -627,7 +631,7 @@ def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge
         l["title"] = l.get("title") or l.get("serial") or l.get("release") or l["id"]
         l["serial"] = l.get("serial") or l.get("release") or l["id"]
         l["release"] = l.get("release") or l["serial"]
-    data = json.dumps([{k: l.get(k) for k in ("id", "serial", "release", "title", "system", "file", "size", "photos", "source")}
+    data = json.dumps([{k: l.get(k) for k in ("id", "serial", "release", "title", "system", "file", "size", "photos", "source", "lowres")}
                        for l in labels], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     wanted = []
     if os.path.exists(os.path.join(folder, "wanted.json")):
