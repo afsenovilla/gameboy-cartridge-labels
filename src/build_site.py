@@ -7,8 +7,8 @@
 # --viewer names the 3D viewer page (docs/3d/ in this repository): "View on a cartridge" then shows that page's models inside the dialog.
 #
 # With --issues, each label has a "Report a problem" button: a form that opens a prefilled new issue of that repository.
-# --issues local keeps the reports in the browser instead, for a local copy: a bar lists them and copies them as lines
-# for screenscraper-labels/ignore.txt.
+# --issues local keeps the reports for a local copy instead: in screenscraper-labels/reports.json when the page is
+# served by serve_catalogue.py (which also writes them into ignore.txt), else in the browser.
 import html, json, os, sys, time
 
 FOLDER = "published-labels"
@@ -96,7 +96,7 @@ main{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
 .rep .row{display:flex;gap:8px;flex-wrap:wrap}
 .reported{margin:0;padding:8px 10px;border-radius:6px;background:var(--well);font-size:14px}
 .repbar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 20px;background:var(--shell);border-top:1.5px solid var(--line)}
-.repbar button{font:14px var(--font)}
+.repbar button{font:14px var(--font)}.repstate{color:var(--muted);font-size:13px}
 .rep button,.rep a{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:8px;padding:8px 12px;font:600 14px var(--font);cursor:pointer;text-decoration:none}
 .rep button.main{background:var(--on);border-color:var(--on);color:var(--on-ink)}
 
@@ -184,7 +184,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
   <nav class="pages" id="pages" aria-label="Pages"></nav>
 </main>
-<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button></div>
+<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-apply" hidden>Leave these out (write to ignore.txt)</button><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button><span id="repstate" class="repstate"></span></div>
 <footer>__CREDIT__</footer>
 <dialog id="view"><div class="view">
   <div class="big"><div class="scene" id="scene" hidden></div><img id="vimg" alt=""><div class="vsw" role="group" aria-label="What to show"><button type="button" class="tdbtn" id="vflat" aria-pressed="true">Label</button><button type="button" class="tdbtn" id="v3d" aria-pressed="false">On a cartridge</button></div><div class="thumbs" id="thumbs"></div></div>
@@ -368,12 +368,25 @@ var openReportForm = function () {
   $("reasons").querySelector("input").focus();
 };
 $("report").onclick = openReportForm; $("rep-cancel").onclick = () => { $("rep").hidden = true; };
-// ISSUES = "local": reports stay in this browser, for the person keeping these labels: "Copy for ignore.txt" gives one
-// line per reported image (its path and what's wrong), to paste into the list of images to leave out.
-const LOCAL = ISSUES === "local";
-let REPORTS = {}; try { REPORTS = JSON.parse(localStorage.getItem("label-reports") || "{}"); } catch (e) {}
-const saveReports = () => { try { localStorage.setItem("label-reports", JSON.stringify(REPORTS)); } catch (e) {} repBar(); };
-function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || !n; $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported"; }
+// ISSUES = "local": reports for the person keeping these labels. Served by serve_catalogue.py, they're saved to its
+// file (screenscraper-labels/reports.json) and "Leave these out" writes them into ignore.txt; opened as a file, they
+// stay in this browser and "Copy for ignore.txt" gives the lines.
+const LOCAL = ISSUES === "local", API = LOCAL && /^https?:$/.test(location.protocol) ? "/api/" : "";
+let REPORTS = {}, SERVED = false; try { REPORTS = JSON.parse(localStorage.getItem("label-reports") || "{}"); } catch (e) {}
+function saveReports() {
+  if (SERVED) fetch(API + "reports", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(REPORTS)})
+    .then(r => { if (!r.ok) throw new Error(r.status); $("repstate").textContent = "Saved to reports.json"; })
+    .catch(e => { $("repstate").textContent = "Not saved (" + e.message + "): is serve_catalogue.py still running?"; });
+  else try { localStorage.setItem("label-reports", JSON.stringify(REPORTS)); } catch (e) {}
+  repBar();
+}
+function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || (!n && !SERVED); $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported";
+  $("rep-apply").hidden = !SERVED || !n; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
+if (API) fetch(API + "reports").then(r => r.ok ? r.json() : Promise.reject()).then(data => {
+  const local = REPORTS; REPORTS = {...local, ...data}; SERVED = true; $("repstate").textContent = "Reports are saved to screenscraper-labels/reports.json";
+  if (Object.keys(local).some(k => !(k in data))) saveReports(); else repBar();  // the browser's earlier ones go to the file too
+  try { localStorage.removeItem("label-reports"); } catch (e) {}
+}).catch(() => {});
 const reportLines = () => Object.entries(REPORTS).map(([file, r]) => file + "  # " + r.title + " (" + r.serial + "): " + (r.reasons.join("; ") || "") + (r.note ? " - " + r.note.replace(/\s+/g, " ") : ""));
 function showReported(l) { const r = LOCAL && REPORTS[l.file]; $("reported").hidden = !r; if (r) $("reported").textContent = "Reported: " + (r.reasons.join("; ") || "") + (r.note ? " - " + r.note : ""); }
 if (LOCAL) {
@@ -385,6 +398,11 @@ if (LOCAL) {
   };
   $("rep-drop").onclick = () => { const l = shown[current].labels[inGroup]; delete REPORTS[l.file]; saveReports(); $("rep").hidden = true; showReported(l); };
   $("rep-copy").onclick = async () => { const t = reportLines().join("\n"); try { await navigator.clipboard.writeText(t); $("rep-copy").textContent = "Copied"; setTimeout(() => $("rep-copy").textContent = "Copy for ignore.txt", 1500); } catch (e) { prompt("Copy these lines:", t); } };
+  $("rep-apply").onclick = () => { $("repstate").textContent = "Leaving them out…"; return fetch(API + "apply", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"}).then(r => r.json()).then(d => {
+    REPORTS = {}; repBar();
+    if (d.rebuilt) { $("repstate").textContent = d.added + " left out. Reloading…"; setTimeout(() => location.reload(), 800); }
+    else $("repstate").textContent = d.added + " written to ignore.txt, but rebuilding failed: see the server's window.";
+  }).catch(e => { $("repstate").textContent = "Couldn't write ignore.txt (" + e.message + ")"; }); };
   $("rep-list").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([reportLines().join("\n") + "\n"], {type: "text/plain"})); a.download = "reports.txt"; a.click(); };
   const open0 = openReportForm;
   openReportForm = function () { open0(); const l = shown[current].labels[inGroup], r = REPORTS[l.file]; $("rep-drop").hidden = !r;

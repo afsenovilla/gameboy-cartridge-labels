@@ -112,3 +112,13 @@ def test_missing_lists_the_releases_no_label_is_of():
                 "AGB-ACHJ": {"id": "AGB-ACHJ", "title": "Castlevania", "system": "agb", "cartridgeSerials": []}}
     got = s.missing(entries, releases)
     assert [(w["print"], w["region"], w["serials"]) for w in got] == [("AGB-ACHJ", "JPN", ["AGB-ACHJ"])]
+
+
+def test_serve_catalogue_writes_reports_into_ignore_once(tmp_path):
+    import serve_catalogue as s
+    ign = tmp_path / "ignore.txt"
+    ign.write_text("gb/1-us.png  # old", encoding="utf-8")
+    reports = {"gb/1-us.png": {"title": "A", "serial": "S", "reasons": ["Not a label"]},
+               "gbc/2-jp.png": {"title": "Checkmate", "serial": "SS-2-jp", "reasons": ["Not a label"], "note": "a\nbox"}}
+    assert s.apply(reports, str(ign)) == 1
+    assert ign.read_text(encoding="utf-8") == "gb/1-us.png  # old\ngbc/2-jp.png  # Checkmate (SS-2-jp): Not a label - a box\n"

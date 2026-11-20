@@ -402,7 +402,7 @@ def report(state, path):
 
 def main(args):
     limit = int(args[args.index("--limit") + 1]) if "--limit" in args else 10 ** 9
-    creds = ss.credentials()
+    creds = None if "--dedupe" in args else ss.credentials()  # --dedupe asks ScreenScraper nothing
     os.makedirs(OUT, exist_ok=True)
     index_path = os.path.join(OUT, "index.json")
     state = {"games": {}, "searched": []}
