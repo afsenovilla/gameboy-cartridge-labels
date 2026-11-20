@@ -76,3 +76,14 @@ def test_a_region_sharing_an_image_gets_its_answer():
         os.path.exists = real
     assert r["gba/1-wor.png"]["serial"] == "AGB-A3AE-USA" and r["gba/1-wor.png"]["same_as"] == "gba/1-us.png"
     assert r["gba/1-wor.png"]["region"] == "wor"
+
+
+def test_review_shows_a_shared_image_once_with_its_regions():
+    import screenscraper_review as r
+    matches = {"gb/1-fr.png": {"how": "serial", "system": "gb", "game": "1", "names": ["A"], "serial": "DMG-A-FRA",
+                               "labels": ["DMG-A-FRA-x"], "wanted": [], "text": ["DMG-A-FRA"]},
+               "gb/1-eu.png": {"how": "serial", "system": "gb", "game": "1", "names": ["A"], "same_as": "gb/1-fr.png"},
+               "gb/2-us.png": {"how": "none", "system": "gb", "game": "2", "names": ["B"], "text": []}}
+    got = r.items(matches, [{"id": "DMG-A-FRA-x", "file": "DMG-A-FRA-x.avif"}])
+    assert [x["img"] for x in got] == ["gb/2-us.png", "gb/1-fr.png"]
+    assert got[1]["also"] == ["gb/1-eu.png"] and got[1]["ours"] == "../published-labels/DMG-A-FRA-x.avif"
