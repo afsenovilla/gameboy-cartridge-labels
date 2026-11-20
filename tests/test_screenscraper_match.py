@@ -122,3 +122,15 @@ def test_serve_catalogue_writes_reports_into_ignore_once(tmp_path):
                "gbc/2-jp.png": {"title": "Checkmate", "serial": "SS-2-jp", "reasons": ["Not a label"], "note": "a\nbox"}}
     assert s.apply(reports, str(ign)) == 1
     assert ign.read_text(encoding="utf-8") == "gb/1-us.png  # old\ngbc/2-jp.png  # Checkmate (SS-2-jp): Not a label - a box\n"
+
+
+def test_an_added_label_is_saved_under_its_serial(tmp_path):
+    import serve_catalogue as s, pytest, json as j
+    e = s.add("dmg-aaue-usa", "", "Pokemon Gold", "dmg", b"\x89PNG...", "image/png", out=str(tmp_path))
+    assert e["file"] == "added/DMG-AAUE-USA.png" and e["release"] == "DMG-AAUE" and (tmp_path / "added" / "DMG-AAUE-USA.png").exists()
+    assert s.add("DMG-AAUE-USA", "", "", "", b"x", "image/png", out=str(tmp_path))["file"] == "added/DMG-AAUE-USA-2.png"
+    assert len(j.loads((tmp_path / "added.json").read_text(encoding="utf-8"))) == 2
+    with pytest.raises(ValueError):
+        s.add("hello", "", "", "", b"x", "image/png", out=str(tmp_path))
+    with pytest.raises(ValueError):
+        s.add("DMG-AAUE-USA", "", "", "", b"x", "text/html", out=str(tmp_path))

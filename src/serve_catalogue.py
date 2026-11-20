@@ -5,6 +5,8 @@
 # "Leave these out" writes the reported images into screenscraper-labels/ignore.txt (one line each, what's wrong as a
 # comment), clears them from the reports, removes them (screenscraper_download.py --dedupe) and builds the page again
 # (screenscraper_site.py), which then reloads without them. Don't use it while a download is running.
+# On the Missing list, "Add label" takes a label image you found (PNG, JPEG, WebP or AVIF) and its serial: it's saved in
+# screenscraper-labels/added/ and listed in added.json, and the page is built again with it among the labels.
 # Only this computer can reach it (127.0.0.1). Stop it with Ctrl+C.
 import http.server
 import json
@@ -18,6 +20,39 @@ REPORTS = os.path.join(OUT, "reports.json")
 IGNORE = os.path.join(OUT, "ignore.txt")
 PAGE = "/" + OUT + "/index.html"
 LOCK = threading.Lock()
+ADDED = os.path.join(OUT, "added.json")
+TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/avif": "avif"}
+MAX_BYTES = 40 * 1024 * 1024
+
+
+def add(serial, release, title, system, data, content_type, out=OUT):
+    """Save a label image someone found for a missing cartridge: added/<serial>[-n].<ext>, listed in added.json.
+    Returns its entry."""
+    import re
+    ext = TYPES.get((content_type or "").split(";")[0].strip())
+    if not ext:
+        raise ValueError("not a PNG, JPEG, WebP or AVIF image")
+    if not data or len(data) > MAX_BYTES:
+        raise ValueError("empty, or over 40 MB")
+    serial = re.sub(r"[^A-Z0-9-]", "", (serial or "").upper())[:20]
+    if not re.fullmatch(r"(DMG|CGB|AGB)-[A-Z0-9]{2,5}(-[A-Z]{3})?(-\d)?", serial):
+        raise ValueError("that doesn't look like a serial (like DMG-AAUE-USA)")
+    added_path = os.path.join(out, "added.json")
+    entries = json.load(open(added_path, encoding="utf-8")) if os.path.exists(added_path) else []
+    os.makedirs(os.path.join(out, "added"), exist_ok=True)
+    name, n = f"added/{serial}.{ext}", 1
+    while os.path.exists(os.path.join(out, name)):
+        n += 1
+        name = f"added/{serial}-{n}.{ext}"
+    with open(os.path.join(out, name), "wb") as f:
+        f.write(data)
+    entry = {"id": os.path.splitext(os.path.basename(name))[0], "serial": serial, "release": release or serial.rsplit("-", 1)[0],
+             "title": title or serial, "system": system or serial[:3].lower(), "file": name, "source": "added by you"}
+    entries.append(entry)
+    with open(added_path + ".tmp", "w", encoding="utf-8", newline="\n") as f:
+        json.dump(entries, f, indent=1, ensure_ascii=False)
+    os.replace(added_path + ".tmp", added_path)
+    return entry
 
 
 def load():
@@ -55,11 +90,12 @@ def apply(reports, ignore=IGNORE):
     return len(new)
 
 
-def rebuild():
+def rebuild(dedupe=True):
     """Remove what ignore.txt lists (--dedupe) and build the page again; True if both went well."""
     import subprocess
     here = os.path.dirname(os.path.abspath(__file__))
-    for script, extra in (("screenscraper_download.py", ["--dedupe"]), ("screenscraper_site.py", [])):
+    steps = [("screenscraper_download.py", ["--dedupe"])] if dedupe else []
+    for script, extra in steps + [("screenscraper_site.py", [])]:
         r = subprocess.run([sys.executable, os.path.join(here, script)] + extra, capture_output=True, text=True)
         sys.stderr.write("  " + (r.stdout + r.stderr).strip().replace("\n", "\n  ") + "\n")
         if r.returncode:
@@ -89,6 +125,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
+        if self.path.startswith("/api/add?"):
+            import urllib.parse
+            q = dict(urllib.parse.parse_qsl(self.path.split("?", 1)[1]))
+            if length > MAX_BYTES:
+                return self._json(400, {"error": "over 40 MB"})
+            data = self.rfile.read(length)
+            with LOCK:
+                try:
+                    entry = add(q.get("serial"), q.get("release"), q.get("title"), q.get("system"), data, self.headers.get("Content-Type"))
+                except ValueError as e:
+                    return self._json(400, {"error": str(e)})
+                done = rebuild(dedupe=False)
+            return self._json(200, {**entry, "rebuilt": done})
         try:
             data = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:

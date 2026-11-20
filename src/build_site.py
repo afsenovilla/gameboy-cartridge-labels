@@ -151,6 +151,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 .wrow .s{display:block;color:var(--muted);font-size:13px;margin-top:3px;overflow-wrap:anywhere}
 .need{display:inline-block;background:var(--lcd);color:var(--lcd-ink);border-radius:5px;padding:2px 9px;font:700 13px var(--font);margin-right:8px;white-space:nowrap}
 .wlinks{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.addl{font:600 14px var(--font);border:1.5px solid var(--ink);background:var(--on);color:var(--on-ink);border-radius:999px;padding:6px 14px;cursor:pointer}
 .wlinks a{border:1.5px solid var(--ink);border-radius:8px;padding:6px 11px;font:600 13px var(--font);text-decoration:none;white-space:nowrap}
 .wlinks a:hover{background:var(--well)}
 @media (max-width:700px){.wrow{grid-template-columns:1fr}.wlinks{justify-content:flex-start}}
@@ -311,7 +312,9 @@ function update(push) {
     const w = g.rep, n = w.needed, row = document.createElement("div"); row.className = "wrow";
     const links = w.search.filter(x => /^https:\/\//.test(x.url)).map(x => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.label) + "</a>").join("");
     row.innerHTML = "<div><h3>" + esc(w.title) + '</h3><span class="s">' + (TEXT.photos ? '<span class="need">' + n + " more photo" + (n === 1 ? "" : "s") + " needed</span>" : "") +
-      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial].filter(Boolean).join(" · ")) + (TEXT.photos ? " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + " so far" : "") + '</span></div><div class="wlinks">' + links + "</div>";
+      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial].filter(Boolean).join(" · ")) + (TEXT.photos ? " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + " so far" : "") + '</span></div><div class="wlinks">' + links +
+      (SERVED ? '<button type="button" class="addl">Add label</button>' : "") + "</div>";
+    if (SERVED) row.querySelector(".addl").onclick = () => addLabel(w, row);
     $("wlist").append(row);
   });
   else slice.forEach((g, i) => {
@@ -382,8 +385,25 @@ function saveReports() {
 }
 function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || (!n && !SERVED); $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported";
   $("rep-apply").hidden = !SERVED || !n; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
+// Served, a Missing cartridge can be given its label: an image file (a scan or a straight photo), with its serial;
+// serve_catalogue saves it in screenscraper-labels/added/ and builds the page again, where it is then a label.
+function addLabel(w, row) {
+  const pick = document.createElement("input"); pick.type = "file"; pick.accept = "image/png,image/jpeg,image/webp,image/avif";
+  pick.onchange = () => {
+    const f = pick.files[0]; if (!f) return;
+    const serial = (prompt("Serial printed on this label (like " + (w.serial || "DMG-XXXX-USA") + "):", w.serial || "") || "").trim().toUpperCase();
+    if (!serial) return;
+    const st = row.querySelector(".s"); st.textContent = "Saving " + f.name + "…";
+    const q = new URLSearchParams({serial, release: w.release || "", title: w.title, system: w.system});
+    fetch(API + "add?" + q, {method: "POST", headers: {"Content-Type": f.type || "application/octet-stream"}, body: f})
+      .then(r => r.json().then(d => r.ok ? d : Promise.reject(new Error(d.error || r.status))))
+      .then(d => { st.textContent = "Added as " + d.file + (d.rebuilt ? ". Reloading…" : ", but rebuilding the page failed: see the server's window."); if (d.rebuilt) setTimeout(() => location.reload(), 800); })
+      .catch(e => { st.textContent = "Not added: " + e.message; });
+  };
+  pick.click();
+}
 if (API) fetch(API + "reports").then(r => r.ok ? r.json() : Promise.reject()).then(data => {
-  const local = REPORTS; REPORTS = {...local, ...data}; SERVED = true; $("repstate").textContent = "Reports are saved to screenscraper-labels/reports.json";
+  const local = REPORTS; REPORTS = {...local, ...data}; SERVED = true; update(false); $("repstate").textContent = "Reports are saved to screenscraper-labels/reports.json";
   if (Object.keys(local).some(k => !(k in data))) saveReports(); else repBar();  // the browser's earlier ones go to the file too
   try { localStorage.removeItem("label-reports"); } catch (e) {}
 }).catch(() => {});

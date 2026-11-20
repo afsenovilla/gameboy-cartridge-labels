@@ -6,7 +6,7 @@
 # title if the serial is known, else ScreenScraper's name for the game, its system. Regions come from the serial, as on
 # the main page; an image with no serial read shows as region "other". Images in ignore.txt, or of games left out, are
 # not there (screenscraper_match never matched them). Writes screenscraper-labels/labels.json and wanted.json (Missing),
-# which build_site reads. Each label can be reported as wrong ("Report a problem"): the reports stay in the browser and
+# which build_site reads. Labels added on the page (serve_catalogue's "Add label") come from added.json. Each label can be reported as wrong ("Report a problem"): the reports stay in the browser and
 # "Copy for ignore.txt" gives the lines for screenscraper-labels/ignore.txt; run this again (after --dedupe for
 # ScreenScraper's images) and they're gone. A restored label is left out by its file name the same way.
 # ScreenScraper's images, for local use: don't publish this page.
@@ -133,6 +133,11 @@ def main(args):
     entries = labels(matches, ignore)
     for e in entries:
         e["source"] = f"ScreenScraper (game {e.pop('screenscraper')})"
+    added_path = os.path.join(OUT, "added.json")
+    if os.path.exists(added_path):  # labels added on the page (serve_catalogue)
+        for e in json.load(open(added_path, encoding="utf-8")):
+            if os.path.basename(e["file"]) not in ignore and os.path.exists(os.path.join(OUT, e["file"])):
+                entries.append({**e, "size": size_of(os.path.join(OUT, e["file"])), "photos": 0})
     if "--only-screenscraper" not in args:
         entries += restored(entries, ignore=ignore)
     releases = {}
