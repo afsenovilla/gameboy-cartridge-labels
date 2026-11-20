@@ -156,7 +156,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 </head>
 <body>
 <header>
-  <h1>Cartridge labels</h1>
+  <h1 id="h1">Cartridge labels</h1>
   <div class="lede"><p id="lede"></p><a class="cta" id="send" href="__UPLOAD__" target="_blank" rel="noopener" hidden>Send photos</a></div>
   <div class="tabs" role="tablist" aria-label="What to show"><button type="button" role="tab" id="tab-w"></button><button type="button" role="tab" id="tab-l"></button></div>
 </header>
@@ -196,6 +196,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
 </div></dialog>
 <script type="application/json" id="data">__DATA__</script>
 <script type="application/json" id="wanted">__WANTED__</script>
+<script type="application/json" id="text">__TEXT__</script>
 <script type="application/json" id="cart-data">__CART__</script>
 <script>
 __LOAD_START__
@@ -291,10 +292,9 @@ function update(push) {
   $("sort").innerHTML = SORTS[state.v].map(([k, n]) => '<option value="' + k + '">' + n + "</option>").join("");
   $("per").value = state.n; $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1";
   $("stack").parentElement.hidden = wv; $("grid").hidden = wv; $("wlist").hidden = !wv; $("send").hidden = !wv || !UPLOAD;
-  $("tab-w").innerHTML = "Wanted<small>" + WANTED.length + "</small>"; $("tab-l").innerHTML = "Restored labels<small>" + LABELS.length + "</small>";
+  $("tab-w").innerHTML = esc(TEXT.wantedTab) + "<small>" + WANTED.length + "</small>"; $("tab-l").innerHTML = esc(TEXT.labelsTab) + "<small>" + LABELS.length + "</small>";
   $("tab-w").setAttribute("aria-selected", String(wv)); $("tab-l").setAttribute("aria-selected", String(!wv));
-  $("lede").textContent = wv ? WANTED.length + " cartridges are only a photo or two short of a restored label. Find one, photograph the label straight on in good light, and send it with the serial printed on the cartridge (like DMG-A2XP-SCN) in the file name."
-    : "Restored labels of Game Boy, Game Boy Color and Game Boy Advance cartridges. Search by title or serial, then open one to see it large.";
+  $("lede").textContent = wv ? WANTED.length + TEXT.wantedLede : TEXT.labelsLede;
   $("count").textContent = matched.length + (wv ? " cartridges" : " labels");
   const from = (state.p - 1) * state.n, slice = shown.slice(from, from + state.n);
   $("range").textContent = shown.length ? "Showing " + (from + 1) + " to " + (from + slice.length) + " of " + shown.length + (wv ? " cartridges" : state.g === "1" ? " games" : " labels") : "";
@@ -303,8 +303,8 @@ function update(push) {
   if (wv) slice.forEach(g => {
     const w = g.rep, n = w.needed, row = document.createElement("div"); row.className = "wrow";
     const links = w.search.filter(x => /^https:\/\//.test(x.url)).map(x => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.label) + "</a>").join("");
-    row.innerHTML = "<div><h3>" + esc(w.title) + '</h3><span class="s"><span class="need">' + n + " more photo" + (n === 1 ? "" : "s") + " needed</span>" +
-      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial].filter(Boolean).join(" · ")) + " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + ' so far</span></div><div class="wlinks">' + links + "</div>";
+    row.innerHTML = "<div><h3>" + esc(w.title) + '</h3><span class="s">' + (TEXT.photos ? '<span class="need">' + n + " more photo" + (n === 1 ? "" : "s") + " needed</span>" : "") +
+      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial].filter(Boolean).join(" · ")) + (TEXT.photos ? " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + " so far" : "") + '</span></div><div class="wlinks">' + links + "</div>";
     $("wlist").append(row);
   });
   else slice.forEach((g, i) => {
@@ -348,7 +348,7 @@ function issueLink() {  // the new-issue link carries what is ticked and typed n
   const l = shown[current].labels[inGroup], reasons = [...$("reasons").querySelectorAll("input:checked")].map(c => c.value), note = $("note").value.trim();
   const img = /^https?:/.test(FOLDER) ? FOLDER + "/" + l.file : l.file;
   const info = [["Label", l.title], ["Serial", l.serial], ["Release", l.release], ["System", SYSTEM_NAME[l.system] || l.system],
-    ["Region", l.region === "other" ? "not in the serial" : l.region], ["Restored from", l.photos ? l.photos + " photos" : "unknown"],
+    ["Region", l.region === "other" ? "not in the serial" : l.region], l.source ? ["Source", l.source] : ["Restored from", l.photos ? l.photos + " photos" : "unknown"],
     ["Size", l.size ? l.size[0] + " x " + l.size[1] + " px" : "unknown"], ["Image", img]];
   const body = info.map(([k, v]) => "**" + k + ":** " + v).join("\n") + "\n\n**What's wrong:** " + (reasons.join("; ") || "not specified") + "\n\n**More info:** " + (note || "none") + "\n";
   $("rep-issue").href = ISSUES.replace(/\/$/, "") + "/issues/new?title=" + encodeURIComponent("Label problem: " + l.title + " (" + l.serial + ")") + "&body=" + encodeURIComponent(body);
@@ -480,7 +480,7 @@ function openView(i, k = 0) {
     $("thumbs").append(b);
   });
   $("vdl").innerHTML = [["Serial", l.serial], ["Release", l.release], ["System", SYSTEM_NAME[l.system] || l.system],
-    ["Region", l.region === "other" ? "Not in the serial" : l.region], ["Restored from", l.photos ? l.photos + " photos" : "—"],
+    ["Region", l.region === "other" ? "Not in the serial" : l.region], l.source ? ["Source", l.source] : ["Restored from", l.photos ? l.photos + " photos" : "—"],
     ["Size", l.size ? l.size[0] + " × " + l.size[1] + " px" : "—"]].map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("");
   if (g.labels.length > 1) $("vdl").insertAdjacentHTML("afterbegin", "<dt>Version</dt><dd>" + (k + 1) + " of " + g.labels.length + "</dd>");
   $("vdl-link").href = file; $("vdl-link").download = l.file.split("/").pop();
@@ -511,13 +511,13 @@ __LOAD_END__
 """
 
 
-LOCAL_LOAD = 'const LABELS = JSON.parse(document.getElementById("data").textContent), WANTED_RAW = JSON.parse(document.getElementById("wanted").textContent);'
+LOCAL_LOAD = 'const LABELS = JSON.parse(document.getElementById("data").textContent), WANTED_RAW = JSON.parse(document.getElementById("wanted").textContent), TEXT = JSON.parse(document.getElementById("text").textContent); document.getElementById("h1").textContent = TEXT.heading;'
 REMOTE_LOAD = """const fromIndex = index => Object.entries(index.prints).filter(([, p]) => p.image).map(([id, p]) => ({id, serial: p.serial || p.release || id,
     release: p.release || p.serial || id, title: p.title || p.serial || p.release || id, system: p.shape, file: p.image, size: p.size,
     photos: (p.label_photos || []).length}));
 const getJson = (url, fallback) => fetch(url).then(r => { if (!r.ok) throw new Error(url + ": HTTP " + r.status); return r.json(); }).catch(e => { if (fallback) return fallback; throw e; });
 Promise.all([getJson("__BASE__index.json"), getJson("__BASE__wanted.json", [])]).then(([index, WANTED_RAW]) => {
-const LABELS = fromIndex(index);"""
+const LABELS = fromIndex(index), TEXT = JSON.parse(document.getElementById("text").textContent);"""
 REMOTE_END = """}).catch(e => { document.getElementById("grid").textContent = "Could not load the data (" + e.message + "). Open this page from the site, next to index.json."; });"""
 
 
@@ -538,20 +538,27 @@ def build_remote(out, issues="", upload=UPLOAD, base="", viewer=""):
             .replace("__CREDIT__", f'<a href="{base}index.html">The plain list of all labels</a> · <a href="{base}wanted.html">Wanted photos</a>'
                      + (f' · <a href="{html.escape(viewer)}">Labels on 3D cartridges</a>' if viewer else "")).replace("__VIEWER__", viewer.replace('"', "")).replace("__STAMP__", str(int(time.time())))  # the stamp makes browsers fetch the viewer page again after each build
             .replace("__FOLDER__", base.rstrip("/") or ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', ""))
-            .replace('<script type="application/json" id="data">__DATA__</script>\n<script type="application/json" id="wanted">__WANTED__</script>\n', "").replace("__CART__", cartridge()))
+            .replace('<script type="application/json" id="data">__DATA__</script>\n<script type="application/json" id="wanted">__WANTED__</script>\n', "").replace("__CART__", cartridge())
+            .replace("__TEXT__", json.dumps(TEXT, ensure_ascii=False).replace("</", "<\\/")))
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
     return out
 
 
-def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge labels"):
+TEXT = {  # the restoration project's words; a catalogue (screenscraper_site) passes its own
+    "heading": "Cartridge labels", "labelsTab": "Restored labels", "wantedTab": "Wanted", "photos": True,
+    "labelsLede": "Restored labels of Game Boy, Game Boy Color and Game Boy Advance cartridges. Search by title or serial, then open one to see it large.",
+    "wantedLede": " cartridges are only a photo or two short of a restored label. Find one, photograph the label straight on in good light, and send it with the serial printed on the cartridge (like DMG-A2XP-SCN) in the file name."}
+
+
+def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge labels", text=None):
     with open(os.path.join(folder, "labels.json"), encoding="utf-8") as f:
         labels = json.load(f)
     for l in labels:  # a release with no title in the database shows under its serial
         l["title"] = l.get("title") or l.get("serial") or l.get("release") or l["id"]
         l["serial"] = l.get("serial") or l.get("release") or l["id"]
         l["release"] = l.get("release") or l["serial"]
-    data = json.dumps([{k: l.get(k) for k in ("id", "serial", "release", "title", "system", "file", "size", "photos")}
+    data = json.dumps([{k: l.get(k) for k in ("id", "serial", "release", "title", "system", "file", "size", "photos", "source")}
                        for l in labels], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     wanted = []
     if os.path.exists(os.path.join(folder, "wanted.json")):
@@ -561,7 +568,7 @@ def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge
                               for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = credit or (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", html.escape(title)).replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__STAMP__", "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge())
+    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", html.escape(title)).replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__STAMP__", "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge()).replace("__TEXT__", json.dumps({**TEXT, **(text or {})}, ensure_ascii=False).replace("</", "<\\/"))
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)

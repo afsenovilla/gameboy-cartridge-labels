@@ -102,3 +102,13 @@ def test_site_labels_one_per_distinct_image_with_serial_or_screenscraper_name():
     assert [(l["id"], l["serial"], l["system"], l["title"]) for l in got] == [
         ("SS-2-jp", "", "dmg", "Qix"), ("AGB-A3AE-USA", "AGB-A3AE-USA", "agb", "Yoshi's Island"),
         ("AGB-A3AE-USA-2", "AGB-A3AE-USA", "agb", "X")]
+
+
+def test_missing_lists_the_releases_no_label_is_of():
+    import screenscraper_site as s
+    entries = [{"serial": "AGB-A3AE-USA", "release": "AGB-A3AE"}, {"serial": "DMG-AAUE-USA", "release": ""}]
+    releases = {"AGB-A3AE": {"id": "AGB-A3AE", "title": "Yoshi", "system": "agb", "cartridgeSerials": ["AGB-A3AE-USA"]},
+                "DMG-AAUE": {"id": "DMG-AAUE", "title": "Pokemon Gold", "system": "dmg", "cartridgeSerials": []},
+                "AGB-ACHJ": {"id": "AGB-ACHJ", "title": "Castlevania", "system": "agb", "cartridgeSerials": []}}
+    got = s.missing(entries, releases)
+    assert [(w["print"], w["region"], w["serials"]) for w in got] == [("AGB-ACHJ", "JPN", ["AGB-ACHJ"])]

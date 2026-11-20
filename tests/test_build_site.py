@@ -9,7 +9,7 @@ def test_build_site_embeds_the_labels_and_escapes_script_ends(tmp_path):
     out, n, _ = build_site.build(str(tmp_path))
     page = open(out, encoding="utf-8").read()
     assert n == 1 and "DMG-X-USA" in page and "<\\/script> Tetris" in page
-    assert page.count("</script>") == 4   # the labels, wanted and cartridge blocks and the page script: none from the title
+    assert page.count("</script>") == 5   # the labels, wanted, text and cartridge blocks and the page script: none from the title
 
 
 def test_a_label_with_no_title_or_serial_shows_under_what_it_has(tmp_path):
@@ -30,7 +30,7 @@ def test_wanted_json_is_embedded_when_present_and_the_page_still_builds_without_
          "serials": ["DMG-A-USA"], "needed": 1, "photos": 2, "search": [{"label": "eBay", "url": "https://www.ebay.com/x"}]}]), encoding="utf-8")
     out, _, w = build_site.build(str(tmp_path))
     page = open(out, encoding="utf-8").read()
-    assert w == 1 and "DMG-A-USA" in page and "<\\/script> Wanted" in page and page.count("</script>") == 4
+    assert w == 1 and "DMG-A-USA" in page and "<\\/script> Wanted" in page and page.count("</script>") == 5
 
 
 def test_remote_page_reads_the_data_from_the_given_site_and_reports_to_the_given_repository(tmp_path):
