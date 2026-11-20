@@ -234,7 +234,7 @@ def test_e_reader_cards_are_not_cartridges(tmp_path):
 
 def test_variants_keep_the_title_as_written():
     assert d.variants("10-Pin Bowling") == ["10-Pin Bowling", "10 Pin Bowling"]
-    assert d.variants("Legend of Zelda, The - Oracle of Ages") == ["Legend of Zelda - Oracle of Ages", "Legend of Zelda", "Legend of Zelda Oracle of Ages"]
+    assert d.variants("Legend of Zelda, The - Oracle of Ages") == ["Legend of Zelda - Oracle of Ages", "Legend of Zelda", "Legend of Zelda The Oracle of Ages"]
     assert d.variants("お茶犬の大冒険") == []
 
 
