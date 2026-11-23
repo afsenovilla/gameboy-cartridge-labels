@@ -132,11 +132,33 @@ def find(cands, cid):
     raise KeyError(cid)
 
 
-def recrop(cid, quad):
+def recrop(cid, quad, typed=""):
+    """Straighten the label again from moved corners, and read its serial again unless one was typed: a first crop
+    that missed the label had nothing to read."""
     cands = load()
     c = find(cands, cid)
     c["quad"] = [[float(x), float(y)] for x, y in quad][:4]
-    preview(c, imread(os.path.join(INBOX, c["file"])))
+    label = preview(c, imread(os.path.join(INBOX, c["file"])))
+    if typed:
+        c["serial"] = typed.strip().upper()
+    else:
+        serial, text = read_serial(label)
+        c["read"] = text
+        if serial:
+            c["serial"] = serial
+    have, missing, titles = catalogue()
+    describe(c, have, missing, titles)
+    save(cands)
+    return c
+
+
+def lookup(cid, serial):
+    """The candidate described with a typed serial: title, missing, already there."""
+    cands = load()
+    c = find(cands, cid)
+    c["serial"] = serial.strip().upper()
+    have, missing, titles = catalogue()
+    describe(c, have, missing, titles)
     save(cands)
     return c
 

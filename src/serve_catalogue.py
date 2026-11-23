@@ -179,7 +179,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(self.rfile.read(length) or b"{}")
                 with LOCK:
                     if action == "recrop":
-                        return self._json(200, inbox.recrop(data["id"], data["quad"]))
+                        return self._json(200, inbox.recrop(data["id"], data["quad"], data.get("typed", "")))
+                    if action == "serial":
+                        return self._json(200, inbox.lookup(data["id"], data.get("serial", "")))
                     if action == "reject":
                         return self._json(200, inbox.reject(data["id"]))
                     if action == "accept":

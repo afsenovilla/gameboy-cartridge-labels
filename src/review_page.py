@@ -23,11 +23,12 @@ main{padding:20px;display:grid;gap:20px;max-width:1300px;margin:0 auto}
 .title{margin:8px 0 10px;font-weight:600}.badges{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;font-size:14px}
 .b-ok{color:var(--ok)}.b-warn{color:var(--warn)}.b-no{color:var(--no)}.row{display:flex;gap:8px;flex-wrap:wrap}
 .empty{color:var(--muted);text-align:center;padding:60px 20px}.state{font-size:13px;color:var(--muted);margin-top:8px}
+#loupe{position:fixed;z-index:9;pointer-events:none;width:180px;height:180px;border-radius:50%;border:3px solid #ff3b30;box-shadow:0 4px 16px rgba(0,0,0,.4);background:#000;display:none}
 @media (max-width:900px){.cand{grid-template-columns:1fr}}
 </style>
 <header><h1>Labels to review <span id="n"></span></h1><a href="/screenscraper-labels/index.html">Back to the catalogue</a>
 <label id="drop">Drop label photos here, or <input type="file" id="pick" accept="image/*" multiple></label><span id="up" class="state"></span></header>
-<main id="list"></main>
+<main id="list"></main><canvas id="loupe" width="180" height="180" aria-hidden="true"></canvas>
 <script>
 const $ = id => document.getElementById(id), esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const post = (url, data) => fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)})
@@ -64,15 +65,22 @@ function card(c) {
     const h = document.createElementNS("http://www.w3.org/2000/svg", "circle"); h.setAttribute("r", 9); svg.append(h);
     h.addEventListener("pointerdown", e => {
       h.setPointerCapture(e.pointerId); const box = img.getBoundingClientRect(), k = img.clientWidth / c.size[0];
-      const move = ev => { quad[i] = [Math.max(0, Math.min(c.size[0], (ev.clientX - box.left) / k)), Math.max(0, Math.min(c.size[1], (ev.clientY - box.top) / k))]; draw(); };
-      const up = () => { h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", up); recrop(); };
+      const move = ev => { quad[i] = [Math.max(0, Math.min(c.size[0], (ev.clientX - box.left) / k)), Math.max(0, Math.min(c.size[1], (ev.clientY - box.top) / k))]; draw(); loupe(img, c, quad, i, ev); };
+      const up = () => { h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", up); $("loupe").style.display = "none"; recrop(); };
+      loupe(img, c, quad, i, e);
       h.addEventListener("pointermove", move); h.addEventListener("pointerup", up);
     });
   });
   const state = el.querySelector(".state");
-  const recrop = () => { state.textContent = "Straightening…";
-    post("/api/candidates/recrop", {id: c.id, quad}).then(d => { Object.assign(c, d); el.querySelector(".prev img").src = "/screenscraper-labels/" + d.preview + "?v=" + d.v;
-      el.querySelector(".badges").innerHTML = badges(c); state.textContent = ""; }).catch(e => state.textContent = "Couldn't straighten it: " + e.message); };
+  const input = el.querySelector("input");
+  let typed = false;  // a serial typed by hand is kept; otherwise it's read again on every new crop
+  const show = d => { Object.assign(c, d); el.querySelector(".title").textContent = c.title || "Unknown title";
+    el.querySelector(".badges").innerHTML = badges(c); if (!typed) input.value = c.serial || ""; };
+  const recrop = () => { state.textContent = "Straightening and reading the serial…";
+    post("/api/candidates/recrop", {id: c.id, quad, typed: typed ? input.value : ""}).then(d => { el.querySelector(".prev img").src = "/screenscraper-labels/" + d.preview + "?v=" + d.v;
+      show(d); state.textContent = d.serial ? "" : "No serial read: type it from the label."; }).catch(e => state.textContent = "Couldn't straighten it: " + e.message); };
+  input.addEventListener("input", () => { typed = !!input.value.trim(); });
+  input.addEventListener("change", () => { if (input.value.trim()) post("/api/candidates/serial", {id: c.id, serial: input.value}).then(show).catch(() => {}); });
   img.onload = draw; window.addEventListener("resize", draw);
   el.querySelector('[data-a="accept"]').onclick = () => { const serial = el.querySelector("input").value.trim().toUpperCase();
     if (!serial) { el.querySelector("input").focus(); state.textContent = "Type the serial first."; return; }
@@ -81,6 +89,18 @@ function card(c) {
       .catch(e => state.textContent = "Not added: " + e.message); };
   el.querySelector('[data-a="reject"]').onclick = () => post("/api/candidates/reject", {id: c.id}).then(load);
   return el;
+}
+// While a corner is dragged: the photo around it, 4 times larger, with a crosshair on the corner.
+function loupe(img, c, quad, i, ev) {
+  const cv = $("loupe"), g = cv.getContext("2d"), zoom = 4, half = cv.width / 2 / zoom, [x, y] = quad[i];
+  cv.style.display = "block";
+  cv.style.left = (ev.clientX + (i === 1 || i === 2 ? 60 : -240)) + "px"; cv.style.top = (ev.clientY + (i >= 2 ? 40 : -220)) + "px";
+  g.imageSmoothingEnabled = false; g.fillStyle = "#000"; g.fillRect(0, 0, cv.width, cv.height);
+  const sx = x * img.naturalWidth / c.size[0], sy = y * img.naturalHeight / c.size[1];
+  g.drawImage(img, sx - half, sy - half, half * 2, half * 2, 0, 0, cv.width, cv.height);
+  const k = cv.width / (half * 2), pts = quad.map(([px, py]) => [(px - x + half) * k, (py - y + half) * k]);
+  g.strokeStyle = "rgba(255,59,48,.9)"; g.lineWidth = 1.5; g.beginPath(); pts.forEach(([px, py], j) => j ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.stroke();
+  g.strokeStyle = "#fff"; g.lineWidth = 1; g.beginPath(); g.moveTo(90, 70); g.lineTo(90, 110); g.moveTo(70, 90); g.lineTo(110, 90); g.stroke();
 }
 function load() {
   fetch("/api/candidates").then(r => r.json()).then(cs => {
