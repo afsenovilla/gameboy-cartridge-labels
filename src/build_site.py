@@ -185,7 +185,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
   <nav class="pages" id="pages" aria-label="Pages"></nav>
 </main>
-<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-apply" hidden>Leave these out (write to ignore.txt)</button><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button><button type="button" id="refresh" hidden>Refresh</button><span id="repstate" class="repstate"></span></div>
+<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-apply" hidden>Leave these out (write to ignore.txt)</button><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button><button type="button" id="refresh" hidden>Refresh</button><a id="revlink" href="/review" hidden>Labels to review</a><span id="repstate" class="repstate"></span></div>
 <footer>__CREDIT__</footer>
 <dialog id="view"><div class="view">
   <div class="big"><div class="scene" id="scene" hidden></div><img id="vimg" alt=""><div class="vsw" role="group" aria-label="What to show"><button type="button" class="tdbtn" id="vflat" aria-pressed="true">Label</button><button type="button" class="tdbtn" id="v3d" aria-pressed="false">On a cartridge</button></div><div class="thumbs" id="thumbs"></div></div>
@@ -384,7 +384,7 @@ function saveReports() {
   repBar();
 }
 function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || (!n && !SERVED); $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported";
-  $("rep-apply").hidden = !SERVED || !n; $("refresh").hidden = !SERVED; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
+  $("rep-apply").hidden = !SERVED || !n; $("refresh").hidden = !SERVED; $("revlink").hidden = !SERVED; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
 // Served, a Missing cartridge can be given its label: an image file (a scan or a straight photo), with its serial;
 // serve_catalogue saves it in screenscraper-labels/added/ and builds the page again, where it is then a label.
 function addLabel(w, row) {
