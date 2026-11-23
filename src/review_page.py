@@ -123,7 +123,12 @@ function loupe(img, c, quad, i, ev) {
   cv.style.display = "block";
   const box = img.getBoundingClientRect(), k0 = img.clientWidth / c.size[0];
   const cx = ev ? ev.clientX : box.left + x * k0, cy = ev ? ev.clientY : box.top + y * k0;
-  cv.style.left = (cx + (i === 1 || i === 2 ? 50 : -50 - W)) + "px"; cv.style.top = (cy + (i >= 2 ? 30 : -30 - W)) + "px";
+  // beside the corner, outside the label; on the other side when that would leave the window, and always inside it
+  const D = cv.offsetWidth || W, vw = window.innerWidth, vh = window.innerHeight;
+  let left = i === 1 || i === 2 ? cx + 50 : cx - 50 - D, top = i >= 2 ? cy + 30 : cy - 30 - D;
+  if (left < 0 || left + D > vw) left = i === 1 || i === 2 ? cx - 50 - D : cx + 50;
+  if (top < 0 || top + D > vh) top = i >= 2 ? cy - 30 - D : cy + 30;
+  cv.style.left = Math.max(4, Math.min(vw - D - 4, left)) + "px"; cv.style.top = Math.max(4, Math.min(vh - D - 4, top)) + "px";
   g.save(); g.fillStyle = "#000"; g.fillRect(0, 0, W, W);
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.filter = "contrast(1.8) brightness(1.25) saturate(1.2)";
   const sx = x * img.naturalWidth / c.size[0], sy = y * img.naturalHeight / c.size[1], sk = img.naturalWidth / c.size[0];
