@@ -106,6 +106,19 @@ def region_of(release):
     return LETTER.get(release["id"][-1:], "other")
 
 
+FIXES = os.path.join(OUT, "database-fixes.json")
+
+
+def database_fixes(path=FIXES):
+    """Serials the database has wrong, and what they should be ("" to drop one): {"DMG-A4RJ-JPI": "DMG-A4RJ-JPN"}.
+    The database came from reading photos, so a few serials were misread; this file corrects them here without
+    touching the database itself."""
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
+
+
 def missing(entries, releases):
     """The cartridges of the database no label of this page is of: the page's Missing list, one per serial (a German
     and a French label of one release are two cartridges), by title. A release the database knows no serial of is one
@@ -154,8 +167,10 @@ def main(args):
     if "--only-screenscraper" not in args:
         entries += restored(entries, ignore=ignore)
     releases = {}
+    fixes = database_fixes()
     if os.path.exists(serials.DATABASE):
         for r in json.load(open(serials.DATABASE, encoding="utf-8")):
+            r["cartridgeSerials"] = [fixes.get(x, x) for x in r.get("cartridgeSerials") or [] if fixes.get(x, x)]
             releases[r["id"]] = r
     wanted = missing(entries, releases)
     with open(os.path.join(OUT, "labels.json"), "w", encoding="utf-8", newline="\n") as f:

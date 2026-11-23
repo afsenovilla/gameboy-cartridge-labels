@@ -144,3 +144,10 @@ def test_an_added_label_is_saved_under_its_serial(tmp_path):
         s.add("hello", "", "", "", b"x", "image/png", out=str(tmp_path))
     with pytest.raises(ValueError):
         s.add("DMG-AAUE-USA", "", "", "", b"x", "text/html", out=str(tmp_path))
+
+
+def test_database_fixes_correct_misread_serials(tmp_path):
+    import screenscraper_site as s
+    f = tmp_path / "fixes.json"
+    f.write_text(json.dumps({"_note": "x", "DMG-A4RJ-JPI": "DMG-A4RJ-JPN"}), encoding="utf-8")
+    assert s.database_fixes(str(f)) == {"DMG-A4RJ-JPI": "DMG-A4RJ-JPN"}
