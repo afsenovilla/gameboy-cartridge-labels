@@ -98,3 +98,11 @@ def test_when_in_doubt_it_is_kept():
         inbox.describe(c, have, missing, {})
         inbox.drop_if_not_needed(c, missing)
         assert c["status"] == "pending"
+
+
+def test_a_photo_too_small_for_a_usable_label_is_rejected_even_if_missing_but_not_for_a_bad_crop():
+    for size, width, status in (([300, 300], 180, "rejected"), ([800, 900], 180, "pending")):
+        c = {"serial": "DMG-AG-NOE", "file": "x.jpg", "size": size, "width": width, "status": "pending"}
+        inbox.describe(c, {}, {"DMG-AG-NOE"}, {"DMG-AG": "Pang"})
+        inbox.drop_if_not_needed(c, {"DMG-AG-NOE"})
+        assert c["status"] == status

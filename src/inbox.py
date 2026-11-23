@@ -154,8 +154,21 @@ def not_needed(c, missing=frozenset()):
                 and all((c.get("width") or 0) <= (e["width"] or 0) * 1.1 for e in c["existing"]))
 
 
+TOO_SMALL = 250  # px across the label: below this a photo isn't worth reviewing; better found by hand
+
+
+def too_small(c):
+    """Whether the label can't be TOO_SMALL px wide in this photo even with the corners right: the larger of the
+    corners' width and three fifths of the photo's (about what a label takes of a whole cartridge), so a wrong first
+    crop doesn't throw out a good photo."""
+    return max(c.get("width") or 0, 0.6 * (c.get("size") or [0])[0]) < TOO_SMALL
+
+
 def drop_if_not_needed(c, missing=frozenset(), log=lambda s: None):
-    if c["status"] == "pending" and not_needed(c, missing):
+    if c["status"] == "pending" and too_small(c):
+        c["status"], c["auto"] = "rejected", "too small"
+        log(f"  inbox: {c['file']} -> too small ({c.get('size', ['?'])[0]} px wide photo): rejected")
+    elif c["status"] == "pending" and not_needed(c, missing):
         c["status"], c["auto"] = "rejected", "already there, not sharper"
         log(f"  inbox: {c['file']} -> {c['serial']} already there and not sharper: rejected")
 
