@@ -80,3 +80,11 @@ def test_a_serial_the_catalogue_has_a_label_of_is_known_even_if_the_database_lac
     c = {"serial": "AGB-B2DU-AUS", "file": "AGB-B2DP-EUR__launchbox_47152eea.png"}
     inbox.describe(c, {"AGB-B2DU-AUS": [("AGB-B2DU-AUS", 600, None)]}, set(), {})
     assert c["known"] and c["existing"]
+
+
+def test_a_photo_of_a_label_already_there_and_not_sharper_is_rejected_and_a_sharper_one_kept():
+    for width, status in ((492, "rejected"), (900, "pending")):
+        c = {"serial": "AGB-B2DU-AUS", "file": "x.png", "width": width, "status": "pending"}
+        inbox.describe(c, {"AGB-B2DU-AUS": [("AGB-B2DU-AUS", 600, None)]}, set(), {})
+        inbox.drop_if_not_needed(c)
+        assert c["status"] == status

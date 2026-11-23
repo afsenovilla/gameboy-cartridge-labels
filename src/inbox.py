@@ -136,6 +136,18 @@ def describe(c, have, missing, titles):
     return c
 
 
+def not_needed(c):
+    """A photo of a label the catalogue already has at least as sharp, and not Missing: nothing to decide."""
+    return bool(c.get("known") and not c.get("missing") and c.get("existing")
+                and all((c.get("width") or 0) <= (e["width"] or 0) * 1.1 for e in c["existing"]))
+
+
+def drop_if_not_needed(c, log=lambda s: None):
+    if c["status"] == "pending" and not_needed(c):
+        c["status"], c["auto"] = "rejected", "already there, not sharper"
+        log(f"  inbox: {c['file']} -> {c['serial']} already there and not sharper: rejected")
+
+
 def preview(c, image):
     out = label_crop.crop(image, c["quad"], aspect=label_crop.aspect_for(c.get("serial"), c["quad"]))
     path = os.path.join(PREVIEWS, c["id"] + ".png")
@@ -180,6 +192,7 @@ def process(log=lambda s: None):
         c["read"] = text
         cands.append(describe(c, have, missing, titles))
         log(f"  inbox: {f} -> {c['serial'] or 'no serial read'}")
+        drop_if_not_needed(c, log)
         save(cands)
     return len(new)
 
@@ -229,6 +242,7 @@ def refresh_all():
     for c in cands:
         if c["status"] == "pending":
             describe(c, have, missing, titles)
+            drop_if_not_needed(c)
     save(cands)
     return cands
 
