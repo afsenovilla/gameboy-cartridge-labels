@@ -33,3 +33,12 @@ def test_candidates_are_cartridge_photos_of_the_missing_region():
               {"print": "DMG-XA-NOE", "title": "Asterix", "system": "dmg", "serials": ["DMG-XA-NOE"]}]
     got = [(w["print"], f) for w, f, r in lb.candidates(wanted, games)]
     assert got == [("DMG-AF-AUS", "a-01.jpg"), ("DMG-XA-NOE", "x-01.jpg")]
+
+
+def test_japanese_script_titles_match_nothing_and_shared_photos_go_once():
+    games = lb.read_metadata(io.BytesIO(XML.replace(b"<Name>Asterix</Name><DatabaseID>11", b"<Name>\xe3\x81\x82</Name><DatabaseID>99</DatabaseID><Platform>Nintendo Game Boy</Platform></Game><Game><Name>Asterix</Name><DatabaseID>11")))
+    wanted = [{"print": "DMG-Q-JPN", "title": "お茶", "system": "dmg", "serials": ["DMG-Q-JPN"]},
+              {"print": "DMG-XA-NOE", "title": "Asterix", "system": "dmg", "serials": ["DMG-XA-NOE"]},
+              {"print": "DMG-XA-SCN", "title": "Asterix", "system": "dmg", "serials": ["DMG-XA-SCN"]}]
+    got = [(w["print"], f) for w, f, r in lb.candidates(wanted, games)]
+    assert got == [("DMG-XA-NOE", "x-01.jpg")]

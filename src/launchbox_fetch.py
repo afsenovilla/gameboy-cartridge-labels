@@ -33,6 +33,7 @@ IMAGES = "https://images.launchbox-app.com/"
 AGENT = "gameboy-cartridge-labels (local catalogue; github.com/afsenovilla/gameboy-cartridge-labels)"
 PLATFORMS = {"nintendo game boy": "dmg", "nintendo game boy color": "cgb", "nintendo game boy advance": "agb"}
 CART_TYPES = {"cart - front"}
+PER_CARTRIDGE = 3
 # a serial's region -> LaunchBox's regions its labels were sold in
 REGIONS = {
     "USA": {"north america", "united states", "usa", "canada"}, "CAN": {"canada", "north america"},
@@ -93,19 +94,26 @@ def candidates(wanted, games, any_region=False):
     by_name = {}
     for g in games.values():
         for n in g["names"]:
-            by_name.setdefault((g["system"], n), []).append(g)
-    out = []
+            if n:  # a title in Japanese script alone has no letters left: it would match every such game
+                by_name.setdefault((g["system"], n), []).append(g)
+    out, taken = [], set()
     for w in wanted:
-        found = by_name.get((w.get("system"), plain(w.get("title"))), [])
+        key = plain(w.get("title"))
+        found = by_name.get((w.get("system"), key), []) if key else []
         serial = (w.get("serials") or [w.get("print")])[0] or ""
         parts = serial.split("-")
         fits = REGIONS.get(parts[2] if len(parts) > 2 else "", set())
         if not fits and len(parts) == 2 and parts[1].endswith("J"):
             fits = REGIONS["JPN"]  # an old Japanese serial with no region
+        mine = []
         for g in found:
             for file, kind, region in g["images"]:
-                if kind in CART_TYPES and (region in fits or (any_region and not fits) or (any_region and not region)):
-                    out.append((w, file, region))
+                if kind in CART_TYPES and file not in taken and (region in fits or (any_region and not fits) or (any_region and not region)):
+                    mine.append((w, file, region))
+        mine.sort(key=lambda x: 0 if x[2] in fits and x[2] != "europe" else 1)  # the cartridge's own country first
+        for x in mine[:PER_CARTRIDGE]:  # one photo shared by two serials (Chuck Rock UKV and NOE) is downloaded once
+            taken.add(x[1])
+            out.append(x)
     return out
 
 
