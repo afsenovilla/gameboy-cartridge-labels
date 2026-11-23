@@ -98,7 +98,7 @@ def rebuild(dedupe=True):
     here = os.path.dirname(os.path.abspath(__file__))
     steps = [("screenscraper_download.py", ["--dedupe"])] if dedupe else []
     for script, extra in steps + [("screenscraper_site.py", [])]:
-        r = subprocess.run([sys.executable, os.path.join(here, script)] + extra, capture_output=True, text=True)
+        r = subprocess.run([sys.executable, os.path.join(here, script)] + extra, capture_output=True, text=True, encoding="utf-8", errors="replace")
         sys.stderr.write("  " + (r.stdout + r.stderr).strip().replace("\n", "\n  ") + "\n")
         if r.returncode:
             return False
@@ -106,6 +106,10 @@ def rebuild(dedupe=True):
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):  # never let the browser keep an old page: it's rebuilt as labels come in
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def _json(self, code, data):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -194,16 +198,27 @@ def watch(every=2.0):
     seen = {p: stamp(p) for p in WATCHED}
     while True:
         time.sleep(every)
+        try:
+            seen = check(seen)
+        except Exception as e:  # never let the watcher die quietly
+            sys.stderr.write(f"  watching failed ({e!r}); still watching\n")
+
+
+def check(seen):
+    """One look at the watched files: rebuild if one changed. Returns what was seen."""
+    import time
+    if True:
         now = {p: stamp(p) for p in WATCHED}
         changed = [p for p in WATCHED if now[p] != seen[p]]
         if not changed:
-            continue
+            return seen
         time.sleep(1.0)  # let a file being written finish
         with LOCK:
             sys.stderr.write("  changed: " + ", ".join(os.path.basename(p) for p in changed) + " - building the page again\n")
             if rebuild(dedupe=any(WATCHED[p] for p in changed)):
                 VERSION["n"] += 1
-            seen = {p: stamp(p) for p in WATCHED}
+                sys.stderr.write("  page built again; open pages will reload\n")
+            return {p: stamp(p) for p in WATCHED}
 
 
 def main(args):
