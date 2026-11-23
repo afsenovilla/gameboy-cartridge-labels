@@ -190,7 +190,9 @@ def main(args):
         with open(STATE, "w", encoding="utf-8", newline="\n") as s:
             json.dump(state, s, indent=1, ensure_ascii=False)
         time.sleep(1)
-    print(f"{done} photos put in screenscraper-labels/inbox/ for review ({max(0, len(todo) - done)} left: run it again).")
+    left = max(0, len(todo) - done)
+    print(f"{done} photos put in screenscraper-labels/inbox/ for review"
+          + (f" ({left} left: run it again)." if left else ": nothing left to download from LaunchBox."))
 
 
 if __name__ == "__main__":
