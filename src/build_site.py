@@ -179,7 +179,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="az" id="az" role="group" aria-label="Starts with"></div>
 </div>
 <main>
-  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label><label class="opt" id="lowopt" hidden><input type="checkbox" id="low"> Only low resolution <span id="lowcount"></span></label></span></div>
+  <div class="meta"><span id="range"></span><span style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><label class="opt">Per page <select id="per" aria-label="Items per page"></select></label><label class="opt"><input type="checkbox" id="stack"> Stack versions of the same game</label><label class="opt" id="kindopt" hidden>Show <select id="kind" aria-label="Which missing cartridges"><option value="">All missing</option><option value="game">Games with no label at all</option><option value="variant">Other versions of games we have</option></select></label><label class="opt" id="lowopt" hidden><input type="checkbox" id="low"> Only low resolution <span id="lowcount"></span></label></span></div>
   <div class="grid" id="grid"></div>
   <div class="wlist" id="wlist" hidden></div>
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
@@ -221,7 +221,7 @@ const regionOf = s => { const m = /-([A-Z]{3})(?:-\d)?$/.exec(s || ""); return m
 const letterOf = t => { const c = fold(t).replace(/[^\p{L}\p{N}]/gu, "")[0] || ""; return /[a-z]/.test(c) ? c.toUpperCase() : /[0-9]/.test(c) ? "#" : "…"; };
 const UPLOAD = "__UPLOAD__";
 const WANTED = WANTED_RAW.filter(w => w.print).map((w, i) => { const serial = (w.serials || []).join(", ") || w.release || "", title = w.title || serial || w.print;
-  return {id: w.print, rank: i, title, serial, release: w.release || "", system: w.system, region: w.region || "other", needed: w.needed, photos: w.photos || 0, search: w.search || [],
+  return {id: w.print, rank: i, title, serial, release: w.release || "", system: w.system, region: w.region || "other", needed: w.needed, photos: w.photos || 0, search: w.search || [], kind: w.kind || "",
     letter: "", hay: fold([title, serial, w.release].join(" "))}; });
 for (const w of WANTED) w.letter = letterOf(w.title);
 const HOME = WANTED.length ? "w" : "l";
@@ -234,11 +234,11 @@ let state = {q: "", s: "", r: "", l: "", g: "1", o: "title", p: 1, v: HOME, n: 4
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   const v = h.get("v") === "l" || h.get("v") === "w" ? h.get("v") : HOME, o = h.get("o");
-  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v, n: PER_CHOICES.includes(+h.get("n")) ? +h.get("n") : 48, z: h.get("z") === "1" ? "1" : ""};
+  state = {q: h.get("q") || "", s: h.get("s") || "", r: h.get("r") || "", l: h.get("l") || "", g: h.get("g") === "0" ? "0" : "1", o: SORTS[v].some(x => x[0] === o) ? o : defaultSort(v), p: parseInt(h.get("p")) || 1, v, n: PER_CHOICES.includes(+h.get("n")) ? +h.get("n") : 48, z: h.get("z") === "1" ? "1" : "", k: ["game", "variant"].includes(h.get("k")) ? h.get("k") : ""};
 }
 function writeHash(push) {
   const h = new URLSearchParams();
-  if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l); if (state.g === "0") h.set("g", "0"); if (state.z) h.set("z", "1");
+  if (state.q) h.set("q", state.q); if (state.s) h.set("s", state.s); if (state.r) h.set("r", state.r); if (state.l) h.set("l", state.l); if (state.g === "0") h.set("g", "0"); if (state.z) h.set("z", "1"); if (state.k) h.set("k", state.k);
   if (state.v !== HOME) h.set("v", state.v); if (state.o !== defaultSort(state.v)) h.set("o", state.o); if (state.p > 1) h.set("p", state.p); if (state.n !== 48) h.set("n", state.n);
   const url = location.pathname + (h.toString() ? "#" + h : "");
   push ? history.pushState(null, "", url) : history.replaceState(null, "", url);
@@ -246,7 +246,7 @@ function writeHash(push) {
 function filtered(ignoreSystem, ignoreLetter) {
   const words = fold(state.q).split(/\s+/).filter(Boolean);
   return (state.v === "w" ? WANTED : LABELS).filter(l => (ignoreSystem || !state.s || l.system === state.s) && (ignoreLetter || !state.l || l.letter === state.l) &&
-    (!state.r || l.region === state.r) && (!state.z || state.v === "w" || l.lowres) &&
+    (!state.r || l.region === state.r) && (!state.z || state.v === "w" || l.lowres) && (!state.k || state.v !== "w" || l.kind === state.k) &&
     words.every(w => l.hay.includes(w)));
 }
 const sorters = {
@@ -299,6 +299,7 @@ function update(push) {
   const wv = state.v === "w";
   $("sort").innerHTML = SORTS[state.v].map(([k, n]) => '<option value="' + k + '">' + n + "</option>").join("");
   $("per").value = state.n; $("q").value = state.q; $("sort").value = state.o; $("stack").checked = state.g === "1"; $("low").checked = !!state.z; $("lowopt").hidden = !LABELS.some(l => l.lowres) || state.v === "w";
+  $("kindopt").hidden = state.v !== "w" || !WANTED.some(w => w.kind); $("kind").value = state.k || "";
   $("stack").parentElement.hidden = wv; $("grid").hidden = wv; $("wlist").hidden = !wv; $("send").hidden = !wv || !UPLOAD;
   $("tab-w").innerHTML = esc(TEXT.wantedTab) + "<small>" + WANTED.length + "</small>"; $("tab-l").innerHTML = esc(TEXT.labelsTab) + "<small>" + LABELS.length + "</small>";
   $("tab-w").setAttribute("aria-selected", String(wv)); $("tab-l").setAttribute("aria-selected", String(!wv));
@@ -312,7 +313,7 @@ function update(push) {
     const w = g.rep, n = w.needed, row = document.createElement("div"); row.className = "wrow";
     const links = w.search.filter(x => /^https:\/\//.test(x.url)).map(x => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.label) + "</a>").join("");
     row.innerHTML = "<div><h3>" + esc(w.title) + '</h3><span class="s">' + (TEXT.photos ? '<span class="need">' + n + " more photo" + (n === 1 ? "" : "s") + " needed</span>" : "") +
-      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial].filter(Boolean).join(" · ")) + (TEXT.photos ? " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + " so far" : "") + '</span></div><div class="wlinks">' + links +
+      esc([SYSTEM_NAME[w.system] || w.system, w.region === "other" ? "" : w.region, w.serial, w.kind === "game" ? "no label of this game yet" : w.kind === "variant" ? "another version of a game we have" : ""].filter(Boolean).join(" · ")) + (TEXT.photos ? " · " + w.photos + " photo" + (w.photos === 1 ? "" : "s") + " so far" : "") + '</span></div><div class="wlinks">' + links +
       (SERVED ? '<button type="button" class="addl">Add label</button>' : "") + "</div>";
     if (SERVED) row.querySelector(".addl").onclick = () => addLabel(w, row);
     $("wlist").append(row);
@@ -582,7 +583,8 @@ $("stack").onchange = e => { state.g = e.target.checked ? "1" : "0"; state.p = 1
 $("per").innerHTML = PER_CHOICES.map(n => "<option>" + n + "</option>").join("");
 $("per").onchange = e => { const first = (state.p - 1) * state.n; state.n = +e.target.value; state.p = Math.floor(first / state.n) + 1; update(true); };
 $("sort").onchange = e => { state.o = e.target.value; state.p = 1; update(true); };
-$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v, n: state.n, z: ""}; update(true); };
+$("clear").onclick = () => { state = {q: "", s: "", r: "", l: "", g: state.g, o: defaultSort(state.v), p: 1, v: state.v, n: state.n, z: "", k: ""}; update(true); };
+$("kind").onchange = e => { state.k = e.target.value; state.p = 1; update(true); };
 for (const v of ["w", "l"]) $("tab-" + v).onclick = () => { if (state.v === v) return; state = {...state, v, s: "", r: "", l: "", o: defaultSort(v), p: 1}; update(true); scrollTo({top: 0}); };
 addEventListener("hashchange", () => { readHash(); update(false); });
 readHash(); update(false);
@@ -646,7 +648,7 @@ def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge
     if os.path.exists(os.path.join(folder, "wanted.json")):
         with open(os.path.join(folder, "wanted.json"), encoding="utf-8") as f:
             wanted = json.load(f)
-    wanted_data = json.dumps([{k: w.get(k) for k in ("print", "release", "title", "system", "region", "serials", "needed", "photos", "search")}
+    wanted_data = json.dumps([{k: w.get(k) for k in ("print", "release", "title", "system", "region", "serials", "needed", "photos", "search", "kind")}
                               for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = credit or (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')

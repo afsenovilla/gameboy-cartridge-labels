@@ -18,7 +18,10 @@ def python():
 
 
 def run(*args):
-    done = subprocess.run([python(), *args], cwd=HERE)
+    try:
+        done = subprocess.run([python(), *args], cwd=HERE)
+    except KeyboardInterrupt:  # Ctrl+C reaches both: the program stops itself, nothing to say here
+        sys.exit(130)
     if done.returncode:
         sys.exit(done.returncode)
 

@@ -151,3 +151,13 @@ def test_database_fixes_correct_misread_serials(tmp_path):
     f = tmp_path / "fixes.json"
     f.write_text(json.dumps({"_note": "x", "DMG-A4RJ-JPI": "DMG-A4RJ-JPN"}), encoding="utf-8")
     assert s.database_fixes(str(f)) == {"DMG-A4RJ-JPI": "DMG-A4RJ-JPN"}
+
+
+def test_missing_tells_whole_games_from_other_versions():
+    import screenscraper_site as s
+    assert s.game_of("DMG-AAUE") == s.game_of("DMG-AAUP-EUR") == s.game_of("DMG-AAUJ-JPN") == "DMG-AAU"
+    assert s.game_of("DMG-T3J") == s.game_of("DMG-T3-NOE") == "DMG-T3"
+    releases = {"DMG-XA": {"id": "DMG-XA", "title": "Asterix", "system": "dmg", "cartridgeSerials": ["DMG-XA-NOE"]},
+                "DMG-QQQE": {"id": "DMG-QQQE", "title": "Nothing", "system": "dmg", "cartridgeSerials": ["DMG-QQQE-USA"]}}
+    got = {w["print"]: w["kind"] for w in s.missing([{"serial": "DMG-XA-FAH", "release": "DMG-XA"}], releases)}
+    assert got == {"DMG-XA-NOE": "variant", "DMG-QQQE-USA": "game"}

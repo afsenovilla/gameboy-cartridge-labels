@@ -119,6 +119,18 @@ def database_fixes(path=FIXES):
         return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
 
 
+def game_of(code):
+    """The game a release or serial is of, across regions: its system and code without the region letter
+    (DMG-AAUE, DMG-AAUP-EUR and DMG-AAUJ are all DMG-AAU; DMG-T3J, the Japanese DMG-T3, is DMG-T3)."""
+    parts = (code or "").upper().split("-")
+    if len(parts) < 2:
+        return code
+    c = parts[1]
+    if len(c) == 4 or (len(c) == 3 and c.endswith("J")):
+        c = c[:-1]
+    return parts[0] + "-" + c
+
+
 def missing(entries, releases):
     """The cartridges of the database no label of this page is of: the page's Missing list, one per serial (a German
     and a French label of one release are two cartridges), by title. A release the database knows no serial of is one
@@ -146,6 +158,9 @@ def missing(entries, releases):
                         "serials": [serial], "needed": 1, "photos": 0,
                         "search": [{"label": "eBay", "url": "https://www.ebay.com/sch/i.html?" + urllib.parse.urlencode({"_nkw": query})},
                                    {"label": f"Google Images: {serial}", "url": "https://www.google.com/search?" + urllib.parse.urlencode({"tbm": "isch", "q": f'"{serial}"'})}]})
+    have_games = {game_of(e.get("release") or e.get("serial")) for e in entries if e.get("release") or e.get("serial")}
+    for w in out:  # a game with no label at all, or another version (region, revision) of one we have
+        w["kind"] = "variant" if game_of(w["release"]) in have_games else "game"
     return sorted(out, key=lambda w: (w["title"].casefold(), w["print"]))
 
 
