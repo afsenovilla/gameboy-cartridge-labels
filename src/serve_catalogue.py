@@ -143,7 +143,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
         elif self.path == "/api/candidates":
             import inbox
-            self._json(200, [c for c in inbox.load() if c["status"] == "pending"])
+            self._json(200, [c for c in inbox.refresh_all() if c["status"] == "pending"])
         elif self.path == "/api/reports":
             with LOCK:
                 self._json(200, load())
