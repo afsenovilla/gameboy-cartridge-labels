@@ -635,7 +635,7 @@ TEXT = {  # the restoration project's words; a catalogue (screenscraper_site) pa
     "wantedLede": " cartridges are only a photo or two short of a restored label. Find one, photograph the label straight on in good light, and send it with the serial printed on the cartridge (like DMG-A2XP-SCN) in the file name."}
 
 
-def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge labels", text=None):
+def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge labels", text=None, viewer=""):
     with open(os.path.join(folder, "labels.json"), encoding="utf-8") as f:
         labels = json.load(f)
     for l in labels:  # a release with no title in the database shows under its serial
@@ -652,7 +652,7 @@ def build(folder=FOLDER, issues="", upload=UPLOAD, credit=None, title="Cartridge
                               for w in wanted], ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     credit = credit or (f'Images restored by geon from photos found online and sent in by contributors: '
               f'<a href="{SOURCE}">{html.escape(SOURCE)}</a>. This page is only a way to browse them.')
-    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", html.escape(title)).replace("__CREDIT__", credit).replace("__VIEWER__", "").replace("__STAMP__", "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge()).replace("__TEXT__", json.dumps({**TEXT, **(text or {})}, ensure_ascii=False).replace("</", "<\\/"))
+    page = PAGE.replace("__LOAD_START__", LOCAL_LOAD).replace("__LOAD_END__", "").replace("__TITLE__", html.escape(title)).replace("__CREDIT__", credit).replace("__VIEWER__", viewer.replace('"', "")).replace("__STAMP__", str(int(time.time())) if viewer else "0").replace("__FOLDER__", ".").replace("__ISSUES__", issues.replace('"', "")).replace("__UPLOAD__", upload.replace('"', "")).replace("__DATA__", data).replace("__WANTED__", wanted_data).replace("__CART__", cartridge()).replace("__TEXT__", json.dumps({**TEXT, **(text or {})}, ensure_ascii=False).replace("</", "<\\/"))
     out = os.path.join(folder, "index.html")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)

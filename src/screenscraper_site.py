@@ -221,7 +221,11 @@ def main(args):
         json.dump(entries, f, indent=1, ensure_ascii=False)
     with open(os.path.join(OUT, "wanted.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(wanted, f, indent=1, ensure_ascii=False)
-    out, n, w = build_site.build(OUT, issues="local", upload="", credit=CREDIT, title="Game Boy cartridge labels", text=TEXT)
+    # the 3D viewer (docs/3d/, all three cartridges) when served from the repository folder by serve_catalogue.py;
+    # without it the page's own mesh, which has no Game Boy Advance
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    viewer = "../docs/3d/" if os.path.exists(os.path.join(here, "docs", "3d", "index.html")) else ""
+    out, n, w = build_site.build(OUT, issues="local", upload="", credit=CREDIT, title="Game Boy cartridge labels", text=TEXT, viewer=viewer)
     print(f"{n} labels, {w} missing: open {out}")
 
 
