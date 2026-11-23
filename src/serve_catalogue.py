@@ -295,6 +295,8 @@ def main(args):
     print("Serving the catalogue at", url, "- reports go to", REPORTS, "(Ctrl+C to stop)")
     print("Label photos to review: drop them in screenscraper-labels/inbox/ or upload them at", url + "review")
     os.makedirs(os.path.join(OUT, "inbox"), exist_ok=True)  # where photos to review are dropped
+    print("Building the page (after a git pull it may have changed)…")
+    rebuild(dedupe=False)
     threading.Thread(target=watch, daemon=True).start()
     threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:
