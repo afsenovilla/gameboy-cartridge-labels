@@ -21,7 +21,7 @@ main{padding:20px;display:grid;gap:20px;max-width:1300px;margin:0 auto}
 .side label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 .side input{width:100%;padding:7px 10px;border:1.5px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:600 16px ui-monospace,monospace}
 .title{margin:8px 0 10px;font-weight:600}.badges{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;font-size:14px}
-.b-ok{color:var(--ok)}.b-warn{color:var(--warn)}.b-no{color:var(--no)}.row{display:flex;gap:8px;flex-wrap:wrap}
+.verdict{font-weight:600;font-size:15px;line-height:1.4}button.rec{box-shadow:0 0 0 3px var(--accent)}.b-ok{color:var(--ok)}.b-warn{color:var(--warn)}.b-no{color:var(--no)}.row{display:flex;gap:8px;flex-wrap:wrap}
 .empty{color:var(--muted);text-align:center;padding:60px 20px}.state{font-size:13px;color:var(--muted);margin-top:8px}
 #loupe{position:fixed;z-index:9;pointer-events:none;width:240px;height:240px;border-radius:50%;border:3px solid #ff3b30;box-shadow:0 4px 16px rgba(0,0,0,.4);background:#000;display:none}
 @media (max-width:900px){.cand{grid-template-columns:1fr}}
@@ -34,21 +34,23 @@ const $ = id => document.getElementById(id), esc = s => String(s ?? "").replace(
 const post = (url, data) => fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)})
   .then(r => r.json().then(d => r.ok ? d : Promise.reject(new Error(d.error || r.status))));
 let CANDS = [];
+function verdict(c) {
+  // what to do with this photo, and why, in one line: [action, reason]
+  const s = esc(c.serial), was = c.fetched_as ? " It was fetched for " + esc(c.fetched_as) + ", which stays in Missing." : "";
+  const best = Math.max(0, ...c.existing.map(e => e.width || 0));
+  if (!c.serial) return ["check", "Type the serial printed on the label, then decide."];
+  if (!c.known && c.suggest) return ["check", "No " + s + " exists, but " + esc(c.suggest) + " does: probably a misreading. Fix the serial if the label says " + esc(c.suggest) + ", then accept."];
+  if (!c.known) return ["accept", "Accept if the label really says " + s + ": a variant the database doesn't list, added as a new label" + (c.title ? " of " + esc(c.title) : "") + "." + was];
+  if (c.missing) return ["accept", "Accept: it's in Missing, and this completes it."];
+  if (!c.existing.length) return ["accept", "Accept: the catalogue has no label of " + s + " yet." + was];
+  if (c.width > best * 1.1) return ["accept", "Accept: sharper than the label of " + s + " you have (" + c.width + " px against " + best + " px). It's added beside it." + was];
+  return ["reject", "Reject: you already have " + s + " at " + best + " px, and this one (" + c.width + " px) isn't sharper." + was];
+}
 function badges(c) {
-  const out = [];
-  if (!c.serial) out.push('<span class="b-no">No serial read: type it from the label</span>');
-  else if (!c.known && c.suggest) out.push('<span class="b-no">The database has no ' + esc(c.serial) + ": did you mean " + esc(c.suggest) + "? Check the label</span>");
-  else if (!c.known && c.fetched_as) out.push('<span class="b-warn">Fetched for ' + esc(c.fetched_as) + ", but the label says " + esc(c.serial) + ". If that's what the label reads, it's a variant the database doesn't have: accepting adds it as a new label" + (c.title ? " of " + esc(c.title) : "") + ", and " + esc(c.fetched_as) + " stays in Missing</span>");
-  else if (!c.known) out.push('<span class="b-no">The database has no ' + esc(c.serial) + ": check it against the label</span>");
-  else if (c.fetched_as && !c.missing) out.push('<span class="b-warn">Fetched for ' + esc(c.fetched_as) + ", but the label says " + esc(c.serial) + "</span>");
-  else if (c.missing) out.push('<span class="b-ok">In Missing: this completes it</span>');
-  else if (!c.existing.length) out.push('<span class="b-ok">New: no label of this serial yet</span>');
-  for (const e of c.existing) {
-    const better = c.width > (e.width || 0) * 1.1;
-    out.push('<span class="' + (better ? "b-ok" : "b-warn") + '">Already there: ' + esc(e.id) + " (" + (e.width || "?") + " px)" + (better ? ", this one is sharper" : ", this one isn't sharper") + "</span>");
-  }
-  out.push("<span>" + c.width + " px wide in the photo" + (c.width < 450 ? ' <span class="b-warn">(low resolution)</span>' : "") + "</span>");
-  return out.join("");
+  const [act, why] = verdict(c);
+  const cls = {accept: "b-ok", reject: "b-no", check: "b-warn"}[act];
+  return '<span class="verdict ' + cls + '">' + why + "</span>" +
+    (c.width < 450 && act === "accept" ? '<span class="b-warn">Low resolution (' + c.width + " px): it will be listed for a better one later.</span>" : "");
 }
 function card(c) {
   const el = document.createElement("section"); el.className = "cand"; el.id = "c-" + c.id;
@@ -79,7 +81,11 @@ function card(c) {
   const input = el.querySelector("input");
   let typed = false;  // a serial typed by hand is kept; otherwise it's read again on every new crop
   const show = d => { Object.assign(c, d); el.querySelector(".title").textContent = c.title || "Unknown title";
-    el.querySelector(".badges").innerHTML = badges(c); if (!typed) input.value = c.serial || ""; };
+    el.querySelector(".badges").innerHTML = badges(c); if (!typed) input.value = c.serial || ""; mark(); };
+  const mark = () => { const act = verdict(c)[0];  // the button the advice says to press, ringed
+    el.querySelector("[data-a=accept]").classList.toggle("rec", act === "accept");
+    el.querySelector("[data-a=reject]").classList.toggle("rec", act === "reject"); };
+  mark();
   const recrop = () => { state.textContent = "Straightening and reading the serial…";
     post("/api/candidates/recrop", {id: c.id, quad, typed: typed ? input.value : ""}).then(d => { el.querySelector(".prev img").src = "/screenscraper-labels/" + d.preview + "?v=" + d.v;
       show(d); state.textContent = d.serial ? "" : "No serial read: type it from the label."; }).catch(e => state.textContent = "Couldn't straighten it: " + e.message); };
