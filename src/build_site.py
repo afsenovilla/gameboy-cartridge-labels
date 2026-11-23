@@ -384,7 +384,7 @@ function saveReports() {
   else try { localStorage.setItem("label-reports", JSON.stringify(REPORTS)); } catch (e) {}
   repBar();
 }
-function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || (!n && !SERVED); $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported";
+function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || (!n && !SERVED); $("repcount").textContent = n ? n + " label" + (n === 1 ? "" : "s") + " reported as wrong" : "No labels reported as wrong. To report one, open it and use “Report a problem”.";
   $("rep-apply").hidden = !SERVED || !n; $("refresh").hidden = !SERVED; $("revlink").hidden = !SERVED; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
 // Served, a Missing cartridge can be given its label: an image file (a scan or a straight photo), with its serial;
 // serve_catalogue saves it in screenscraper-labels/added/ and builds the page again, where it is then a label.
