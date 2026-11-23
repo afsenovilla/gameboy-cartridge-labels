@@ -292,6 +292,7 @@ def main(args):
     url = f"http://localhost:{port}/"
     print("Serving the catalogue at", url, "- reports go to", REPORTS, "(Ctrl+C to stop)")
     print("Label photos to review: drop them in screenscraper-labels/inbox/ or upload them at", url + "review")
+    os.makedirs(os.path.join(OUT, "inbox"), exist_ok=True)  # where photos to review are dropped
     threading.Thread(target=watch, daemon=True).start()
     threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:
