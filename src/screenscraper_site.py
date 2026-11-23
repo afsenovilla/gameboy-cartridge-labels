@@ -110,7 +110,8 @@ FIXES = os.path.join(OUT, "database-fixes.json")
 
 
 def database_fixes(path=FIXES):
-    """Serials the database has wrong, and what they should be ("" to drop one): {"DMG-A4RJ-JPI": "DMG-A4RJ-JPN"}.
+    """Serials the database has wrong, and what they should be ("" to drop one, or a whole release by its id):
+    {"DMG-A4RJ-JPI": "DMG-A4RJ-JPN", "agb-0488": ""}.
     The database came from reading photos, so a few serials were misread; this file corrects them here without
     touching the database itself."""
     if not os.path.exists(path):
@@ -185,6 +186,8 @@ def main(args):
     fixes = database_fixes()
     if os.path.exists(serials.DATABASE):
         for r in json.load(open(serials.DATABASE, encoding="utf-8")):
+            if fixes.get(r["id"]) == "":  # a release that isn't one (agb-0488: a placeholder, not a serial)
+                continue
             r["cartridgeSerials"] = [fixes.get(x, x) for x in r.get("cartridgeSerials") or [] if fixes.get(x, x)]
             releases[r["id"]] = r
     wanted = missing(entries, releases)
