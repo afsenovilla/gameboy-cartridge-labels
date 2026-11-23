@@ -61,3 +61,10 @@ def test_crops_get_the_labels_true_proportions():
     assert label_crop.crop(img, stretched, aspect=label_crop.aspect_for("DMG-K2J")).shape[:2] == (720, 820)
     assert label_crop.crop(img, stretched, aspect=label_crop.aspect_for("AGB-BD2J-JPN")).shape[:2] == (413, 820)
     assert label_crop.aspect_for("", [[0, 0], [400, 0], [400, 220], [0, 220]]) == label_crop.ASPECT["agb"]
+
+
+def test_avif_photos_are_read(tmp_path):
+    from PIL import Image
+    p = tmp_path / "x.avif"
+    Image.fromarray(np.full((50, 60, 3), 200, np.uint8)).save(p)
+    assert inbox.imread(str(p)).shape == (50, 60, 3)

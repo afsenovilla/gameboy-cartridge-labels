@@ -22,7 +22,7 @@ OUT = "screenscraper-labels"
 INBOX = os.path.join(OUT, "inbox")
 PREVIEWS = os.path.join(OUT, "candidates")
 LIST = os.path.join(OUT, "candidates.json")
-IMAGES = (".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp")
+IMAGES = (".png", ".jpg", ".jpeg", ".webp", ".avif", ".heic", ".heif", ".bmp", ".gif", ".tif", ".tiff")
 SERIAL = re.compile(r"(DMG|CGB|AGB)-[A-Z0-9]{2,5}-[A-Z]{3}(?:-\d)?", re.I)
 
 
@@ -40,7 +40,25 @@ def save(cands):
 
 
 def imread(path):
-    return cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)  # imread fails on some Windows paths
+    """A photo as BGR, whatever its format: OpenCV reads most (imread fails on some Windows paths, so from bytes);
+    AVIF, HEIC and the rest go through Pillow (with pillow-heif, already a requirement, for HEIC/AVIF)."""
+    image = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if image is not None:
+        return image
+    try:
+        from PIL import Image, ImageOps
+        try:
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+            if hasattr(pillow_heif, "register_avif_opener"):
+                pillow_heif.register_avif_opener()
+        except Exception:
+            pass
+        with Image.open(path) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            return cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR)
+    except Exception:
+        return None
 
 
 def read_serial(image):
@@ -139,6 +157,11 @@ def process(log=lambda s: None):
             continue
         c = {"id": re.sub(r"[^A-Za-z0-9_-]", "_", os.path.splitext(f)[0])[:60] + f"-{len(cands)}", "file": f,
              "photo": f"inbox/{f}", "bytes": os.path.getsize(os.path.join(INBOX, f)), "size": [image.shape[1], image.shape[0]], "quad": label_crop.detect(image), "status": "pending"}
+        if f.lower().endswith((".heic", ".heif", ".tif", ".tiff")):  # browsers can't show these: a JPEG copy to look at
+            os.makedirs(PREVIEWS, exist_ok=True)
+            shown = os.path.join(PREVIEWS, c["id"] + "-photo.jpg")
+            cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 92])[1].tofile(shown)
+            c["photo"] = os.path.relpath(shown, OUT).replace("\\", "/")
         label = preview(c, image)
         serial, text = read_serial(label)
         hint = SERIAL.search(f)
@@ -214,7 +237,8 @@ def accept(cid, serial, title, add):
         n += 1
         done = f"{base}_{n}{ext}"
     os.replace(os.path.join(INBOX, c["file"]), os.path.join(INBOX, "done", done))
-    c["photo"] = "inbox/done/" + done
+    if c["photo"].startswith("inbox/"):
+        c["photo"] = "inbox/done/" + done
     save(cands)
     return entry
 
