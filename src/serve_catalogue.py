@@ -7,6 +7,8 @@
 # (screenscraper_site.py), which then reloads without them. Don't use it while a download is running.
 # On the Missing list, "Add label" takes a label image you found (PNG, JPEG, WebP or AVIF) and its serial: it's saved in
 # screenscraper-labels/added/ and listed in added.json, and the page is built again with it among the labels.
+# While it runs it watches added.json, ignore.txt, matches.json and the restored labels: when one changes (a label
+# added from elsewhere, say), it builds the page again and open pages reload themselves.
 # Only this computer can reach it (127.0.0.1). Stop it with Ctrl+C.
 import http.server
 import json
@@ -120,6 +122,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif self.path == "/favicon.ico":  # the browser asks for one; there is none
             self.send_response(204)
             self.end_headers()
+        elif self.path == "/api/version":
+            self._json(200, VERSION)
         elif self.path == "/api/reports":
             with LOCK:
                 self._json(200, load())
@@ -140,6 +144,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except ValueError as e:
                     return self._json(400, {"error": str(e)})
                 done = rebuild(dedupe=False)
+                VERSION["n"] += done
             return self._json(200, {**entry, "rebuilt": done})
         try:
             data = json.loads(self.rfile.read(length) or b"{}")
@@ -151,18 +156,54 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     return self._json(400, {"error": "expected an object"})
                 save(data)
                 return self._json(200, {"saved": len(data)})
+            if self.path == "/api/refresh":  # the page's "Refresh" button: build it again now
+                done = rebuild(dedupe=False)
+                VERSION["n"] += done
+                return self._json(200, {"rebuilt": done})
             if self.path == "/api/apply":
                 reports = load()
                 added = apply(reports)
                 save({})
                 done = rebuild()
+                VERSION["n"] += done
                 return self._json(200, {"added": added, "rebuilt": done})
         self._json(404, {"error": "no such thing"})
 
     def log_message(self, fmt, *args):  # only the saves and the errors, not every image
         first = str(args[0]) if args else ""
-        if "/api/" in first or (fmt.startswith("code") and "favicon" not in self.path):
+        if ("/api/" in first and "/api/version" not in first) or (fmt.startswith("code") and "favicon" not in self.path):
             sys.stderr.write("  " + fmt % args + "\n")
+
+
+WATCHED = {os.path.join(OUT, "added.json"): False, os.path.join(OUT, "ignore.txt"): True,
+           os.path.join(OUT, "matches.json"): False, os.path.join("published-labels", "labels.json"): False}
+VERSION = {"n": 0}
+
+
+def stamp(path):
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return None
+
+
+def watch(every=2.0):
+    """Build the page again whenever what it's made of changes (a label added to added.json, by the page or from
+    elsewhere; ignore.txt edited; matches redone), and count it, so open pages reload themselves (/api/version)."""
+    import time
+    seen = {p: stamp(p) for p in WATCHED}
+    while True:
+        time.sleep(every)
+        now = {p: stamp(p) for p in WATCHED}
+        changed = [p for p in WATCHED if now[p] != seen[p]]
+        if not changed:
+            continue
+        time.sleep(1.0)  # let a file being written finish
+        with LOCK:
+            sys.stderr.write("  changed: " + ", ".join(os.path.basename(p) for p in changed) + " - building the page again\n")
+            if rebuild(dedupe=any(WATCHED[p] for p in changed)):
+                VERSION["n"] += 1
+            seen = {p: stamp(p) for p in WATCHED}
 
 
 def main(args):
@@ -172,6 +213,7 @@ def main(args):
     server = http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler)
     url = f"http://localhost:{port}/"
     print("Serving the catalogue at", url, "- reports go to", REPORTS, "(Ctrl+C to stop)")
+    threading.Thread(target=watch, daemon=True).start()
     threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()

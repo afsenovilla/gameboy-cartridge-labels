@@ -185,7 +185,7 @@ dialog::backdrop{background:rgba(10,14,8,.72)}
   <div class="empty" id="empty" hidden>Nothing matches. Clear the search or choose another system or region.<br><button id="clear">Clear filters</button></div>
   <nav class="pages" id="pages" aria-label="Pages"></nav>
 </main>
-<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-apply" hidden>Leave these out (write to ignore.txt)</button><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button><span id="repstate" class="repstate"></span></div>
+<div class="repbar" id="repbar" hidden><span id="repcount"></span><button type="button" id="rep-apply" hidden>Leave these out (write to ignore.txt)</button><button type="button" id="rep-copy">Copy for ignore.txt</button><button type="button" id="rep-list">Download reports</button><button type="button" id="refresh" hidden>Refresh</button><span id="repstate" class="repstate"></span></div>
 <footer>__CREDIT__</footer>
 <dialog id="view"><div class="view">
   <div class="big"><div class="scene" id="scene" hidden></div><img id="vimg" alt=""><div class="vsw" role="group" aria-label="What to show"><button type="button" class="tdbtn" id="vflat" aria-pressed="true">Label</button><button type="button" class="tdbtn" id="v3d" aria-pressed="false">On a cartridge</button></div><div class="thumbs" id="thumbs"></div></div>
@@ -384,7 +384,7 @@ function saveReports() {
   repBar();
 }
 function repBar() { const n = Object.keys(REPORTS).length; $("repbar").hidden = !LOCAL || (!n && !SERVED); $("repcount").textContent = n + " label" + (n === 1 ? "" : "s") + " reported";
-  $("rep-apply").hidden = !SERVED || !n; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
+  $("rep-apply").hidden = !SERVED || !n; $("refresh").hidden = !SERVED; $("rep-copy").hidden = SERVED || !n; $("rep-list").hidden = !n; }
 // Served, a Missing cartridge can be given its label: an image file (a scan or a straight photo), with its serial;
 // serve_catalogue saves it in screenscraper-labels/added/ and builds the page again, where it is then a label.
 function addLabel(w, row) {
@@ -402,6 +402,15 @@ function addLabel(w, row) {
   };
   pick.click();
 }
+// Served, the page reloads itself when serve_catalogue builds it again (a label added, some left out), unless a
+// report is being written; then it waits for the form to close.
+if (API) $("refresh").onclick = () => { $("repstate").textContent = "Building the page again…";
+  fetch(API + "refresh", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"}).then(r => r.json())
+    .then(d => d.rebuilt ? location.reload() : $("repstate").textContent = "Building failed: see the server's window.")
+    .catch(e => $("repstate").textContent = "Couldn't refresh (" + e.message + "): is serve_catalogue.py running?"); };
+if (API) fetch(API + "version").then(r => r.json()).then(v0 => setInterval(() => fetch(API + "version").then(r => r.json()).then(v => {
+  if (v.n !== v0.n && $("rep").hidden) location.reload();
+}).catch(() => {}), 3000)).catch(() => {});
 if (API) fetch(API + "reports").then(r => r.ok ? r.json() : Promise.reject()).then(data => {
   const local = REPORTS; REPORTS = {...local, ...data}; SERVED = true; update(false); $("repstate").textContent = "Reports are saved to screenscraper-labels/reports.json";
   if (Object.keys(local).some(k => !(k in data))) saveReports(); else repBar();  // the browser's earlier ones go to the file too
