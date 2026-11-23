@@ -62,12 +62,28 @@ def detect(image):
     return (q / k).round(1).tolist()
 
 
-def crop(image, quad, width=WIDTH, corner=None):
-    """The label inside quad, straightened to width px, its rounded corners filled with the colour beside each."""
+ASPECT = {"dmg": 1.139, "cgb": 1.139, "agb": 1.986}  # width / height of real labels (geon's restorations, medians)
+
+
+def aspect_for(serial, quad=None):
+    """The label's true proportions: from the serial's system, else the nearer of the two shapes to the corners."""
+    system = (serial or "")[:3].lower()
+    if system in ASPECT:
+        return ASPECT[system]
+    if quad is not None:
+        q = np.float32(quad)
+        r = (np.linalg.norm(q[1] - q[0]) + np.linalg.norm(q[2] - q[3])) / max(1, np.linalg.norm(q[3] - q[0]) + np.linalg.norm(q[2] - q[1]))
+        return min(ASPECT.values(), key=lambda a: abs(a - r))
+    return None
+
+
+def crop(image, quad, width=WIDTH, corner=None, aspect=None):
+    """The label inside quad, straightened to width px (and to the label's true proportions when aspect is given, so
+    a photo taken at an angle isn't left stretched), its rounded corners filled with the colour beside each."""
     q = np.float32(quad)
     w = (np.linalg.norm(q[1] - q[0]) + np.linalg.norm(q[2] - q[3])) / 2
     h = (np.linalg.norm(q[3] - q[0]) + np.linalg.norm(q[2] - q[1])) / 2
-    W, H = width, max(1, round(width * h / max(w, 1)))
+    W, H = width, max(1, round(width / aspect if aspect else width * h / max(w, 1)))
     out = cv2.warpPerspective(image, cv2.getPerspectiveTransform(q, np.float32([(0, 0), (W, 0), (W, H), (0, H)])), (W, H),
                               flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
     r = corner or max(12, round(W * 0.03))

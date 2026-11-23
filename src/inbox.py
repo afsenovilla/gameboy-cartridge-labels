@@ -50,11 +50,10 @@ def read_serial(image):
     except Exception:  # OCR not installed: the serial is typed on the page
         return None, []
     lines = [l["text"] for l in read_text.read(image)]
-    for line in lines:
-        for s in serials.reads(line):
-            if serials.region_of(s):
-                return s, lines
-    return None, lines
+    found = [s for line in lines for s in serials.reads(line)]
+    with_region = [s for s in found if serials.region_of(s)]
+    # old Japanese labels print no region (DMG-K2J): take one of those when there's nothing better
+    return (with_region or found or [None])[0], lines
 
 
 def catalogue():
@@ -109,7 +108,7 @@ def describe(c, have, missing, titles):
 
 
 def preview(c, image):
-    out = label_crop.crop(image, c["quad"])
+    out = label_crop.crop(image, c["quad"], aspect=label_crop.aspect_for(c.get("serial"), c["quad"]))
     path = os.path.join(PREVIEWS, c["id"] + ".png")
     os.makedirs(PREVIEWS, exist_ok=True)
     cv2.imencode(".png", out)[1].tofile(path)
@@ -205,7 +204,7 @@ def accept(cid, serial, title, add):
     cands = load()
     c = find(cands, cid)
     image = imread(os.path.join(INBOX, c["file"]))
-    ok, png = cv2.imencode(".png", label_crop.crop(image, c["quad"]))
+    ok, png = cv2.imencode(".png", label_crop.crop(image, c["quad"], aspect=label_crop.aspect_for(serial, c["quad"])))
     entry = add(serial, "", title or c.get("title"), "", png.tobytes(), "image/png", source_width=c.get("width"))
     c.update(status="accepted", serial=entry["serial"], added=entry["file"])
     os.makedirs(os.path.join(INBOX, "done"), exist_ok=True)

@@ -53,3 +53,11 @@ def test_a_new_photo_with_an_accepted_ones_name_is_new(tmp_path, monkeypatch):
     inbox.save([{"id": "old", "file": "s-l1200.jpg", "status": "accepted"}])
     assert inbox.process() == 1
     assert inbox.process() == 0
+
+
+def test_crops_get_the_labels_true_proportions():
+    img = np.zeros((900, 900, 3), np.uint8)
+    stretched = [[0, 0], [300, 0], [300, 400], [0, 400]]       # photographed at an angle: too tall
+    assert label_crop.crop(img, stretched, aspect=label_crop.aspect_for("DMG-K2J")).shape[:2] == (720, 820)
+    assert label_crop.crop(img, stretched, aspect=label_crop.aspect_for("AGB-BD2J-JPN")).shape[:2] == (413, 820)
+    assert label_crop.aspect_for("", [[0, 0], [400, 0], [400, 220], [0, 220]]) == label_crop.ASPECT["agb"]
