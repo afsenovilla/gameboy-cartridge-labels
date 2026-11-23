@@ -136,14 +136,26 @@ def describe(c, have, missing, titles):
     return c
 
 
-def not_needed(c):
-    """A photo of a label the catalogue already has at least as sharp, and not Missing: nothing to decide."""
-    return bool(c.get("known") and not c.get("missing") and c.get("existing")
+def lookalikes(serial):
+    """Every serial one look-alike character away (8 for B, 0 for O...): what OCR might have misread it from."""
+    out = set()
+    for i, ch in enumerate(serial):
+        if ch in LOOKALIKE:
+            out.add(serial[:i] + LOOKALIKE[ch] + serial[i + 1:])
+    return out
+
+
+def not_needed(c, missing=frozenset()):
+    """A photo of a label the catalogue already has at least as sharp, and not Missing: nothing to decide. Only when
+    sure: the serial was read on the label by OCR (not guessed from the file name or typed), and no serial it could
+    be a misreading of is Missing. Otherwise it's shown, to look at."""
+    return bool(c.get("ocr") and c.get("ocr") == c.get("serial") and c.get("known") and not c.get("missing")
+                and c.get("existing") and not (lookalikes(c["serial"]) & set(missing))
                 and all((c.get("width") or 0) <= (e["width"] or 0) * 1.1 for e in c["existing"]))
 
 
-def drop_if_not_needed(c, log=lambda s: None):
-    if c["status"] == "pending" and not_needed(c):
+def drop_if_not_needed(c, missing=frozenset(), log=lambda s: None):
+    if c["status"] == "pending" and not_needed(c, missing):
         c["status"], c["auto"] = "rejected", "already there, not sharper"
         log(f"  inbox: {c['file']} -> {c['serial']} already there and not sharper: rejected")
 
@@ -189,10 +201,11 @@ def process(log=lambda s: None):
         serial, text = read_serial(label)
         hint = SERIAL.search(f)
         c["serial"] = (serial or (hint.group(0).upper() if hint else ""))
+        c["ocr"] = serial or ""
         c["read"] = text
         cands.append(describe(c, have, missing, titles))
         log(f"  inbox: {f} -> {c['serial'] or 'no serial read'}")
-        drop_if_not_needed(c, log)
+        drop_if_not_needed(c, missing, log)
         save(cands)
     return len(new)
 
@@ -216,6 +229,7 @@ def recrop(cid, quad, typed=""):
     else:
         serial, text = read_serial(label)
         c["read"] = text
+        c["ocr"] = serial or ""
         if serial:
             c["serial"] = serial
     have, missing, titles = catalogue()
@@ -242,7 +256,7 @@ def refresh_all():
     for c in cands:
         if c["status"] == "pending":
             describe(c, have, missing, titles)
-            drop_if_not_needed(c)
+            drop_if_not_needed(c, missing)
     save(cands)
     return cands
 

@@ -84,7 +84,17 @@ def test_a_serial_the_catalogue_has_a_label_of_is_known_even_if_the_database_lac
 
 def test_a_photo_of_a_label_already_there_and_not_sharper_is_rejected_and_a_sharper_one_kept():
     for width, status in ((492, "rejected"), (900, "pending")):
-        c = {"serial": "AGB-B2DU-AUS", "file": "x.png", "width": width, "status": "pending"}
+        c = {"serial": "AGB-B2DU-AUS", "ocr": "AGB-B2DU-AUS", "file": "x.png", "width": width, "status": "pending"}
         inbox.describe(c, {"AGB-B2DU-AUS": [("AGB-B2DU-AUS", 600, None)]}, set(), {})
         inbox.drop_if_not_needed(c)
         assert c["status"] == status
+
+
+def test_when_in_doubt_it_is_kept():
+    have = {"AGB-B2DU-AUS": [("AGB-B2DU-AUS", 600, None)]}
+    for c, missing in (({"serial": "AGB-B2DU-AUS", "ocr": ""}, set()),  # from the file name, not read
+                       ({"serial": "AGB-B2DU-AUS", "ocr": "AGB-B2DU-AUS"}, {"AGB-82DU-AUS"})):  # 8 or B?
+        c.update(file="x.png", width=400, status="pending")
+        inbox.describe(c, have, missing, {})
+        inbox.drop_if_not_needed(c, missing)
+        assert c["status"] == "pending"
