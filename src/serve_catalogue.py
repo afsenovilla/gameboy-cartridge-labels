@@ -237,7 +237,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 WATCHED = {os.path.join(OUT, "added.json"): False, os.path.join(OUT, "ignore.txt"): True,
-           os.path.join(OUT, "matches.json"): False, os.path.join("published-labels", "labels.json"): False}
+           os.path.join(OUT, "matches.json"): False, os.path.join(OUT, "database-fixes.json"): False, os.path.join("published-labels", "labels.json"): False}
 VERSION = {"n": 0}
 REVIEW = {"n": 0}  # bumped when the inbox gets new candidates
 
