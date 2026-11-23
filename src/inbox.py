@@ -84,6 +84,8 @@ def catalogue():
         for e in json.load(open(path, encoding="utf-8")):
             if put and e.get("serial"):
                 have.setdefault(e["serial"], []).append((e["id"], (e.get("size") or [0])[0], e.get("source_width")))
+                if e.get("title") and e["title"] != e["serial"]:  # a label the catalogue has is a serial that exists,
+                    titles.setdefault(serial_release(e["serial"]), e["title"])  # in the database or not (AGB-B2DU-AUS)
             if not put:
                 missing.add(e["print"])
             if e.get("release") and e.get("title"):
@@ -111,15 +113,24 @@ def lookalike(serial, titles):
     return ""
 
 
+def serial_release(s):
+    return s.rsplit("-", 1)[0] if s.count("-") >= 2 and len(s.rsplit("-", 1)[1]) == 3 else "-".join(s.split("-")[:2])
+
+
 def describe(c, have, missing, titles):
     """The candidate's standing against the catalogue, for the page."""
     s = c.get("serial") or ""
-    rel = s.rsplit("-", 1)[0] if s.count("-") >= 2 and len(s.rsplit("-", 1)[1]) == 3 else "-".join(s.split("-")[:2])
-    c["title"] = titles.get(rel) or c.get("title") or ""
-    c["known"] = rel in titles  # a serial the database doesn't know is often an OCR slip (8 for B, 0 for O)
+    rel = serial_release(s)
+    c["title"] = titles.get(rel) or ""
+    c["known"] = rel in titles or s in have  # a serial the database doesn't know is often an OCR slip (8 for B, 0 for O)
     c["suggest"] = ""
+    hint = SERIAL.search(c.get("file") or "")  # the serial it was fetched for (LaunchBox, eBay): DMG-ACWP-EUR__launchbox_...
+    hint = hint.group(0).upper() if hint else ""
+    c["fetched_as"] = hint if hint and hint != s else ""
     if s and not c["known"]:
         c["suggest"] = lookalike(s, titles)
+        if not c["title"] and hint:  # a variant the database lacks (Cool Hand's DMG-ACDX-EUR): the game's title still
+            c["title"] = titles.get(serial_release(hint)) or ""
     c["missing"] = s in missing
     c["existing"] = [{"id": i, "width": sw or w} for i, w, sw in have.get(s, [])]
     return c

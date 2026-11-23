@@ -68,3 +68,15 @@ def test_avif_photos_are_read(tmp_path):
     p = tmp_path / "x.avif"
     Image.fromarray(np.full((50, 60, 3), 200, np.uint8)).save(p)
     assert inbox.imread(str(p)).shape == (50, 60, 3)
+
+
+def test_a_variant_the_database_lacks_takes_the_title_of_the_serial_it_was_fetched_for():
+    c = {"serial": "DMG-ACDX-EUR", "file": "DMG-ACWP-EUR__launchbox_cebae0e8.jpg"}
+    inbox.describe(c, {}, {"DMG-ACWP-EUR"}, {"DMG-ACWP": "Cool Hand"})
+    assert (c["known"], c["title"], c["fetched_as"], c["missing"]) == (False, "Cool Hand", "DMG-ACWP-EUR", False)
+
+
+def test_a_serial_the_catalogue_has_a_label_of_is_known_even_if_the_database_lacks_it():
+    c = {"serial": "AGB-B2DU-AUS", "file": "AGB-B2DP-EUR__launchbox_47152eea.png"}
+    inbox.describe(c, {"AGB-B2DU-AUS": [("AGB-B2DU-AUS", 600, None)]}, set(), {})
+    assert c["known"] and c["existing"]
