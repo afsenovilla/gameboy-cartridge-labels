@@ -39,3 +39,17 @@ def test_a_serial_in_the_file_name_is_a_hint():
 def test_an_unknown_serial_gets_its_lookalike_suggested():
     c = inbox.describe({"serial": "AGB-8D2J-JPN"}, {}, set(), {"AGB-BD2J": "Duel Masters 2"})
     assert not c["known"] and c["suggest"] == "AGB-BD2J-JPN"
+
+
+def test_a_new_photo_with_an_accepted_ones_name_is_new(tmp_path, monkeypatch):
+    monkeypatch.setattr(inbox, "INBOX", str(tmp_path))
+    monkeypatch.setattr(inbox, "LIST", str(tmp_path / "c.json"))
+    monkeypatch.setattr(inbox, "PREVIEWS", str(tmp_path / "p"))
+    monkeypatch.setattr(inbox, "OUT", str(tmp_path))
+    monkeypatch.setattr(inbox, "read_serial", lambda img: (None, []))
+    monkeypatch.setattr(inbox, "catalogue", lambda: ({}, set(), {}))
+    img = np.full((300, 300, 3), 120, np.uint8)
+    cv2.imwrite(str(tmp_path / "s-l1200.jpg"), img)
+    inbox.save([{"id": "old", "file": "s-l1200.jpg", "status": "accepted"}])
+    assert inbox.process() == 1
+    assert inbox.process() == 0

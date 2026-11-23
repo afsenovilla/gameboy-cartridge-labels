@@ -124,8 +124,13 @@ def process(log=lambda s: None):
     if not os.path.isdir(INBOX):
         return 0
     cands = load()
-    seen = {c["file"] for c in cands}
-    new = [f for f in sorted(os.listdir(INBOX)) if f.lower().endswith(IMAGES) and f not in seen]
+    # a photo already seen: still in the inbox (pending or rejected) with the same name and size. Accepted ones have
+    # left for done/, so a new photo of the same name (eBay's are all s-l1200.jpg) is a new photo.
+    seen = {(c["file"], c.get("bytes")) for c in cands if c["status"] != "accepted"}
+    old = {c["file"] for c in cands if c["status"] != "accepted" and "bytes" not in c}
+    def is_new(f):
+        return f.lower().endswith(IMAGES) and f not in old and (f, os.path.getsize(os.path.join(INBOX, f))) not in seen
+    new = [f for f in sorted(os.listdir(INBOX)) if is_new(f)]
     if not new:
         return 0
     have, missing, titles = catalogue()
@@ -134,7 +139,7 @@ def process(log=lambda s: None):
         if image is None:
             continue
         c = {"id": re.sub(r"[^A-Za-z0-9_-]", "_", os.path.splitext(f)[0])[:60] + f"-{len(cands)}", "file": f,
-             "photo": f"inbox/{f}", "size": [image.shape[1], image.shape[0]], "quad": label_crop.detect(image), "status": "pending"}
+             "photo": f"inbox/{f}", "bytes": os.path.getsize(os.path.join(INBOX, f)), "size": [image.shape[1], image.shape[0]], "quad": label_crop.detect(image), "status": "pending"}
         label = preview(c, image)
         serial, text = read_serial(label)
         hint = SERIAL.search(f)
@@ -204,8 +209,13 @@ def accept(cid, serial, title, add):
     entry = add(serial, "", title or c.get("title"), "", png.tobytes(), "image/png", source_width=c.get("width"))
     c.update(status="accepted", serial=entry["serial"], added=entry["file"])
     os.makedirs(os.path.join(INBOX, "done"), exist_ok=True)
-    os.replace(os.path.join(INBOX, c["file"]), os.path.join(INBOX, "done", c["file"]))
-    c["photo"] = "inbox/done/" + c["file"]
+    base, ext = os.path.splitext(c["file"])
+    done, n = c["file"], 1
+    while os.path.exists(os.path.join(INBOX, "done", done)):  # an earlier s-l1200.jpg is there already
+        n += 1
+        done = f"{base}_{n}{ext}"
+    os.replace(os.path.join(INBOX, c["file"]), os.path.join(INBOX, "done", done))
+    c["photo"] = "inbox/done/" + done
     save(cands)
     return entry
 
