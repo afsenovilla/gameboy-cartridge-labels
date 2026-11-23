@@ -138,7 +138,7 @@ def test_an_added_label_is_saved_under_its_serial(tmp_path):
     import serve_catalogue as s, pytest, json as j
     e = s.add("dmg-aaue-usa", "", "Pokemon Gold", "dmg", b"\x89PNG...", "image/png", out=str(tmp_path))
     assert e["file"] == "added/DMG-AAUE-USA.png" and e["release"] == "DMG-AAUE" and (tmp_path / "added" / "DMG-AAUE-USA.png").exists()
-    assert s.add("DMG-AAUE-USA", "", "", "", b"x", "image/png", out=str(tmp_path))["file"] == "added/DMG-AAUE-USA-2.png"
+    assert s.add("DMG-AAUE-USA", "", "", "", b"x", "image/png", out=str(tmp_path))["file"] == "added/DMG-AAUE-USA_2.png"
     assert len(j.loads((tmp_path / "added.json").read_text(encoding="utf-8"))) == 2
     with pytest.raises(ValueError):
         s.add("hello", "", "", "", b"x", "image/png", out=str(tmp_path))
@@ -161,3 +161,15 @@ def test_missing_tells_whole_games_from_other_versions():
                 "DMG-QQQE": {"id": "DMG-QQQE", "title": "Nothing", "system": "dmg", "cartridgeSerials": ["DMG-QQQE-USA"]}}
     got = {w["print"]: w["kind"] for w in s.missing([{"serial": "DMG-XA-FAH", "release": "DMG-XA"}], releases)}
     assert got == {"DMG-XA-NOE": "variant", "DMG-QQQE-USA": "game"}
+
+
+def test_added_labels_come_from_the_folder_even_if_added_json_lost_them(tmp_path):
+    import screenscraper_site as s
+    (tmp_path / "added").mkdir()
+    for n in ("DMG-AAUP-EUR-1.png", "AGB-AAKJ-JPN.png", "DMG-XA-FAH_2.png", "notes.txt"):
+        (tmp_path / "added" / n).write_bytes(b"x")
+    (tmp_path / "added.json").write_text(json.dumps([{"id": "AGB-AAKJ-JPN", "serial": "AGB-AAKJ-JPN", "release": "AGB-AAKJ",
+        "title": "Airforce Delta II", "system": "agb", "file": "added/AGB-AAKJ-JPN.png", "source_width": 440}]), encoding="utf-8")
+    got = {e["id"]: (e["serial"], e["title"]) for e in s.added(out=str(tmp_path), titles={"DMG-AAUP": "Pokemon - Gold Version"})}
+    assert got == {"AGB-AAKJ-JPN": ("AGB-AAKJ-JPN", "Airforce Delta II"), "DMG-AAUP-EUR-1": ("DMG-AAUP-EUR-1", "Pokemon - Gold Version"),
+                   "DMG-XA-FAH_2": ("DMG-XA-FAH", "DMG-XA-FAH")}

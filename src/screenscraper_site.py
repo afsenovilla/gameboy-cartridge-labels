@@ -12,6 +12,7 @@
 # ScreenScraper's images) and they're gone. A restored label is left out by its file name the same way.
 # ScreenScraper's images, for local use: don't publish this page.
 import json
+import re
 import os
 import struct
 import sys
@@ -165,6 +166,34 @@ def missing(entries, releases):
     return sorted(out, key=lambda w: (w["title"].casefold(), w["print"]))
 
 
+ADDED_NAME = re.compile(r"^((?:DMG|CGB|AGB)-[A-Z0-9]{2,5}(?:-[A-Z]{3})?(?:-\d)?)(?:_\d+)?\.(?:png|jpe?g|webp|avif)$", re.I)
+
+
+def added(ignore=frozenset(), out=OUT, titles=None):
+    """The added labels: added.json's entries whose image is there, plus every image in added/ that added.json
+    doesn't list (its entry lost: the file name is its serial), with the database's title. So the folder is what
+    counts, and added.json only adds what a file name can't say (title, source width)."""
+    path = os.path.join(out, "added.json")
+    listed = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
+    entries = [e for e in listed if os.path.basename(e["file"]) not in ignore and os.path.exists(os.path.join(out, e["file"]))]
+    known = {e["file"] for e in entries}
+    folder = os.path.join(out, "added")
+    if titles is None:
+        titles = {}
+        if os.path.exists(serials.DATABASE):
+            titles = {r["id"]: r.get("title") for r in json.load(open(serials.DATABASE, encoding="utf-8"))}
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        m = ADDED_NAME.match(name)
+        if not m or f"added/{name}" in known or name in ignore:
+            continue
+        serial = m.group(1).upper()
+        release = "-".join(serial.split("-")[:2])
+        entries.append({"id": os.path.splitext(name)[0].upper(), "serial": serial, "release": release,
+                        "title": titles.get(release) or serial, "system": serial[:3].lower(), "file": f"added/{name}",
+                        "source": "added by you"})
+    return entries
+
+
 def main(args):
     with open(os.path.join(OUT, "matches.json"), encoding="utf-8") as f:
         matches = json.load(f)
@@ -172,11 +201,8 @@ def main(args):
     entries = labels(matches, ignore)
     for e in entries:
         e["source"] = f"ScreenScraper (game {e.pop('screenscraper')})"
-    added_path = os.path.join(OUT, "added.json")
-    if os.path.exists(added_path):  # labels added on the page (serve_catalogue)
-        for e in json.load(open(added_path, encoding="utf-8")):
-            if os.path.basename(e["file"]) not in ignore and os.path.exists(os.path.join(OUT, e["file"])):
-                entries.append({**e, "size": size_of(os.path.join(OUT, e["file"])), "photos": 0})
+    for e in added(ignore):  # labels added on the page (serve_catalogue) or by hand
+        entries.append({**e, "size": size_of(os.path.join(OUT, e["file"])), "photos": 0})
     for e in entries:  # small in the photo or scan it came from: worth a better one
         width = e.get("source_width") or (e.get("size") or [LOW_WIDTH])[0]
         e["lowres"] = width < LOW_WIDTH

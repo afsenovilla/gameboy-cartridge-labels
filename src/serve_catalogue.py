@@ -48,7 +48,7 @@ def add(serial, release, title, system, data, content_type, out=OUT, source_widt
     name, n = f"added/{serial}.{ext}", 1
     while os.path.exists(os.path.join(out, name)):
         n += 1
-        name = f"added/{serial}-{n}.{ext}"
+        name = f"added/{serial}_{n}.{ext}"  # _n, not -n: DMG-AAUP-EUR-1 is a serial, its second image DMG-AAUP-EUR-1_2
     with open(os.path.join(out, name), "wb") as f:
         f.write(data)
     entry = {"id": os.path.splitext(os.path.basename(name))[0], "serial": serial, "release": release or "-".join(serial.split("-")[:2]),
