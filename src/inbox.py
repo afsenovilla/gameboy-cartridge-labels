@@ -77,11 +77,32 @@ def catalogue():
     return have, missing, titles
 
 
+LOOKALIKE = {"8": "B", "B": "8", "0": "O", "O": "0", "1": "I", "I": "1", "5": "S", "S": "5", "2": "Z", "Z": "2", "6": "G", "G": "6"}
+
+
+def lookalike(serial, titles):
+    """A serial the database knows that differs from this one by one look-alike character (8 for B, 0 for O...)."""
+    parts = serial.split("-")
+    if len(parts) < 2:
+        return ""
+    code = parts[1]
+    for i, ch in enumerate(code):
+        if ch in LOOKALIKE:
+            fixed = code[:i] + LOOKALIKE[ch] + code[i + 1:]
+            if f"{parts[0]}-{fixed}" in titles:
+                return "-".join([parts[0], fixed] + parts[2:])
+    return ""
+
+
 def describe(c, have, missing, titles):
     """The candidate's standing against the catalogue, for the page."""
     s = c.get("serial") or ""
     rel = s.rsplit("-", 1)[0] if s.count("-") >= 2 and len(s.rsplit("-", 1)[1]) == 3 else "-".join(s.split("-")[:2])
     c["title"] = titles.get(rel) or c.get("title") or ""
+    c["known"] = rel in titles  # a serial the database doesn't know is often an OCR slip (8 for B, 0 for O)
+    c["suggest"] = ""
+    if s and not c["known"]:
+        c["suggest"] = lookalike(s, titles)
     c["missing"] = s in missing
     c["existing"] = [{"id": i, "width": sw or w} for i, w, sw in have.get(s, [])]
     return c

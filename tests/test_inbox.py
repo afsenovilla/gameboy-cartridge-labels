@@ -34,3 +34,8 @@ def test_describe_says_if_missing_or_already_there():
 
 def test_a_serial_in_the_file_name_is_a_hint():
     assert inbox.SERIAL.search("cgb-bsfp-hol_photo.jpg").group(0).upper() == "CGB-BSFP-HOL"
+
+
+def test_an_unknown_serial_gets_its_lookalike_suggested():
+    c = inbox.describe({"serial": "AGB-8D2J-JPN"}, {}, set(), {"AGB-BD2J": "Duel Masters 2"})
+    assert not c["known"] and c["suggest"] == "AGB-BD2J-JPN"

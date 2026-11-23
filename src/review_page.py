@@ -37,6 +37,7 @@ let CANDS = [];
 function badges(c) {
   const out = [];
   if (!c.serial) out.push('<span class="b-no">No serial read: type it from the label</span>');
+  else if (!c.known) out.push('<span class="b-no">The database has no ' + esc(c.serial) + (c.suggest ? ": did you mean " + esc(c.suggest) + "? Check the label" : ": check it against the label") + "</span>");
   else if (c.missing) out.push('<span class="b-ok">In Missing: this completes it</span>');
   else if (!c.existing.length) out.push('<span class="b-ok">New: no label of this serial yet</span>');
   for (const e of c.existing) {
