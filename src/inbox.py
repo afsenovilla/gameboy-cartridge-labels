@@ -154,7 +154,7 @@ def not_needed(c, missing=frozenset()):
                 and all((c.get("width") or 0) <= (e["width"] or 0) * 1.1 for e in c["existing"]))
 
 
-TOO_SMALL = 250  # px across the label: below this a photo isn't worth reviewing; better found by hand
+TOO_SMALL = 300  # px across the label: below this a photo isn't worth reviewing; better found by hand
 
 
 def too_small(c):
