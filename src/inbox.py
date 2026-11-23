@@ -154,7 +154,7 @@ def not_needed(c, missing=frozenset()):
                 and all((c.get("width") or 0) <= (e["width"] or 0) * 1.1 for e in c["existing"]))
 
 
-TOO_SMALL = 300  # px across the label: below this a photo isn't worth reviewing; better found by hand
+TOO_SMALL = 200  # px across the label: below this a photo isn't worth reviewing; better found by hand
 
 
 def too_small(c):
@@ -267,6 +267,9 @@ def refresh_all():
     cands = load()
     have, missing, titles = catalogue()
     for c in cands:
+        if c["status"] == "rejected" and c.get("auto") == "too small" and not too_small(c):
+            c["status"] = "pending"  # the limit was lowered: back for review
+            c.pop("auto")
         if c["status"] == "pending":
             describe(c, have, missing, titles)
             drop_if_not_needed(c, missing)
